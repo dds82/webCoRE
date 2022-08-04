@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update July 31, 2022 for Hubitat
+ * Last update August 2, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -6281,8 +6281,9 @@ private Boolean evaluateConditions(Map r9,Map cndtns,String collection,Boolean a
 				Integer i
 				i=iZ
 				for(Map cndtn in cndtnsCOL){
-					if( sMt(cndtn)!=sGROUP )
-						if( i!=iZ && ( (cndtn.ct==sT /*&& cndtn.s */) || (cndtn.ts || cndtn.fs) ) ){ canopt=false; break }
+					//if( sMt(cndtn)!=sGROUP )
+					//if( i!=iZ && ( (cndtn.ct==sT /*&& cndtn.s */) || (cndtn.ts || cndtn.fs) ) ){ canopt=false; break }
+					if( i!=iZ && (cndtn.ct==sT /*&& cndtn.s */) ){ canopt=false; break }
 					i++
 				}
 			}
@@ -12037,7 +12038,8 @@ Map fixHeGType(Boolean toHubV,String typ,v){
 private static String md5(String md5){
 	MessageDigest md=MessageDigest.getInstance('MD5')
 	byte[] array=md.digest(md5.getBytes())
-	String result=sBLK
+	String result
+	result=sBLK
 	Integer l=array.size()
 	for(Integer i=iZ; i<l;++i){
 		result+=Integer.toHexString((array[i] & 0xFF)| 0x100).substring(i1,i3)

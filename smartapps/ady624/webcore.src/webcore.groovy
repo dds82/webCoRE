@@ -800,7 +800,6 @@ def pageDumpPR(){
 	Map<String,List> t2
 	if(t1!=null) t2= t1.gtGlobalVarsInUse()
 	else t2=[:]
-	//if(eric())warn "in use $t2"
 	Map newMap
 	newMap=[:]
 	Map<String,Map> glbs=listAvailableVariables1()
@@ -823,7 +822,6 @@ def pageDumpPR(){
 		newMap[k]= []+newLst
 	}
 	newMap = newMap.sort { (String)it.key }
-	//if(eric())warn "newMap is $newMap"
 
 	String message=getMapDescStr(newMap)
 	return dynamicPage((sNM):"pageDumpPR",(sTIT):sBLK,uninstall:false){
