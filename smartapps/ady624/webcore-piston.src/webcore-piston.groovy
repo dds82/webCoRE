@@ -9579,7 +9579,7 @@ private Map func_ceil(Map r9,List<Map> prms){ return func_ceiling(r9,prms)}
 /** Usage: sprintf(format, arguments)						**/
 private Map func_sprintf(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i2))return rtnErr('sprintf(format, arguments)')
-	String format=sNL
+	String format; format=sNL
 	List args=[]
 	Boolean a
 	try{

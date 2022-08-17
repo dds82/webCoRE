@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update August 1, 2022 for Hubitat
+ * Last update August 16, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -800,7 +800,7 @@ def pageDumpPR(){
 	Map<String,List> t2
 	if(t1!=null) t2= t1.gtGlobalVarsInUse()
 	else t2=[:]
-	Map newMap
+	Map<String,Object> newMap
 	newMap=[:]
 	Map<String,Map> glbs=listAvailableVariables1()
 	String nf= ' (VARIABLE NOT FOUND)'
@@ -4389,7 +4389,7 @@ private static Map<String,Map> virtualCommands(){
 		noop					: [ (sN): "No operation",				(sA): true,	(sI): "circle",				(sD): "No operation",						],
 		wait					: [ (sN): "Wait...",					(sA): true,	(sI): sCLOCK, is: sR,		(sD): "Wait {0}",						(sP): [[(sN):sDURATION, (sT):sDUR]],				],
 		waitRandom				: [ (sN): "Wait randomly...",			(sA): true,	(sI): sCLOCK, is: sR,		(sD): "Wait randomly between {0} and {1}",									(sP): [[(sN):"At least", (sT):sDUR],[(sN):"At most", (sT):sDUR]],	],
-		waitForTime				: [ (sN): "Wait for time...",			(sA): true,	(sI): sCLOCK, is: sR,		(sD): "Wait until {0}",													(sP): [[(sN):"Time", (sT):"time"]],	],
+		waitForTime				: [ (sN): "Wait for time...",			(sA): true,	(sI): sCLOCK, is: sR,		(sD): "Wait until {0}",													(sP): [[(sN):"Time", (sT):sTIME]],	],
 		waitForDateTime			: [ (sN): "Wait for date & time...",	(sA): true,	(sI): sCLOCK, is: sR,		(sD): "Wait until {0}",													(sP): [[(sN):"Date & Time", (sT):sDTIME]],	],
 		executePiston			: [ (sN): "Execute piston...",			(sA): true,	(sI): sCLOCK, is: sR,		(sD): "Execute piston \"{0}\"{1}",											(sP): [[(sN):"Piston", (sT):"piston"], [(sN):"Arguments", (sT):"variables", (sD):" with arguments {v}"],[(sN):"Wait for execution", (sT):sBOOLN,(sD):" and wait for execution to finish",w:"webCoRE can only wait on piston executions of pistons within the same instance as the caller. Please note that global variables updated in the callee piston do NOT get reflected immediately in the caller piston, the new values will be available on the next run."]],	],
 		pausePiston				: [ (sN): "Pause piston...",			(sA): true,	(sI): sCLOCK, is: sR,		(sD): "Pause piston \"{0}\"",												(sP): [[(sN):"Piston", (sT):"piston"]],	],
@@ -4661,10 +4661,10 @@ Map getChildComparisons(){
 	int				: [ (sT): sINT,						],
 	integer			: [ (sT): sINT,						],
 	float			: [ (sT): sDEC,						],
-	decimal			: [ (sT): sDEC,						],
+	(sDEC)			: [ (sT): sDEC,						],
 	number			: [ (sT): sDEC,						],
-	bool			: [ (sT): sBOOLN,					],
-	boolean			: [ (sT): sBOOLN,					],
+	(sBOOL)			: [ (sT): sBOOLN,					],
+	(sBOOLN)		: [ (sT): sBOOLN,					],
 	power			: [ (sT): sDEC,						],
 	sqr				: [ (sT): sDEC,						],
 	sqrt			: [ (sT): sDEC,						],
@@ -4672,7 +4672,7 @@ Map getChildComparisons(){
 	fahrenheit		: [ (sT): sDEC,						],
 	celsius			: [ (sT): sDEC,						],
 	converttemperatureifneeded	: [ (sT):sDEC, (sD): "convertTemperatureIfNeeded",	],
-	dateAdd			: [ (sT): "time",		(sD): "dateAdd",		],
+	dateAdd			: [ (sT): sTIME,		(sD): "dateAdd",		],
 	startswith		: [ (sT): sBOOLN,	(sD): "startsWith",	],
 	endswith		: [ (sT): sBOOLN,	(sD): "endsWith",		],
 	contains		: [ (sT): sBOOLN,					],
@@ -4687,8 +4687,8 @@ Map getChildComparisons(){
 	isempty			: [ (sT): sBOOLN,	(sD): "isEmpty",		],
 	if				: [ (sT): sDYN,						],
 	datetime		: [ (sT): sDTIME,					],
-	date			: [ (sT): "date",					],
-	time			: [ (sT): "time",					],
+	date			: [ (sT): sDATE,					],
+	time			: [ (sT): sTIME,					],
 	addseconds		: [ (sT): sDTIME,	(sD): "addSeconds"		],
 	addminutes		: [ (sT): sDTIME,	(sD): "addMinutes"		],
 	addhours		: [ (sT): sDTIME,	(sD): "addHours"		],
@@ -4857,9 +4857,9 @@ Map getChildVirtDevices(){
 
 private Map<String,Map> virtualDevices(Boolean updateCache=false){
 	return [
-		date:			[ (sN): 'Date',				(sT): 'date',		],
+		date:			[ (sN): 'Date',				(sT): sDATE,		],
 		datetime:		[ (sN): 'Date & Time',		(sT): sDTIME,	],
-		time:			[ (sN): 'Time',				(sT): 'time',		],
+		time:			[ (sN): 'Time',				(sT): sTIME,		],
 		email:			[ (sN): 'Email',			(sT): 'email',						(sM): true	],
 		powerSource:	[ (sN): 'Hub power source',	(sT): sENUM,	(sO): [battery: 'battery', mains: 'mains'],					x: true	],
 		ifttt:			[ (sN): 'IFTTT',			(sT): sSTR,						(sM): true	],
