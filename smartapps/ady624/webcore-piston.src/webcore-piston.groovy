@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update August 16, 2022 for Hubitat
+ * Last update August 18, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -1703,15 +1703,15 @@ private LinkedHashMap getCachedMaps(String meth=sNL,Boolean retry=true,Boolean U
 	String s=sAppId()
 	String myId=s
 	String mSmaNm=s
-	LinkedHashMap result,t
+	LinkedHashMap res,t
 	t=[:] as LinkedHashMap
 	getTheLock(mSmaNm,sI)
-	result=theCacheVFLD[myId]
-	if(result){
-		if(result[sCACHE] instanceof Map && result[sBLD] instanceof Integer){
-			result=(LinkedHashMap)(t+result)
+	res=theCacheVFLD[myId]
+	if(res){
+		if(res[sCACHE] instanceof Map && res[sBLD] instanceof Integer){
+			res=(LinkedHashMap)(t+res)
 			releaseTheLock(mSmaNm)
-			return result
+			return res
 		}
 		theCacheVFLD[myId]=t
 		theCacheVFLD=theCacheVFLD
@@ -1742,7 +1742,7 @@ private LinkedHashMap getDSCache(String meth,Boolean Upd=true){
 	String appStr=sAppId()
 	String myId=appStr
 	String mSmaNm=myId
-	LinkedHashMap r9,result,pC
+	LinkedHashMap r9,res,pC
 	pC=getParentCache()
 	Boolean sendM
 	sendM=false
@@ -1750,9 +1750,9 @@ private LinkedHashMap getDSCache(String meth,Boolean Upd=true){
 	r9=null
 
 	getTheLock(mSmaNm,sGDS)
-	result=theCacheVFLD[myId]
+	res=theCacheVFLD[myId]
 
-	if(!result){
+	if(!res){
 		releaseTheLock(mSmaNm)
 		stateStart=wnow()
 		Map mst=gtState()
@@ -1847,8 +1847,8 @@ private LinkedHashMap getDSCache(String meth,Boolean Upd=true){
 		if(lim<iZ)lim=myL
 		t1[sMLOGS]=lim
 
-		result= t1 as LinkedHashMap
-		r9= (LinkedHashMap)(result+pC)
+		res= t1 as LinkedHashMap
+		r9= (LinkedHashMap)(res+pC)
 
 		sendM=true
 		if(Upd){
@@ -1865,13 +1865,13 @@ private LinkedHashMap getDSCache(String meth,Boolean Upd=true){
 			debug 'creating'+s+' my piston cache '+meth,r9
 		}
 	}else{
-		r9= (LinkedHashMap)(result+pC)
+		r9= (LinkedHashMap)(res+pC)
 		releaseTheLock(mSmaNm)
 	}
 	if(stateStart) //noinspection GroovyVariableNotAssigned
 		r9.stateAccess=stateEnd-stateStart
 	pC=null
-	result=null
+	res=null
 	if(sendM && iMs(r9,sBLD)!=iZ)checkLabel(r9)
 	return r9
 }
@@ -1907,15 +1907,15 @@ private void loadCDB(){
 
 private LinkedHashMap getParentCache(){
 	String wName=sPAppId()
-	LinkedHashMap result
-	result=theParentCacheVFLD[wName]
-	if(result==null){
+	LinkedHashMap res
+	res=theParentCacheVFLD[wName]
+	if(res==null){
 		String lockTyp='getParentCache'
 		String semName=sTSLF
 		getTheLock(semName,lockTyp)
-		result=theParentCacheVFLD[wName]
+		res=theParentCacheVFLD[wName]
 		Boolean sendM; sendM=false
-		if(result==null){
+		if(res==null){
 			Map t0=wgtPdata()
 			Map t1
 			t1=[
@@ -1936,7 +1936,7 @@ private LinkedHashMap getParentCache(){
 				incidents: (List)t0.incidents,
 				useLocalFuelStreams: bIs(t0,'useLocalFuelStreams')
 			]
-			result=t1
+			res=t1
 			theParentCacheVFLD[wName]=t1
 			theParentCacheVFLD=theParentCacheVFLD
 			t1=null
@@ -1945,7 +1945,7 @@ private LinkedHashMap getParentCache(){
 		releaseTheLock(semName)
 		if(eric() && sendM)debug 'gathering parent cache',null
 	}
-	return result
+	return res
 }
 
 @CompileStatic
@@ -3590,8 +3590,8 @@ private Boolean executeAction(Map r9,Map statement,Boolean async){
 		myDetail r9,mySt,i1
 	}
 	List svDevices=(List)gtSysVarVal(r9,sDLLRDEVS)
-	Boolean result,isCurEvtDev
-	result=true
+	Boolean res,isCurEvtDev
+	res=true
 	isCurEvtDev= false
 	List sd= statement.d ? (List)statement.d:[]
 	List<String> deviceIds; deviceIds=expandDeviceList(r9,sd)
@@ -3625,15 +3625,15 @@ private Boolean executeAction(Map r9,Map statement,Boolean async){
 			}
 			stSysVarVal(r9,sDLLRDEVS,deviceIds)
 			r9.curTsk=[$:stmtNum(task)] as LinkedHashMap
-			result=executeTask(r9,devices,statement,task,async,data)
+			res=executeTask(r9,devices,statement,task,async,data)
 			r9.remove('curTsk')
-			if(!result && prun(r9))break
+			if(!res && prun(r9))break
 		}
 	}
 	r9.remove('curActn')
 	stSysVarVal(r9,sDLLRDEVS,svDevices)
-	if(isEric(r9))myDetail r9,mySt+"resumed: ${bIs(r9,'resumed')} result:$result".toString()
-	return result
+	if(isEric(r9))myDetail r9,mySt+"resumed: ${bIs(r9,'resumed')} result:$res".toString()
+	return res
 }
 
 @Field static List<String> LWCMDS
@@ -3671,29 +3671,37 @@ private Boolean executeTask(Map r9,List devices,Map statement,Map task,Boolean a
 		mySt=("executeTask #${tskNm} "+sMs(task,sC)+" async:${async} devices: ${devices.size()} ").toString()
 		myDetail r9,mySt,i1
 	}
+
+	//handle duplicate command "push" which was replaced with fake command "pushMomentary"
+	def override=CommandsOverrides.find{ (String)it.value.r==sMs(task,sC) }
+	String command=override ? (String)override.value.c:sMs(task,sC)
+
 	//parse parameter
 	List prms=[]
+	Boolean emptyIndex; emptyIndex=false
 	for(Map prm in (List<Map>)task.p){
 		def p; p=null
 		String vt=sMvt(prm)
 		switch(vt){
 			case sVARIABLE: // vcmd_setVariable command, first argument is the variable name
-				if(sMt(prm)==sX) p=prm.x instanceof List ? (List)prm.x:sMs(prm,sX)+(sMs(prm,sXI)!=sNL ? sLB+sMs(prm,sXI)+sRB:sBLK)
+				if(sMt(prm)==sX){
+					p=prm.x instanceof List ? (List)prm.x:sMs(prm,sX)+(sMs(prm,sXI)!=sNL ? sLB+sMs(prm,sXI)+sRB:sBLK)
+				}
 				break
 			default:
 				Map v=(Map)evaluateOperand(r9,null,prm)
 				String tt1=vt.replace(sLRB,sBLK)
+				emptyIndex= tt1!=vt &&
+						command=='setVariable' &&
+						prms[0] instanceof String &&
+						!( ((String)prms[0]).contains(sRB) )
 				def t0=v.v
 				//if not selected, return the null to fill in parameter
-				p=t0==null || matchCast(r9,t0,tt1) ? t0:evaluateExpression(r9,v,tt1).v
+				p=t0==null || emptyIndex || matchCast(r9,t0,tt1) ? t0:evaluateExpression(r9,v,tt1).v
 		}
 		//ensure value type is successfully passed through
 		Boolean a=prms.push(p)
 	}
-
-	//handle duplicate command "push" which was replaced with fake command "pushMomentary"
-	def override=CommandsOverrides.find{ (String)it.value.r==sMs(task,sC) }
-	String command=override ? (String)override.value.c:sMs(task,sC)
 
 	def virtualDevice=devices.size()!=iZ ? null:gtLocation()
 // If the VirtualCommand exists and has o:true use that virtual command otherwise try the physical command
@@ -8433,7 +8441,6 @@ private Map getVariable(Map r9,String name){
 	}
 	rt= res!=null ? sMt(res):sNL
 	if(rt.endsWith(sRB)){
-		res.t= rt.replace(sLRB,sBLK)
 		if(res.v instanceof Map && var.index!=sNL && var.index!=sBLK){
 			if(!var.index.isNumber()){
 				//indirect variable addressing
@@ -8446,6 +8453,7 @@ private Map getVariable(Map r9,String name){
 					var.index=(String)cast(r9,value,sSTR,dataType)
 				}
 			}
+			res.t= rt.replace(sLRB,sBLK)
 			res.v=res.v[var.index]
 		}
 	}else{
@@ -8454,7 +8462,7 @@ private Map getVariable(Map r9,String name){
 			res=(rt && rt==sMt(res)) ? res:evaluateExpression(r9,res,rt)
 		}
 	}
-	def v=res.v
+	def v; v=res.v
 	rt=sMt(res)
 	if(rt==sDEC && v instanceof BigDecimal)v=v.toDouble()
 	res=rtnMap(rt,v)
@@ -8483,30 +8491,30 @@ private Map setVariable(Map r9,String name,value){
 				String typ,wctyp
 				typ=sNL
 				wctyp=sNL
-				def vl=null
+				def vl; vl=null
 				Map tb=fixHeGType(false,sMs(hg,sTYPE),hg.value)
 				for(t in tb){
 					wctyp=(String)t.key
 				}
 				if(wctyp){ // if we know current type
 					Map ta=fixHeGType(true,wctyp,value)
-					Map result=null
+					Map res; res=null
 					for(t in ta){
 						typ=(String)t.key
 						vl=t.value
 						if(isEric(r9))myDetail r9,"setVariable setting Hub ($vn) to $vl with type ${typ} wc original type ${wctyp}",iN2
-						Boolean a=false
+						Boolean a; a=false
 						try{
 							a=wsetGlobalVar(vn,vl)
 						}catch(all){
 							error 'An error occurred while executing set hub variable',r9,iN2,all
 						}
 						if(a){
-							result=rtnMap(wctyp,value)
-							if(isEric(r9))myDetail r9,"setVariable returning ${result} to webcore",iN2
+							res=rtnMap(wctyp,value)
+							if(isEric(r9))myDetail r9,"setVariable returning ${res} to webcore",iN2
 						}else err.v='setGlobal failed'
 					}
-					if(result)return result
+					if(res)return res
 				}else err.v='setGlobal unknown wctyp'
 			}
 		}else{
@@ -8544,17 +8552,36 @@ private Map setVariable(Map r9,String name,value){
 				variable.v=(variable.v instanceof Map)? variable.v:[:]
 				if(var.index=='*CLEAR') ((Map)variable.v).clear()
 				else{
-					if(!var.index.isNumber()){
-						//indirect variable addressing
-						Map indirectVar=getVariable(r9,var.index)
-						String indt=sMt(indirectVar)
-						if(indt!=sERROR){
-							def a=indirectVar.v
-							var.index=(a instanceof String)? (String)a:(String)cast(r9,a,sSTR,indt)
+					if(var.index!=null){
+						if(!var.index.isNumber()){
+							//indirect variable addressing
+							Map indirectVar=getVariable(r9,var.index)
+							String indt=sMt(indirectVar)
+							if(indt!=sERROR){
+								def a=indirectVar.v
+								var.index=(a instanceof String)? (String)a:(String)cast(r9,a,sSTR,indt)
+							}
 						}
+						String at=t.replace(sLRB,sBLK)
+						variable.v[var.index]= matchCast(r9,value,at)?value:cast(r9,value,at)
+					}else{
+						//list of numbers, spread into multiple prms
+						def nvalue
+						nvalue=value
+						if(nvalue instanceof String){
+							String s= (String)nvalue
+							if(s.startsWith(sLB) && s.endsWith(sRB)){
+								try{
+									List l= (List)new JsonSlurper().parseText(s)
+									nvalue= l
+								}catch(ignored){}
+							}
+						}
+						if(nvalue instanceof List){
+							if(isEric(r9))myDetail r9,"setVariable list found ${variable} value: ${nvalue}",iN2
+							variable.v= nvalue
+						} else return err
 					}
-					String at=t.replace(sLRB,sBLK)
-					variable.v[var.index]= matchCast(r9,value,at)?value:cast(r9,value,at)
 				}
 			}else{
 				def v=(value instanceof GString)? "$value".toString():value
@@ -8650,7 +8677,7 @@ Map proxyEvaluateExpression(LinkedHashMap mr9,Map expression,String dataType=sNL
 
 @CompileStatic
 private static Map simplifyExpression(Map express){
-	Map expression=express
+	Map expression; expression=express
 	while (sMt(expression)==sEXPR && expression.i && ((List)expression.i).size()==i1) expression=(Map)((List)expression.i)[iZ]
 	return expression
 }
@@ -8810,8 +8837,8 @@ private Map evaluateExpression(Map r9,Map express,String rtndataType=sNL){
 				//already parsed
 				result=expression
 			}else{
-				List deviceIds=(expression.id instanceof List)? (List)expression.id:(expression.id ? [expression.id]:[])
-				Boolean err=false
+				List deviceIds; deviceIds=(expression.id instanceof List)? (List)expression.id:(expression.id ? [expression.id]:[])
+				Boolean err; err=false
 				if(deviceIds.size()==iZ){
 					//get variable {n:name,t:type,v:value}
 					Map var=getVariable(r9,sMs(expression,sX))
@@ -8863,7 +8890,7 @@ private Map evaluateExpression(Map r9,Map express,String rtndataType=sNL){
 								case iZ: break
 								case i1: a=prms.push(prm); break
 								default:
-									String t= sMt(prm)
+									String t= sMt(prm).replace(sLRB,sBLK)
 									String s= sMa(prm)
 									for(v in (List)prm.v){
 										if(s || v instanceof String)
@@ -9380,15 +9407,15 @@ private static String buildList(List list,String suffix=sAND){
 	if(!list)return sBLK
 	Integer cnt,t0,t1
 	cnt=i1
-	String result=sBLK
+	String res; res=sBLK
 	t0=list.size()
 	t1=t0-i1
 	String a=sCOMMA+sSPC
 	for(item in list){
-		result+=item.toString()+(cnt<t0 ? (cnt==t1 ? sSPC+suffix+sSPC:a):sBLK)
+		res+=item.toString()+(cnt<t0 ? (cnt==t1 ? sSPC+suffix+sSPC:a):sBLK)
 		cnt++
 	}
-	return result
+	return res
 }
 
 @CompileStatic
@@ -9585,7 +9612,8 @@ private Map func_sprintf(Map r9,List<Map> prms){
 	try{
 		format=strEvalExpr(r9,prms[iZ])
 		Integer sz=prms.size()
-		for(Integer x=i1; x<sz; x++) a=args.push(evaluateExpression(r9,prms[x]).v)
+		Integer x
+		for(x=i1; x<sz; x++) a=args.push(evaluateExpression(r9,prms[x]).v)
 		return rtnMapS(sprintf(format,args))
 	}catch(all){
 		return rtnErr("$all $format $args".toString())
@@ -9779,7 +9807,8 @@ private Map func_indexof(Map r9,List<Map> prms){
 	if(sMt(prms[iZ])==sDEV && sz>i2){
 		Integer t0=sz-i1
 		String item=strEvalExpr(r9,prms[t0])
-		for(Integer idx=iZ; idx<t0; idx++){
+		Integer idx
+		for(idx=iZ; idx<t0; idx++){
 			Map it=evaluateExpression(r9,prms[idx],sSTR)
 			if(sMs(it,sV)==item)return rtnMapI(idx)
 		}
@@ -9802,7 +9831,8 @@ private Map func_lastindexof(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i2) || (sMt(prms[iZ])!=sDEV && sz!=i2))return rtnErr('lastIndexOf(string, substring)')
 	if(sMt(prms[iZ])==sDEV && sz>i2){
 		String item=strEvalExpr(r9,prms[sz-i1])
-		for(Integer idx=sz-i2; idx>=iZ; idx--){
+		Integer idx
+		for(idx=sz-i2; idx>=iZ; idx--){
 			if(strEvalExpr(r9,prms[idx])==item){ return rtnMapI(idx) }
 		}
 		return rtnMapI(iN1)
@@ -9822,37 +9852,37 @@ private Map func_lastindexof(Map r9,List<Map> prms){
 /** Usage: lower(string)							**/
 private Map func_lower(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnErr('lower(string)')
-	String result=sBLK
-	for(Map prm in prms) result+=strEvalExpr(r9,prm)
-	rtnMapS(result.toLowerCase())
+	String res; res=sBLK
+	for(Map prm in prms) res+=strEvalExpr(r9,prm)
+	rtnMapS(res.toLowerCase())
 }
 
 /** upper returns a upper case value of a string				**/
 /** Usage: upper(string)							**/
 private Map func_upper(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnErr('upper(string)')
-	String result=sBLK
-	for(Map prm in prms) result+=strEvalExpr(r9,prm)
-	rtnMapS(result.toUpperCase())
+	String res; res=sBLK
+	for(Map prm in prms) res+=strEvalExpr(r9,prm)
+	rtnMapS(res.toUpperCase())
 }
 
 /** title returns a title case value of a string				**/
 /** Usage: title(string)							**/
 private Map func_title(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnErr('title(string)')
-	String result=sBLK
-	for(Map prm in prms) result+=strEvalExpr(r9,prm)
+	String res; res=sBLK
+	for(Map prm in prms) res+=strEvalExpr(r9,prm)
 	//noinspection GroovyAssignabilityCheck
-	rtnMapS(result.tokenize(sSPC)*.toLowerCase()*.capitalize().join(sSPC))
+	rtnMapS(res.tokenize(sSPC)*.toLowerCase()*.capitalize().join(sSPC))
 }
 
 /** avg calculates the average of a series of numeric values			**/
 /** Usage: avg(values)								**/
 private Map func_avg(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnErr('avg'+sVALUEN)
-	Double sum=dZ
-	for(Map prm in prms) sum+=dblEvalExpr(r9,prm)
-	rtnMapD(sum/prms.size())
+	Double s; s=dZ
+	for(Map prm in prms) s+=dblEvalExpr(r9,prm)
+	rtnMapD(s/prms.size())
 }
 
 /** median returns the value in the middle of a sorted array			**/
@@ -9895,9 +9925,9 @@ private Map func_most(Map r9,List<Map> prms){
 /** Usage: sum(values)								**/
 private Map func_sum(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnErr('sum'+sVALUEN)
-	Double sum=dZ
-	for(Map prm in prms) sum+=dblEvalExpr(r9,prm)
-	rtnMapD(sum)
+	Double s; s=dZ
+	for(Map prm in prms) s+=dblEvalExpr(r9,prm)
+	rtnMapD(s)
 }
 
 /** variance calculates the variance of a series of numeric values	**/
