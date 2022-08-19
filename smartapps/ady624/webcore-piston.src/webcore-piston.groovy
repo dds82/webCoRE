@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update August 18, 2022 for Hubitat
+ * Last update August 19, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -1373,7 +1373,7 @@ static Map shortRtd(Map r9){
 	Map myRt=[
 		(sID):sMs(r9,sID),
 		(sACT):isAct(r9),
-		(sTMSTMP):r9[sTMSTMP],
+		(sTMSTMP):lMs(r9,sTMSTMP),
 		(sCTGRY):sMs(r9,sCTGRY),
 		(sSTATS):[
 			(sNSCH):lMs(r9,sNSCH)
@@ -10001,15 +10001,45 @@ private Map func_hsltohex(Map r9,List<Map> prms){
 private Map func_count(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnMapI(iZ)
 	Integer cnt,i
+	Integer sz; sz=prms.size()
 	cnt=iZ
-	if(prms.size()==i1 && (sMt(prms[iZ]) in [sSTR,sDYN])){
-		String[] list=strEvalExpr(r9,prms[iZ]).split(sCOMMA)
-		Integer sz=list.size()
-		for(i=iZ; i<sz; i++){
-			Boolean t1=bcast(r9,list[i])
-			cnt+=t1 ? i1:iZ
+	if(sz==i1){
+		String t= sMt(prms[iZ])
+		String tt1=t.replace(sLRB,sBLK)
+		//if(isEric(r9)) myDetail r9, "count found t: $t and tt1: $tt1",iN2
+		if(t!=tt1 || t in [sSTR,sDYN]){
+			Map m; m=null
+			List list
+			def a= prms[iZ].v
+			if(t!=tt1){ //input is a list or map type
+				list= a instanceof List ? (List)a : null
+				m= a instanceof Map ? (Map)a : null
+			}else
+				list=strEvalExpr(r9,prms[iZ]).split(sCOMMA)
+			//String[] list=strEvalExpr(r9,prms[iZ]).split(sCOMMA)
+			//if(isEric(r9)) myDetail r9, "a is list: $list  m: $m ${myObj(a)}",iN2
+			Boolean t1
+			if(m){
+				for(j in m){
+					//if(isEric(r9)) myDetail r9, "j.value is $j.value ${myObj(j.value)}",iN2
+					t1=bcast(r9,j.value)
+					cnt+=t1 ? i1:iZ
+				}
+				/*m.each{
+					t1=bcast(r9,it.value)
+					cnt+=t1 ? i1:iZ
+				}*/
+			}else{
+				sz=list.size()
+				for(i=iZ; i<sz; i++){
+					t1=bcast(r9,list[i])
+					cnt+=t1 ? i1:iZ
+				}
+			}
+			return rtnMapI(cnt)
 		}
-	}else for(Map prm in prms) cnt+=boolEvalExpr(r9,prm) ? i1:iZ
+	}
+	for(Map prm in prms) cnt+=boolEvalExpr(r9,prm) ? i1:iZ
 	rtnMapI(cnt)
 }
 
@@ -10017,13 +10047,29 @@ private Map func_count(Map r9,List<Map> prms){
 /** Usage: size(values)							**/
 private Map func_size(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnMapI(iZ)
-	Integer cnt
 	Integer sz=prms.size()
-	if(sz==i1 && (sMt(prms[iZ]) in [sSTR,sDYN])){
-		String[] list=strEvalExpr(r9,prms[iZ]).split(sCOMMA)
-		cnt=list.size()
-	}else cnt=sz
-	rtnMapI(cnt)
+	if(sz==i1){
+		Integer cnt
+		String t= sMt(prms[iZ])
+		String tt1=t.replace(sLRB,sBLK)
+		if(t!=tt1 || t in [sSTR,sDYN]){
+			Map m; m=null
+			List list
+			def a= prms[iZ].v
+			if(t!=tt1){ //input is a list or map type
+				list= a instanceof List ? (List)a : null
+				m= a instanceof Map ? (Map)a : null
+			}else
+				list=strEvalExpr(r9,prms[iZ]).split(sCOMMA)
+			//String[] list=strEvalExpr(r9,prms[iZ]).split(sCOMMA)
+			if(m)
+				cnt=m.size()
+			else
+				cnt=list.size()
+			return rtnMapI(cnt)
+		}
+	}
+	rtnMapI(sz)
 }
 
 /** age returns the number of milliseconds an attribute had the current value	**/
@@ -10342,10 +10388,21 @@ private Map func_arrayitem(Map r9,List<Map> prms){
 	Map serr=rtnMapE('Array item index is outside of bounds.')
 	Integer index=intEvalExpr(r9,prms[iZ])
 	Integer sz=prms.size()
-	if(sz==i2 && (sMt(prms[i1]) in [sSTR,sDYN])){
-		String[] list=strEvalExpr(r9,prms[i1]).split(sCOMMA)
-		if(index<iZ || index>=list.size())return serr
-		return rtnMapS(list[index])
+	if(sz==i2){
+		String t= sMt(prms[i1])
+		String tt1=t.replace(sLRB,sBLK)
+		if(t!=tt1 || t in [sSTR,sDYN]){
+			List list
+			def a= prms[iZ].v
+			if(t!=tt1 && a instanceof List) //input is a list type
+				list= (List)a
+			else
+				list=strEvalExpr(r9,prms[i1]).split(sCOMMA)
+			//String[] list=strEvalExpr(r9,prms[i1]).split(sCOMMA)
+			if(index<iZ || index>=list.size())return serr
+			String rtnT= t!=tt1 ? tt1 : sSTR
+			return rtnMap(rtnT,list[index])
+		}
 	}
 	if(index<iZ || index>=sz-i1)return serr
 	return prms[index+i1]
@@ -11261,7 +11318,7 @@ private Map log(message,Map r9,Integer shift=iN2,Exception err=null,String cmd=s
 	}else myMsg=message.toString()
 	String mcmd=cmd!=sNL ? cmd:sDBG
 
-	if(r9 && r9[sTMSTMP]){
+	if(r9 && lMs(r9,sTMSTMP)){
 		//shift is
 		// 0 initialize level,level set to 1
 		// 1 start of routine,level up
