@@ -9803,8 +9803,8 @@ private Map func_rainbowvalue(Map r9,List<Map> prms){
 /** Usage: indexOf(stringOrDeviceOrList, substringOrItem)			**/
 private Map func_indexof(Map r9,List<Map> prms){
 	Integer sz=prms.size()
-	if(badParams(r9,prms,i2) || (sMt(prms[iZ])!=sDEV && sz!=i2))return rtnErr('indexOf(stringOrDeviceOrList, substringOrItem)')
-	if(sMt(prms[iZ])==sDEV && sz>i2){
+	if(badParams(r9,prms,i2) /*|| (sMt(prms[iZ])!=sDEV && sz!=i2)*/)return rtnErr('indexOf(stringOrDeviceOrList, substringOrItem)')
+	if(/*sMt(prms[iZ])==sDEV &&*/ sz>i2){
 		Integer t0=sz-i1
 		String item=strEvalExpr(r9,prms[t0])
 		Integer idx
@@ -9828,8 +9828,8 @@ private Map func_indexof(Map r9,List<Map> prms){
 /** Usage: lastIndexOf(string, substring)					**/
 private Map func_lastindexof(Map r9,List<Map> prms){
 	Integer sz=prms.size()
-	if(badParams(r9,prms,i2) || (sMt(prms[iZ])!=sDEV && sz!=i2))return rtnErr('lastIndexOf(string, substring)')
-	if(sMt(prms[iZ])==sDEV && sz>i2){
+	if(badParams(r9,prms,i2) /*|| (sMt(prms[iZ])!=sDEV && sz!=i2)*/)return rtnErr('lastIndexOf(string, substring)')
+	if(/*sMt(prms[iZ])==sDEV &&*/ sz>i2){
 		String item=strEvalExpr(r9,prms[sz-i1])
 		Integer idx
 		for(idx=sz-i2; idx>=iZ; idx--){
@@ -10025,10 +10025,6 @@ private Map func_count(Map r9,List<Map> prms){
 					t1=bcast(r9,j.value)
 					cnt+=t1 ? i1:iZ
 				}
-				/*m.each{
-					t1=bcast(r9,it.value)
-					cnt+=t1 ? i1:iZ
-				}*/
 			}else{
 				sz=list.size()
 				for(i=iZ; i<sz; i++){
@@ -10201,8 +10197,8 @@ private Map func_endswith(Map r9,List<Map> prms){
 private Map func_contains(Map r9,List<Map> prms){
 	Integer t0,idx
 	t0=prms.size()
-	if(badParams(r9,prms,i2) || (sMt(prms[iZ])!=sDEV && t0!=i2))return rtnErr('contains(string, substring)')
-	if(sMt(prms[iZ])==sDEV && t0>i2){
+	if(badParams(r9,prms,i2) /*|| (sMt(prms[iZ])!=sDEV && t0!=i2)*/)return rtnErr('contains(string, substring)')
+	if(/*sMt(prms[iZ])==sDEV &&*/ t0>i2){
 		t0=t0-i1
 		String item=strEvalExpr(r9,prms[t0])
 		for(idx=iZ; idx<t0; idx++){
