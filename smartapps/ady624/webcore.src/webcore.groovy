@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update August 16, 2022 for Hubitat
+ * Last update August 22, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -30,7 +30,7 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20220714_HE'
+@Field static final String sHVER='v0.3.114.20220822_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -4638,6 +4638,7 @@ Map getChildComparisons(){
 	ceil			: [ (sT): sDEC,						],
 	ceiling			: [ (sT): sDEC,						],
 	floor			: [ (sT): sDEC,						],
+	sort			: [ (sT): sDYN+'[]',				],
 	min				: [ (sT): sDEC,						],
 	max				: [ (sT): sDEC,						],
 	sum				: [ (sT): sDEC,						],
