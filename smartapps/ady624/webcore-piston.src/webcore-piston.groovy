@@ -5506,6 +5506,16 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 	if(!useQryS && reqCntntT==sAPPFORM && data instanceof Map){
 		data=data.collect{ String k,v -> encodeURIComponent(k)+'='+encodeURIComponent(v) }.join(sAMP)
 	}
+
+	Boolean internal; internal= uri.startsWith("10.") || uri.startsWith("192.168.")
+	if(!internal && uri.startsWith("172.")){ //check for the 172.16.x.x/12 class
+		String b; b=uri.tokenize(sDOT)[i1] //substring(4,6)
+		if(b.isInteger()){
+			Integer bi=b.toInteger()
+			internal=(bi>=16 && bi<=31)
+		}
+	}
+
 	try{
 		Map requestParams=[
 			uri: protocol+'://'+userPart+uri,
@@ -5514,7 +5524,7 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 			contentType: '*/*',
 			requestContentType: reqCntntT,
 			body: !useQryS ? data:null,
-			ignoreSSLIssues: (protocol=='https' && uri.contains('192.168.')),
+			ignoreSSLIssues: (protocol=='https' && internal),
 			timeout:i20
 		]
 		func=sBLK
@@ -5549,7 +5559,7 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 void ahttpRequestHandler(resp,Map callbackData){
 	Boolean binary; binary=false
 	def t0=resp.getHeaders()
-	String t1=t0!=null ? (String)t0."Content-Type":sNL
+	String t1=t0!=null ? sMs(t0,'Content-Type'):sNL
 	String mediaType; mediaType=t1 ? t1.toLowerCase()?.tokenize(';')[iZ] :sNL
 	switch(mediaType){
 		case 'image/jpeg':
@@ -5570,6 +5580,7 @@ void ahttpRequestHandler(resp,Map callbackData){
 	}
 	Boolean respOk=(responseCode>=200 && responseCode<300)
 
+	Map em=(Map)callbackData?.em
 	switch(callBackC){
 		case sHTTPR:
 			if(responseCode==204){ // no content
@@ -5592,13 +5603,11 @@ void ahttpRequestHandler(resp,Map callbackData){
 			}
 			break
 		case sLIFX:
-			Map em=(Map)callbackData?.em
 			if(!respOk) erMsg="lifx Error lifx sending ${em?.t}".toString()+erMsg
 			break
 		case sSENDE:
 			String msg
 			msg='Unknown error'
-			Map em=(Map)callbackData?.em
 			Boolean success
 			success=false
 			if(respOk){
@@ -5611,7 +5620,6 @@ void ahttpRequestHandler(resp,Map callbackData){
 			if(!success) erMsg="Error sending email to ${em?.t}: ${msg}".toString()
 			break
 		case sIFTTM:
-			Map em=(Map)callbackData?.em
 			if(!respOk) erMsg="ifttt Error iftttMaker to ${em?.t}: ${em?.p1},${em?.p2},${em?.p3} ".toString()+erMsg
 			break
 		case sSTOREM:
@@ -6404,10 +6412,10 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 					mv=rtnMapS((rEN==oV ? evntVal:sNL))
 					break
 				case 'ifttt':
-					mv=rtnMapS((rEN==('ifttt.'+evntVal)? evntVal:sNL))
+					mv=rtnMapS((rEN==('ifttt'+sDOT+evntVal)? evntVal:sNL))
 					break
 				case 'email':
-					mv=rtnMap('email',(rEN==('email.'+evntVal)? evntVal:sNL))
+					mv=rtnMap('email',(rEN==('email'+sDOT+evntVal)? evntVal:sNL))
 					break
 			}
 			break
