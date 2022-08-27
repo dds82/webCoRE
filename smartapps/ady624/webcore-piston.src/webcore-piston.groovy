@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update August 26, 2022 for Hubitat
+ * Last update August 27, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -5514,6 +5514,7 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 			contentType: '*/*',
 			requestContentType: reqCntntT,
 			body: !useQryS ? data:null,
+			ignoreSSLIssues: (protocol=='https' && uri.contains('192.168.')),
 			timeout:i20
 		]
 		func=sBLK
