@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update August 31, 2022 for Hubitat
+ * Last update September 2, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -273,6 +273,8 @@ static Boolean eric1(){ return false }
 @Field static final String sPS='ps'
 @Field static final String sCONDITIONS='conditions'
 @Field static final String sTRIGGERS='triggers'
+@Field static final String sJSON='json'
+@Field static final String sRESP='response'
 
 @Field static final String sZ6='000000'
 @Field static final String sHTTPR='httpRequest'
@@ -2369,7 +2371,9 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 				event.t=lMt(sch)
 			}
 
-			if(isEric(r9))myDetail r9,"async/timer event $event",iN2
+			if(isEric(r9)){
+				myDetail r9,"async/timer event $event",iN2
+			}
 
 			if(evntName==sASYNCREP){
 				syncTime=false
@@ -2379,8 +2383,8 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 					case sHTTPR:
 						Map ee; ee=mMs(sch,sSTACK)
 						ee=ee!=null ? ee:[:]
-						ee.response=event.responseData
-						ee.json=event.jsonData
+						ee[sRESP]=event.responseData
+						ee[sJSON]=event.jsonData
 						((Map)event[sSCH])[sSTACK]=ee
 						stSysVarVal(r9,sHTTPCNTN,sMs(event,'contentType'))
 					case sSTOREM:
@@ -2412,7 +2416,7 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 					switch(ttyp){
 						case sHTTPR:
 							stSysVarVal(r9,sHTTPCNTN,sBLK)
-							if(sch[sSTACK]!=null)((Map)((Map)event[sSCH])[sSTACK]).response=null
+							if(sch[sSTACK]!=null)((Map)((Map)event[sSCH])[sSTACK])[sRESP]=null
 						case sSTOREM:
 							stSysVarVal(r9,sHTTPCODE,rCode)
 							stSysVarVal(r9,sHTTPOK,sOk)
@@ -2557,8 +2561,8 @@ private Boolean executeEvent(Map r9,Map event){
 		targs=event.jsonData!=null ? event.jsonData:[:]
 
 		Map srcEvent; srcEvent=null
-		r9.json=[:]
-		r9.response=[:]
+		r9[sJSON]=[:]
+		r9[sRESP]=[:]
 
 		Map es=(Map)event?.schedule
 		if(es!=null && evntName==sTIME){
@@ -2571,8 +2575,8 @@ private Boolean executeEvent(Map r9,Map event){
 				sysV[sDLLRDEVICE].v=tMap[sDEV] ?:null
 				sysV[sDLLRDEVS].v=tMap[sDEVS] ?:[]
 				r9[sSYSVARS]=sysV
-				r9.json=tMap.json ?: [:]
-				r9.response=tMap.response ?: [:]
+				r9[sJSON]=tMap[sJSON] ?: [:]
+				r9[sRESP]=tMap[sRESP] ?: [:]
 				index=(Integer)srcEvent?.index ?: iZ
 // more to restore here?
 			}
@@ -2638,8 +2642,8 @@ private Boolean executeEvent(Map r9,Map event){
 
 		if(isEric(r9)){
 			myDetail r9,sCUREVT+" $mEvt",iN2
-			myDetail r9,"json ${r9['json']} ${myObj(r9['json'])}",iN2
-			myDetail r9,"response ${r9['response']} ${myObj(r9['response'])}",iN2
+			myDetail r9,"json ${r9[sJSON]} ${myObj(r9[sJSON])}",iN2
+			myDetail r9,"response ${r9[sRESP]} ${myObj(r9[sRESP])}",iN2
 			myDetail r9,"event ${r9[sEVENT]}",iN2
 			myDetail r9,"currun is ${currun(r9)}",iN2
 		}
@@ -2730,7 +2734,7 @@ private Boolean executeEvent(Map r9,Map event){
 @Field static List<String> cleanData
 private static List<String> fill_cleanData(){
 	return ['allDevices', sCACHEP, 'mem', sBREAK, 'powerSource', 'oldLocations', 'incidents', 'semaphoreDelay', sVARS,
-			'stateAccess', sATHR, sBIN, sBLD, sNWCACHE, 'mediaData', 'weather', sLOGS, sTRC, sSYSVARS, sLOCALV, 'previousEvent', 'json', 'response',
+			'stateAccess', sATHR, sBIN, sBLD, sNWCACHE, 'mediaData', 'weather', sLOGS, sTRC, sSYSVARS, sLOCALV, 'previousEvent', sJSON, sRESP,
 			sCACHE, sSTORE, 'settings', 'locationModeId', 'coreVersion', 'hcoreVersion', sCNCLATNS, sCNDTNSTC, sPSTNSTC, sFFT, sRUN,
 			'resumed', 'terminated', sINSTID, 'wakingUp', sSTMTL, sARGS, 'nfl', 'temp']
 }
@@ -3766,7 +3770,7 @@ private Boolean executeTask(Map r9,List devices,Map statement,Map task,Boolean a
 				}
 			}else
 				executePhysicalCommand(r9,device,command,prms)
-			if(isTrc(r9))trace msg,r9
+			if(isInf(r9))info msg,r9
 		}else{
 			if(vcmd!=null){
 				delay=executeVirtualCommand(r9,vcmd.a ? devices:device,command,prms)
@@ -4411,10 +4415,10 @@ private void requestWakeUp(Map r9,Map statement,Map task,Long timeOrDelay,String
 		fnd=false
 		def myResp,myJson,a
 
-		myResp=r9.response
+		myResp=r9[sRESP]
 		if(myResp.toString().size()>10000){ myResp=[:]; fnd=true } // state can only be total 100KB
 
-		myJson=r9.json
+		myJson=r9[sJSON]
 		if(myJson.toString().size()>10000){ myJson=[:]; fnd=true }
 		if(fnd)debug 'trimming from scheduled wakeup saved $response and/or $json due to large size',r9
 
@@ -4428,9 +4432,9 @@ private void requestWakeUp(Map r9,Map statement,Map task,Long timeOrDelay,String
 		a=(List)gtSysVarVal(r9,sDLLRDEVS); if(a)fnd=true
 		mstk[sDEVS]=a
 		if(myJson)fnd=true
-		mstk.json=myJson
+		mstk[sJSON]=myJson
 		if(myResp)fnd=true
-		mstk.response=myResp
+		mstk[sRESP]=myResp
 		if(fnd)mmschedule[sSTACK]=mstk
 // what about previousEvent httpContentType httpStatusCode httpStatusOk iftttStatusCode iftttStatusOk "\$mediaId" "\$mediaUrl" "\$mediaType" mediaData (big)
 
@@ -5549,7 +5553,8 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 			contentType: '*/*',
 			requestContentType: reqCntntT,
 			body: !useQryS ? data:null,
-			ignoreSSLIssues: (protocol=='https' && internal),
+			ignoreSSLIssues: internal, // (protocol=='https' && internal),
+			followRedirects: true,
 			timeout:i20
 		]
 		func=sBLK
@@ -5593,8 +5598,7 @@ void ahttpRequestHandler(resp,Map callbackData){
 		case 'image/gif':
 			binary=true
 	}
-	def data; data=null
-	def json=null
+	def data,json; data=null; json=null
 	Map setRtData; setRtData=[:]
 	String callBackC=(String)callbackData?.command
 	Integer responseCode; responseCode=resp.status
@@ -5618,10 +5622,8 @@ void ahttpRequestHandler(resp,Map callbackData){
 						if(eric() && ((String)gtSetting(sLOGNG))?.toInteger()>i2) debug "http response $mediaType $responseCode $data $t0",null
 						if(data!=null && !(data instanceof Map) && !(data instanceof List)){
 							def ndata=parseMyResp(data,mediaType)
-							if(ndata){
-								json=data
+							if(ndata)
 								data=ndata
-							}
 						}
 					}else{
 						if(resp.data!=null && resp.data instanceof java.io.ByteArrayInputStream){
@@ -5675,7 +5677,7 @@ private parseMyResp(aa,String mediaType=sNL){
 	ret=null
 	if(aa instanceof String || aa instanceof GString){
 		String a=aa.toString()
-		Boolean expectJson= mediaType ? mediaType.contains('json'):false
+		Boolean expectJson= mediaType ? mediaType.contains(sJSON):false
 		try{
 			if(stJson(a)){
 				ret=(LinkedHashMap)new JsonSlurper().parseText(a)
@@ -6136,10 +6138,10 @@ private Long vcmd_parseJson(Map r9,device,List prms){
 	String data=sLi(prms,iZ)
 	try{
 		if(stJson(data)){
-			r9.json=(LinkedHashMap)new JsonSlurper().parseText(data)
+			r9[sJSON]=(LinkedHashMap)new JsonSlurper().parseText(data)
 		}else if(data.startsWith(sLB) && data.endsWith(sRB)){
-			r9.json=(List)new JsonSlurper().parseText(data)
-		}else r9.json=[:]
+			r9[sJSON]=(List)new JsonSlurper().parseText(data)
+		}else r9[sJSON]=[:]
 	}catch(all){
 		error "Error parsing JSON data $data",r9,iN2,all
 	}
@@ -8331,11 +8333,11 @@ private Map getArgument(Map r9,String name){
 	return getJsonData(r9,ttt,name)
 }
 
-private Map getJson(Map r9,String name){ return getJsonData(r9,r9.json,name) }
+private Map getJson(Map r9,String name){ return getJsonData(r9,r9[sJSON],name) }
 
 private Map getPlaces(Map r9,String name){ return getJsonData(r9,r9.settings?.places,name) }
 
-private Map getResponse(Map r9,String name){ return getJsonData(r9,r9.response,name) }
+private Map getResponse(Map r9,String name){ return getJsonData(r9,r9[sRESP],name) }
 
 private Map getWeather(Map r9,String name){
 	if(r9.weather==null){
@@ -11619,7 +11621,8 @@ void doLog(String mcmd, String msg){
 		default:
 			clr= sCLRRED
 	}
-	log."$mcmd" span(msg,clr)
+	String myMsg= msg.replaceAll(sLTH, '&lt;').replaceAll(sGTH, '&gt;')
+	log."$mcmd" span(myMsg,clr)
 }
 
 private void info(message,Map r9,Integer shift=iN2,Exception err=null){ Map a=log(message,r9,shift,err,'info')}
@@ -11962,10 +11965,11 @@ private static LinkedHashMap<String,LinkedHashMap> getSystemVariables(){
 }
 
 @CompileStatic
-private static rtnStr(v,Boolean frcStr=false){
-	if(!frcStr && (v instanceof Map || v instanceof List))
-		if(v!=null && v!=[:] && v!=[] && v!=sBLK)return JsonOutput.toJson(v)
-	if(v!=null && v!=[:] && v!=[] && v!=sBLK)return "${v}".toString()
+private static String rtnStr(v,Boolean frcStr=false){
+	if(v!=null && v!=[:] && v!=[] && v!=sBLK){
+		if(!frcStr && (v instanceof Map || v instanceof List)) return JsonOutput.toJson(v)
+		else return "${v}".toString()
+	}
 	return null
 }
 
@@ -12000,9 +12004,9 @@ private gtSysVarVal(Map r9,String name, Boolean frcStr=false){
 		case sCURPHYS: return ce?.physical
 		case sCURVALUE: return ce?.value
 		case sCURUNIT: return ce?.unit
-		case sDJSON: return rtnStr(r9.json,frcStr)
+		case sDJSON: return rtnStr(r9[sJSON],frcStr)
 		case '$places': return rtnStr(((Map)r9.settings)?.places)
-		case sDRESP: return rtnStr(r9.response,frcStr)
+		case sDRESP: return rtnStr(r9[sRESP],frcStr)
 		case '$weather': return rtnStr(r9.weather,frcStr)
 		case '$nfl': return rtnStr(r9.nfl)
 		case '$incidents': return rtnStr(r9.incidents,frcStr)
