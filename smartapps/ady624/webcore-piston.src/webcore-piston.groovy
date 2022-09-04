@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update September 2, 2022 for Hubitat
+ * Last update September 4, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -2371,9 +2371,7 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 				event.t=lMt(sch)
 			}
 
-			if(isEric(r9)){
-				myDetail r9,"async/timer event $event",iN2
-			}
+			if(isEric(r9)) myDetail r9,"async/timer event $event",iN2
 
 			if(evntName==sASYNCREP){
 				syncTime=false
@@ -2548,7 +2546,7 @@ private Boolean executeEvent(Map r9,Map event){
 	try{
 		// see fixEvt for description of event
 		Integer index; index=iZ //event?.index ?: iZ
-		if(event.jsonData!=null){
+		if(event.jsonData){
 			Map attribute=Attributes()[evntName]
 			String attrI=attribute!=null ? sMs(attribute,sI):sNL
 			if(attrI!=sNL)
@@ -3770,7 +3768,7 @@ private Boolean executeTask(Map r9,List devices,Map statement,Map task,Boolean a
 				}
 			}else
 				executePhysicalCommand(r9,device,command,prms)
-			if(isInf(r9))info msg,r9
+			if(isInf(r9) && !isTrc(r9))info msg,r9
 		}else{
 			if(vcmd!=null){
 				delay=executeVirtualCommand(r9,vcmd.a ? devices:device,command,prms)
@@ -5598,7 +5596,7 @@ void ahttpRequestHandler(resp,Map callbackData){
 		case 'image/gif':
 			binary=true
 	}
-	def data,json; data=null; json=null
+	def data,json; data=[:]; json=[:]
 	Map setRtData; setRtData=[:]
 	String callBackC=(String)callbackData?.command
 	Integer responseCode; responseCode=resp.status
@@ -5609,6 +5607,7 @@ void ahttpRequestHandler(resp,Map callbackData){
 		if(!responseCode) responseCode=500
 	}
 	Boolean respOk=(responseCode>=200 && responseCode<300)
+	Boolean respRedir=(responseCode>=300 && responseCode<400)
 
 	Map em=(Map)callbackData?.em
 	switch(callBackC){
@@ -5616,7 +5615,7 @@ void ahttpRequestHandler(resp,Map callbackData){
 			if(responseCode==204){ // no content
 				mediaType=sBLK
 			}else{
-				if(respOk && resp.data){
+				if((respOk || respRedir || responseCode==401) && resp.data){
 					if(!binary){
 						data=resp.data
 						if(eric() && ((String)gtSetting(sLOGNG))?.toInteger()>i2) debug "http response $mediaType $responseCode $data $t0",null
@@ -5631,7 +5630,7 @@ void ahttpRequestHandler(resp,Map callbackData){
 							setRtData.mediaData=resp.data.decodeBase64() // HE binary data is b64encoded resp.data.getBytes()
 						}
 					}
-				}else erMsg='http'+erMsg
+				}else erMsg= 'http error'+erMsg
 			}
 			break
 		case sLIFX:
@@ -5676,7 +5675,7 @@ private parseMyResp(aa,String mediaType=sNL){
 	def ret
 	ret=null
 	if(aa instanceof String || aa instanceof GString){
-		String a=aa.toString()
+		String a=aa.toString() //.trim()
 		Boolean expectJson= mediaType ? mediaType.contains(sJSON):false
 		try{
 			if(stJson(a)){
