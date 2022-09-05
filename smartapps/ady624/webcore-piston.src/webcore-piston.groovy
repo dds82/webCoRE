@@ -5644,8 +5644,10 @@ void ahttpRequestHandler(resp,Map callbackData){
 							}
 						}
 					}else erMsg= 'http error'+erMsg
-				}catch(ignored){
+				}catch(all){
+					erMsg= erMsg ?: " Response Status: ${resp.status} error Message: ${all}".toString()
 					erMsg= 'http error'+erMsg
+					if(!responseCode) responseCode=500
 				}
 			}
 			break
