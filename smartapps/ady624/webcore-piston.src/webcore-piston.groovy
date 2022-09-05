@@ -5627,22 +5627,26 @@ void ahttpRequestHandler(resp,Map callbackData){
 			if(responseCode==204){ // no content
 				mediaType=sBLK
 			}else{
-				if((respOk || respRedir || responseCode==401) && resp.data){
-					if(!binary){
-						data=resp.data
-						if(eric() && ((String)gtSetting(sLOGNG))?.toInteger()>i2) debug "http response $mediaType $responseCode $data $t0",null
-						if(data!=null && !(data instanceof Map) && !(data instanceof List)){
-							def ndata=parseMyResp(data,mediaType)
-							if(ndata)
-								data=ndata
+				try{
+					if((respOk || respRedir || responseCode==401) && resp.data){
+						if(!binary){
+							data=resp.data
+							if(eric() && ((String)gtSetting(sLOGNG))?.toInteger()>i2) debug "http response $mediaType $responseCode $data $t0",null
+							if(data!=null && !(data instanceof Map) && !(data instanceof List)){
+								def ndata=parseMyResp(data,mediaType)
+								if(ndata)
+									data=ndata
+							}
+						}else{
+							if(resp.data!=null && resp.data instanceof java.io.ByteArrayInputStream){
+								setRtData.mediaType=mediaType
+								setRtData.mediaData=resp.data.decodeBase64() // HE binary data is b64encoded resp.data.getBytes()
+							}
 						}
-					}else{
-						if(resp.data!=null && resp.data instanceof java.io.ByteArrayInputStream){
-							setRtData.mediaType=mediaType
-							setRtData.mediaData=resp.data.decodeBase64() // HE binary data is b64encoded resp.data.getBytes()
-						}
-					}
-				}else erMsg= 'http error'+erMsg
+					}else erMsg= 'http error'+erMsg
+				}catch(ignored){
+					erMsg= 'http error'+erMsg
+				}
 			}
 			break
 		case sLIFX:
