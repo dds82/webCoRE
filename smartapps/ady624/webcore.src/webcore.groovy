@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update August 22, 2022 for Hubitat
+ * Last update September 7, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -105,6 +105,8 @@ preferences{
 
 @CompileStatic
 private static Boolean eric(){ return false }
+@CompileStatic
+private static Boolean eric1(){ return false }
 @CompileStatic
 private static Boolean graphsOn(){ return true }
 
@@ -528,7 +530,7 @@ def pageSettings(){
 			input "recovery", sENUM, (sTIT): "Run recovery", options: ["Never", "Every 5 minutes", "Every 10 minutes", "Every 15 minutes", "Every 30 minutes", "Every 1 hour", "Every 3 hours"], (sDESC): "Allows recovery procedures to run every so often", defaultValue: "Every 30 minutes", (sREQ): true
 		}
 
-		if((Boolean)getLogging().debug || eric()){
+		if(getLogging().debug || eric()){
 			String a='Tap to clear'
 			String b='complete'
 			section("Piston Log Cleanups"){
@@ -1522,7 +1524,7 @@ private api_intf_dashboard_load(){
 	}else result=[:]
 	tlastActivityFLD=t
 
-	if((Boolean)getLogging().debug) checkResultSize(result, false, s)
+	if(getLogging().debug) checkResultSize(result, false, s)
 
 	//for accuracy, use the time as close as possible to the render
 	result.now=wnow()
@@ -1624,7 +1626,7 @@ private api_intf_dashboard_piston_create(){
 }
 
 private findPiston(String id, String nm=sNULL){
-	def piston=null
+	def piston; piston=null
 	if(id!=sNULL || nm!=sNULL){
 		String n=handlePistn()
 		List t0=wgetChildApps().findAll{ (String)it.name==n }
@@ -1639,7 +1641,7 @@ private findPiston(String id, String nm=sNULL){
 }
 
 private api_intf_dashboard_piston_getDb() {
-	Map result=[:]
+	Map result; result=[:]
 	if(verifySecurityToken((String)params.token)){
 		String serverDbVersion=sHVER
 		debug "Dashboard: getDb sending new db current: ${serverDbVersion} in server"
@@ -1667,7 +1669,7 @@ private api_intf_dashboard_piston_getDb() {
 }
 
 private api_intf_dashboard_piston_get(){
-	Map result=[:]
+	Map result; result=[:]
 	Boolean requireDb
 	String wName=sAppId()
 	clearBaseResult('get Piston',wName)
@@ -1702,7 +1704,7 @@ private api_intf_dashboard_piston_get(){
 				result.dbVersion=serverDbVersion
 				//result.db=theDb
 			}
-			if((Boolean)getLogging().debug) checkResultSize(result, requireDb, "get piston")
+			if(getLogging().debug) checkResultSize(result, requireDb, "get piston")
 		}else{
 			result=api_get_error_result(sERRID,s)
 			warn "Dashboard: get piston bad ID : ${params?.id}"
@@ -2135,17 +2137,17 @@ private api_intf_variable_set(){
 	Map result
 	String meth="dashboard variable_set "
 	debug meth+"Request received to set a variable"
-	String meth1=sNULL
+	String meth1; meth1=sNULL
 	if(verifySecurityToken((String)params.token)){
 		String pid=(String)params.id
-		String name=(String)params.name
+		String name; name=(String)params.name
 		def value=params.value ? (LinkedHashMap) new JsonSlurper().parseText(new String(((String)params.value).decodeBase64(), "UTF-8")) : null
 		trace meth+"pid: $pid name: $name value: $value"
 		Map<String,Map> globalVars
 		Map<String,Object> localVars
 		if(!pid){
-			Boolean chgd=false
-			String vln=value ? (String)value.n : sNULL
+			Boolean chgd; chgd=false
+			String vln; vln=value ? (String)value.n : sNULL
 			if( (name && (Boolean)name.startsWith('@@')) || (vln && vln.startsWith('@@')) ){
 				String vn=sNULL
 				if(name && !value){
@@ -2175,7 +2177,7 @@ private api_intf_variable_set(){
 							else trace meth1
 						}
 						// add a variable
-						def vl=value.v
+						def vl; vl=value.v
 						if((String)value.t==sTIME){
 							Long aa=vl.toLong()
 							// the browers is in local zone but internally HE is utc
@@ -2201,7 +2203,7 @@ private api_intf_variable_set(){
 						def hg=getGlobalVar(vln)
 						if(!hg) warn meth+"GET HE global failed $vln"
 						else{
-							def vl=value.v
+							def vl; vl=value.v
 							if(vl){
 								if(eric())debug "vl is ${myObj(vl)}"
 								if((String)value.t==sTIME){
@@ -2555,7 +2557,7 @@ private api_intf_dashboard_piston_activity(){
 			tlastActivityFLD=wnow()
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
-	if((Boolean)getLogging().debug) checkResultSize(result, false, "piston activity")
+	if(getLogging().debug) checkResultSize(result, false, "piston activity")
 	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
@@ -2915,7 +2917,8 @@ private String getDashboardInitUrl(Boolean reg=false){
 	if(eric()) debug "getDashboardInitUrl: reg: $reg"
 	String url=reg ? getDashboardRegistrationUrl() : getDashboardUrl()
 	if(!url) return sNULL
-	String t0=url + (reg ? "register/" : "init/")
+	String t0
+	t0=url + (reg ? "register/" : "init/")
 	String regkey
 	if(isCustomEndpoint()){
 		if(eric())debug "getDashboardInitUrl: isCustomEndpoint"
@@ -2952,12 +2955,14 @@ private String getDashboardRegistrationUrl(){
 Map listAvailableDevices(Boolean raw=false, Boolean updateCache=false, Integer offset=0){
 	Long time=wnow()
 	def storageApp //=getStorageApp()
-	Map result=[:]
+	Map result; result=[:]
 	if(storageApp){
 		result=storageApp.listAvailableDevices(raw, offset)
 	}else{
-		List myDevices=(List)((Map<String,Object>)settings).findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().sort{ it.getDisplayName() }
-		List devices=(List)myDevices.unique{ it.id }
+		List myDevices
+		myDevices=(List)((Map<String,Object>)settings).findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().sort{ it.getDisplayName() }
+		List devices
+		devices=(List)myDevices.unique{ it.id }
 		if(raw){
 			result=devices.collectEntries{ dev -> [(hashId(dev.id)): dev]}
 		}else{
@@ -2970,7 +2975,7 @@ Map listAvailableDevices(Boolean raw=false, Boolean updateCache=false, Integer o
 //				log.debug "Loaded device at ${idx} after ${now() - time}ms. Data size is ${result.toString().size()}"
 					result.devices[hashId(dev.id)]=getDevDetails(dev, true)
 
-					Boolean stop=false
+					Boolean stop; stop=false
 					String jsonData=JsonOutput.toJson(result)
 					Integer responseLength=jsonData.getBytes("UTF-8").length
 					if(responseLength > 50000 || wnow()-time > 4000) stop=true
@@ -2988,7 +2993,8 @@ Map listAvailableDevices(Boolean raw=false, Boolean updateCache=false, Integer o
 	}
 	if(raw || (Boolean)result.complete){
 		String n=handlePres()
-		List presenceDevices=getChildDevices().findAll{ (String)it.name==n }
+		List presenceDevices
+		presenceDevices=getChildDevices().findAll{ (String)it.name==n }
 		if(presenceDevices && presenceDevices.size()){
 			if(raw){
 				result << presenceDevices.collectEntries{ dev -> [(hashId(dev.id)): dev]}
@@ -3006,7 +3012,7 @@ Map listAvailableDevices(Boolean raw=false, Boolean updateCache=false, Integer o
 Map getDevDetails(dev, Boolean addtransform=false){
 	Map<String,Map> overrides=commandOverrides()
 	String nm=dev.getDisplayName()
-	List cmdL=dev.getSupportedCommands()
+	List cmdL; cmdL=dev.getSupportedCommands()
 	cmdL=cmdL.unique{ (String)it.getName() }
 	List newCL=[]
 	for(cmd in cmdL){
@@ -3022,7 +3028,7 @@ Map getDevDetails(dev, Boolean addtransform=false){
 			}
 		}
 	}
-	return [
+	Map res=[
 			(sN): nm,
 			cn: dev.getCapabilities()*.name,
 			(sA): ((List)dev.getSupportedAttributes()).unique{ (String)it.name }.collect{
@@ -3043,6 +3049,8 @@ Map getDevDetails(dev, Boolean addtransform=false){
 			]} */
 			(sC): newCL.unique{ (String)it.n }
 	]
+	if(eric1())debug "getDevDetails transform: $addtransform result: $res"
+	return res
 }
 
 /*
@@ -3055,7 +3063,7 @@ Map getDevDetails(dev, Boolean addtransform=false){
 
  Z-Wave Poller only supports Generic Z-Wave Dimmer and Generic Z-Wave Switch. It won't work with other drivers, as there is a handshake with the driver.
 
- You can determine if Z-Wave Poller is installed with this:
+ You can determine if Z-Wave Poller is installed with this
  isAppInstalled("hubitat", "Z-Wave Poller", "SYSTEM")
 */
 
@@ -4018,7 +4026,7 @@ Map getChildAttributes(){
 	Map<String,Map> cleanResult=[:]
 	Map defv=[(sN):sA]
 	for(it in result){
-		Map t0=[:]
+		Map t0; t0=[:]
 		String hasI=it.value.i
 		Boolean hasP=it.value.p
 		String hasT=it.value.t
@@ -4249,7 +4257,7 @@ Map getChildCommands(){
 	resumeTrack			: [ (sN): "Resume track...",				(sD): "Resume track <uri>{0}</uri>",							(sP): [[(sN):"Track URL", (sT):"url"]],			],
 	setCode				: [ (sN): "Set Code...",				(sD): "Set code {0} to {1} {2}",						(sP): [[(sN):"Code Position", (sT):sINT], [(sN):"Pin", (sT):sSTR], [(sN):"Name", (sT):sSTR]],							],
 	setCodeLength		: [ (sN): "Set Code Max Length...",		(sD): "Set code length to {0}",						(sP): [[(sN):"Code Length", (sT):sINT]],						],
-	setColor			: [ (sN): "Set color...",		(sI): 'palette', is: "l",	(sD): "Set color to {0}{1}",			(sA): sCOLOR,				(sP): [[(sN):sCCOLOR, (sT):sCOLOR], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],							],
+	setColor			: [ (sN): "Set color...",		(sI): 'palette', is: sL,	(sD): "Set color to {0}{1}",			(sA): sCOLOR,				(sP): [[(sN):sCCOLOR, (sT):sCOLOR], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],							],
 	setColorTemperature	: [ (sN): "Set color temperature...",		(sD): "Set color temperature to {0}°K{1}",			(sA): "colorTemperature",			(sP): [[(sN):"Color Temperature", (sT):"colorTemperature"], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY],[(sN):"Level", (sT):sLVL],[(sN):"Transition duration (seconds)", (sT):sINT,(sD):" over {v} seconds"]]	],
 	setConsumableStatus	: [ (sN): "Set consumable status...",		(sD): "Set consumable status to {0}",								(sP): [[(sN):"Status", (sT):"consumable"]],		],
 	setCoolingSetpoint	: [ (sN): "Set cooling point...",			(sD): "Set cooling point at {0}{T}",			(sA): "thermostatCoolingSetpoint",		(sP): [[(sN):"Desired temperature", (sT):"thermostatSetpoint"]],	],
@@ -4257,7 +4265,7 @@ Map getChildCommands(){
 	setEntryDelay		: [ (sN): "Set Entry Delay...",			(sD): "Set entry delay to {0}",									(sP): [[(sN):"Entry Delay", (sT):sINT]],				],
 	setExitDelay		: [ (sN): "Set Exit Delay...",			(sD): "Set exit delay to {0}",									(sP): [[(sN):"Exit Delay", (sT):sINT]],				],
 	setHeatingSetpoint	: [ (sN): "Set heating point...",			(sD): "Set heating point at {0}{T}",			(sA): "thermostatHeatingSetpoint",		(sP): [[(sN):"Desired temperature", (sT):"thermostatSetpoint"]],																	],
-	setHue				: [ (sN): "Set hue...",		(sI): 'palette', is: "l",	(sD): "Set hue to {0}°{1}",			(sA): "hue",				(sP): [[(sN):"Hue", (sT):"hue"], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],								],
+	setHue				: [ (sN): "Set hue...",		(sI): 'palette', is: sL,	(sD): "Set hue to {0}°{1}",			(sA): "hue",				(sP): [[(sN):"Hue", (sT):"hue"], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],								],
 	setInfraredLevel	: [ (sN): "Set infrared level...",	(sI): 'signal',	(sD): "Set infrared level to {0}%{1}",			(sA): "infraredLevel",			(sP): [[(sN):"Level", (sT):"infraredLevel"], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],					],
 	setLevel			: [ (sN): "Set level...",		(sI): 'signal',	(sD): "Set level to {0}%{2}{1}",				(sA): sLVL,				(sP): [[(sN):"Level", (sT):sLVL], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY],[(sN):"Transition duration (seconds)", (sT):sINT,(sD):" over {v} seconds"]],							],
 	setNextEffect		: [ (sN): "Set next light effect",																					],
@@ -4376,44 +4384,49 @@ static Map getChildVirtCommands(){
 }
 
 	//a=aggregate (only execute once for a list of devices)
-	//d=display
-	//n=name
-	//t=type
-	//i=icon
 	//o=override physical with virtual
-	//p=parameters
+
+	//d=display (UI)
+	//n=name (UI)
+	//i=icon   (UI) fontawesome
+	//is= iconstyle (UI)  s- solid (default); r- regular, l- light  not used: b - brand, d- duotone V5 - letter; V6 is full word
+	//p=parameters (UI)
+		//t=type (UI parameters)
+	//r= require command (UI)
 @Field static final String sBVB='{v}'
 private static Map<String,Map> virtualCommands(){
 	List<String> tileIndexes=['1','2','3','4','5','6','7','8','9','10','11','12','13','14','15','16']
-	Map<String,Map> a= [
+	String is='is'
+	Map<String,Map> a
+	a=[
 		noop					: [ (sN): "No operation",				(sA): true,	(sI): "circle",				(sD): "No operation",						],
-		wait					: [ (sN): "Wait...",					(sA): true,	(sI): sCLOCK, is: sR,		(sD): "Wait {0}",						(sP): [[(sN):sDURATION, (sT):sDUR]],				],
-		waitRandom				: [ (sN): "Wait randomly...",			(sA): true,	(sI): sCLOCK, is: sR,		(sD): "Wait randomly between {0} and {1}",									(sP): [[(sN):"At least", (sT):sDUR],[(sN):"At most", (sT):sDUR]],	],
-		waitForTime				: [ (sN): "Wait for time...",			(sA): true,	(sI): sCLOCK, is: sR,		(sD): "Wait until {0}",													(sP): [[(sN):"Time", (sT):sTIME]],	],
-		waitForDateTime			: [ (sN): "Wait for date & time...",	(sA): true,	(sI): sCLOCK, is: sR,		(sD): "Wait until {0}",													(sP): [[(sN):"Date & Time", (sT):sDTIME]],	],
-		executePiston			: [ (sN): "Execute piston...",			(sA): true,	(sI): sCLOCK, is: sR,		(sD): "Execute piston \"{0}\"{1}",											(sP): [[(sN):"Piston", (sT):"piston"], [(sN):"Arguments", (sT):"variables", (sD):" with arguments {v}"],[(sN):"Wait for execution", (sT):sBOOLN,(sD):" and wait for execution to finish",w:"webCoRE can only wait on piston executions of pistons within the same instance as the caller. Please note that global variables updated in the callee piston do NOT get reflected immediately in the caller piston, the new values will be available on the next run."]],	],
-		pausePiston				: [ (sN): "Pause piston...",			(sA): true,	(sI): sCLOCK, is: sR,		(sD): "Pause piston \"{0}\"",												(sP): [[(sN):"Piston", (sT):"piston"]],	],
-		resumePiston			: [ (sN): "Resume piston...",			(sA): true,	(sI): sCLOCK, is: sR,		(sD): "Resume piston \"{0}\"",												(sP): [[(sN):"Piston", (sT):"piston"]],	],
-		executeRule				: [ (sN): "Execute Rule...",			(sA): true,	(sI): sCLOCK, is: sR,		(sD): "Execute Rule \"{0}\" with action {1}",											(sP): [[(sN):"Rule", (sT):"rule"], [(sN):"Argument", (sT):sENUM, (sO):['Run','Stop','Pause','Resume','Evaluate','Set Boolean True','Set Boolean False']] ]	],
+		wait					: [ (sN): "Wait...",					(sA): true,	(sI): sCLOCK, (is): sR,		(sD): "Wait {0}",						(sP): [[(sN):sDURATION, (sT):sDUR]],				],
+		waitRandom				: [ (sN): "Wait randomly...",			(sA): true,	(sI): sCLOCK, (is): sR,		(sD): "Wait randomly between {0} and {1}",									(sP): [[(sN):"At least", (sT):sDUR],[(sN):"At most", (sT):sDUR]],	],
+		waitForTime				: [ (sN): "Wait for time...",			(sA): true,	(sI): sCLOCK, (is): sR,		(sD): "Wait until {0}",													(sP): [[(sN):"Time", (sT):sTIME]],	],
+		waitForDateTime			: [ (sN): "Wait for date & time...",	(sA): true,	(sI): sCLOCK, (is): sR,		(sD): "Wait until {0}",													(sP): [[(sN):"Date & Time", (sT):sDTIME]],	],
+		executePiston			: [ (sN): "Execute piston...",			(sA): true,	(sI): sCLOCK, (is): sR,		(sD): "Execute piston \"{0}\"{1}",											(sP): [[(sN):"Piston", (sT):"piston"], [(sN):"Arguments", (sT):"variables", (sD):" with arguments {v}"],[(sN):"Wait for execution", (sT):sBOOLN,(sD):" and wait for execution to finish",w:"webCoRE can only wait on piston executions of pistons within the same instance as the caller. Please note that global variables updated in the callee piston do NOT get reflected immediately in the caller piston, the new values will be available on the next run."]],	],
+		pausePiston				: [ (sN): "Pause piston...",			(sA): true,	(sI): sCLOCK, (is): sR,		(sD): "Pause piston \"{0}\"",												(sP): [[(sN):"Piston", (sT):"piston"]],	],
+		resumePiston			: [ (sN): "Resume piston...",			(sA): true,	(sI): sCLOCK, (is): sR,		(sD): "Resume piston \"{0}\"",												(sP): [[(sN):"Piston", (sT):"piston"]],	],
+		executeRule				: [ (sN): "Execute Rule...",			(sA): true,	(sI): sCLOCK, (is): sR,		(sD): "Execute Rule \"{0}\" with action {1}",											(sP): [[(sN):"Rule", (sT):"rule"], [(sN):"Argument", (sT):sENUM, (sO):['Run','Stop','Pause','Resume','Evaluate','Set Boolean True','Set Boolean False']] ]	],
 		toggle					: [ (sN): "Toggle", (sR): [sON, sOFF],			(sI): sTOGON																				],
 		toggleRandom			: [ (sN): "Random toggle", (sR): [sON, sOFF],		(sI): sTOGON,				(sD): "Random toggle{0}",													(sP): [[(sN):"Probability for on", (sT):sLVL, (sD):" with a {v}% probability for on"]],	],
 		setSwitch				: [ (sN): "Set switch...", (sR): [sON, sOFF],		(sI): sTOGON,				(sD): "Set switch to {0}",													(sP): [[(sN):"Switch value", (sT):sSWITCH]],																],
-		setHSLColor				: [ (sN): "Set color... (hsl)",				(sI): "palette", is: "l",			(sD): "Set color to H:{0}° / S:{1}% / L%:{2}{3}",				(sR): ["setColor"],				(sP): [[(sN):"Hue", (sT):"hue"], [(sN):"Saturation", (sT):"saturation"], [(sN):"Level", (sT):sLVL], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],							],
+		setHSLColor				: [ (sN): "Set color... (hsl)",				(sI): "palette", (is): sL,			(sD): "Set color to H:{0}° / S:{1}% / L%:{2}{3}",				(sR): ["setColor"],				(sP): [[(sN):"Hue", (sT):"hue"], [(sN):"Saturation", (sT):"saturation"], [(sN):"Level", (sT):sLVL], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],							],
 		toggleLevel				: [ (sN): "Toggle level...",				(sI): "toggle-off",					(sD): "Toggle level between 0% and {0}%",	(sR): [sON, sOFF, "setLevel"],	(sP): [[(sN):"Level", (sT):sLVL]],																																	],
-		sendNotification		: [ (sN): "Send notification...",		(sA): true,	(sI): "comment-alt", is: sR,			(sD): "Send notification \"{0}\"",											(sP): [[(sN):"Message", (sT):sSTR]],												],
-		sendPushNotification	: [ (sN): "Send PUSH notification...",	(sA): true,	(sI): "comment-alt", is: sR,			(sD): "Send PUSH notification \"{0}\"{1}",									(sP): [[(sN):"Message", (sT):sSTR],[(sN):"Store in Messages", (sT):sBOOLN, (sD):" and store in Messages", (sS):1]],	],
-		sendSMSNotification		: [ (sN): "Send SMS notification...",	(sA): true,	(sI): "comment-alt", is: sR,			(sD): "Send SMS notification \"{0}\" to {1}{2}",							(sP): [[(sN):"Message", (sT):sSTR],[(sN):"Phone number", (sT):"phone",w:"HE requires +countrycode in phone number."],[(sN):"Store in Messages", (sT):sBOOLN, (sD):" and store in Messages", (sS):1]],	],
+		sendNotification		: [ (sN): "Send notification...",		(sA): true,	(sI): "comment-alt", (is): sR,			(sD): "Send notification \"{0}\"",											(sP): [[(sN):"Message", (sT):sSTR]],												],
+		sendPushNotification	: [ (sN): "Send PUSH notification...",	(sA): true,	(sI): "comment-alt", (is): sR,			(sD): "Send PUSH notification \"{0}\"{1}",									(sP): [[(sN):"Message", (sT):sSTR],[(sN):"Store in Messages", (sT):sBOOLN, (sD):" and store in Messages", (sS):1]],	],
+		sendSMSNotification		: [ (sN): "Send SMS notification...",	(sA): true,	(sI): "comment-alt", (is): sR,			(sD): "Send SMS notification \"{0}\" to {1}{2}",							(sP): [[(sN):"Message", (sT):sSTR],[(sN):"Phone number", (sT):"phone",w:"HE requires +countrycode in phone number."],[(sN):"Store in Messages", (sT):sBOOLN, (sD):" and store in Messages", (sS):1]],	],
 		log						: [ (sN): "Log to console...",			(sA): true,	(sI): "bug",				(sD): "Log {0} \"{1}\"{2}",												(sP): [[(sN):"Log type", (sT):sENUM, (sO):["info","trace","debug","warn","error"]],[(sN):"Message", (sT):sSTR],[(sN):"Store in Messages", (sT):sBOOLN, (sD):" and store in Messages", (sS):1]],	],
-		httpRequest				: [ (sN): "Make a web request",			(sA): true,	(sI): "anchor", is: sR,		(sD): "Make a {1} request to {0}",					(sP): [[(sN):"URL", (sT):"uri"],[(sN):"Method", (sT):sENUM, (sO):["GET","POST","PUT","DELETE","HEAD"]],[(sN):"Request body type", (sT):sENUM, (sO):["JSON","FORM","CUSTOM"]],[(sN):"Send variables", (sT):"variables", (sD):"data {v}"],[(sN):"Request body", (sT):sSTR, (sD):"data {v}"],[(sN):"Request content type", (sT):sENUM, (sO):["text/plain","text/html",sAPPJSON,"application/x-www-form-urlencoded","application/xml"]],[(sN):"Authorization header", (sT):sSTR, (sD):sBVB]],	],
-		setVariable				: [ (sN): "Set variable...",			(sA): true,	(sI): "superscript", is:sR,	(sD): "Set variable {0} = {1}",											(sP): [[(sN):"Variable", (sT):sVARIABLE],[(sN):"Value", (sT):sDYN]],	],
-		setState				: [ (sN): "Set piston state...",		(sA): true,	(sI): "align-left", is:"l",	(sD): "Set piston state to \"{0}\"",										(sP): [[(sN):"State", (sT):sSTR]],	],
-		setTileColor			: [ (sN): "Set piston tile colors...",	(sA): true,	(sI): "info-square", is:"l",	(sD): "Set piston tile #{0} colors to {1} over {2}{3}",					(sP): [[(sN):"Tile Index", (sT):sENUM,(sO):tileIndexes],[(sN):"Text Color", (sT):sCOLOR],[(sN):"Background Color", (sT):sCOLOR],[(sN):"Flash mode", (sT):sBOOLN,(sD):" (flashing)"]],	],
-		setTileTitle			: [ (sN): "Set piston tile title...",	(sA): true,	(sI): "info-square", is:"l",	(sD): "Set piston tile #{0} title to \"{1}\"",								(sP): [[(sN):"Tile Index", (sT):sENUM,(sO):tileIndexes],[(sN):"Title", (sT):sSTR]],	],
-		setTileOTitle			: [ (sN): "Set piston tile mouseover title...",	(sA): true,	(sI): "info-square", is:"l",	(sD): "Set piston tile #{0} mouseover title to \"{1}\"",								(sP): [[(sN):"Tile Index", (sT):sENUM,(sO):tileIndexes],[(sN):"Title", (sT):sSTR]],	],
-		setTileText				: [ (sN): "Set piston tile text...",	(sA): true,	(sI): "info-square", is:"l",	(sD): "Set piston tile #{0} text to \"{1}\"",								(sP): [[(sN):"Tile Index", (sT):sENUM,(sO):tileIndexes],[(sN):"Text", (sT):sSTR]],	],
-		setTileFooter			: [ (sN): "Set piston tile footer...",	(sA): true,	(sI): "info-square", is:"l",	(sD): "Set piston tile #{0} footer to \"{1}\"",							(sP): [[(sN):"Tile Index", (sT):sENUM,(sO):tileIndexes],[(sN):"Footer", (sT):sSTR]],	],
-		setTile					: [ (sN): "Set piston tile...",			(sA): true,	(sI): "info-square", is:"l",	(sD): "Set piston tile #{0} title to \"{1}\", text to \"{2}\", footer to \"{3}\", and colors to {4} over {5}{6}",		(sP): [[(sN):"Tile Index", (sT):sENUM,(sO):tileIndexes],[(sN):"Title", (sT):sSTR],[(sN):"Text", (sT):sSTR],[(sN):"Footer", (sT):sSTR],[(sN):"Text Color", (sT):sCOLOR],[(sN):"Background Color", (sT):sCOLOR],[(sN):"Flash mode", (sT):sBOOLN,(sD):" (flashing)"]],	],
-		clearTile				: [ (sN): "Clear piston tile...",		(sA): true,	(sI): "info-square", is:"l",	(sD): "Clear piston tile #{0}",											(sP): [[(sN):"Tile Index", (sT):sENUM,(sO):tileIndexes]],	],
+		httpRequest				: [ (sN): "Make a web request",			(sA): true,	(sI): "anchor", (is): sR,		(sD): "Make a {1} request to {0}",					(sP): [[(sN):"URL", (sT):"uri"],[(sN):"Method", (sT):sENUM, (sO):["GET","POST","PUT","DELETE","HEAD"]],[(sN):"Request body type", (sT):sENUM, (sO):["JSON","FORM","CUSTOM"]],[(sN):"Send variables", (sT):"variables", (sD):"data {v}"],[(sN):"Request body", (sT):sSTR, (sD):"data {v}"],[(sN):"Request content type", (sT):sENUM, (sO):["text/plain","text/html",sAPPJSON,"application/x-www-form-urlencoded","application/xml"]],[(sN):"Authorization header", (sT):sSTR, (sD):sBVB]],	],
+		setVariable				: [ (sN): "Set variable...",			(sA): true,	(sI): "superscript", (is):sR,	(sD): "Set variable {0} = {1}",											(sP): [[(sN):"Variable", (sT):sVARIABLE],[(sN):"Value", (sT):sDYN]],	],
+		setState				: [ (sN): "Set piston state...",		(sA): true,	(sI): "align-left", (is):sL,	(sD): "Set piston state to \"{0}\"",										(sP): [[(sN):"State", (sT):sSTR]],	],
+		setTileColor			: [ (sN): "Set piston tile colors...",	(sA): true,	(sI): "info-square", (is):sL,	(sD): "Set piston tile #{0} colors to {1} over {2}{3}",					(sP): [[(sN):"Tile Index", (sT):sENUM,(sO):tileIndexes],[(sN):"Text Color", (sT):sCOLOR],[(sN):"Background Color", (sT):sCOLOR],[(sN):"Flash mode", (sT):sBOOLN,(sD):" (flashing)"]],	],
+		setTileTitle			: [ (sN): "Set piston tile title...",	(sA): true,	(sI): "info-square", (is):sL,	(sD): "Set piston tile #{0} title to \"{1}\"",								(sP): [[(sN):"Tile Index", (sT):sENUM,(sO):tileIndexes],[(sN):"Title", (sT):sSTR]],	],
+		setTileOTitle			: [ (sN): "Set piston tile mouseover title...",	(sA): true,	(sI): "info-square", (is):sL,	(sD): "Set piston tile #{0} mouseover title to \"{1}\"",								(sP): [[(sN):"Tile Index", (sT):sENUM,(sO):tileIndexes],[(sN):"Title", (sT):sSTR]],	],
+		setTileText				: [ (sN): "Set piston tile text...",	(sA): true,	(sI): "info-square", (is):sL,	(sD): "Set piston tile #{0} text to \"{1}\"",								(sP): [[(sN):"Tile Index", (sT):sENUM,(sO):tileIndexes],[(sN):"Text", (sT):sSTR]],	],
+		setTileFooter			: [ (sN): "Set piston tile footer...",	(sA): true,	(sI): "info-square", (is):sL,	(sD): "Set piston tile #{0} footer to \"{1}\"",							(sP): [[(sN):"Tile Index", (sT):sENUM,(sO):tileIndexes],[(sN):"Footer", (sT):sSTR]],	],
+		setTile					: [ (sN): "Set piston tile...",			(sA): true,	(sI): "info-square", (is):sL,	(sD): "Set piston tile #{0} title to \"{1}\", text to \"{2}\", footer to \"{3}\", and colors to {4} over {5}{6}",		(sP): [[(sN):"Tile Index", (sT):sENUM,(sO):tileIndexes],[(sN):"Title", (sT):sSTR],[(sN):"Text", (sT):sSTR],[(sN):"Footer", (sT):sSTR],[(sN):"Text Color", (sT):sCOLOR],[(sN):"Background Color", (sT):sCOLOR],[(sN):"Flash mode", (sT):sBOOLN,(sD):" (flashing)"]],	],
+		clearTile				: [ (sN): "Clear piston tile...",		(sA): true,	(sI): "info-square", (is):sL,	(sD): "Clear piston tile #{0}",											(sP): [[(sN):"Tile Index", (sT):sENUM,(sO):tileIndexes]],	],
 		setLocationMode			: [ (sN): "Set location mode...",		(sA): true,	(sI): sBLK,						(sD): "Set location mode to {0}",											(sP): [[(sN):"Mode", (sT):"mode"]],																														],
 		sendEmail				: [ (sN): "Send email...",				(sA): true,	(sI): "envelope",				(sD): "Send email with subject \"{1}\" to {0}",							(sP): [[(sN):"Recipient", (sT):"email"],[(sN):"Subject", (sT):sSTR],[(sN):"Message body", (sT):sSTR]],																							],
 		wolRequest				: [ (sN): "Wake a LAN device",			(sA): true,	(sI): sBLK,						(sD): "Wake LAN device at address {0}{1}",									(sP): [[(sN):"MAC address", (sT):sSTR],[(sN):"Secure code", (sT):sSTR,(sD):" with secure code {v}"]],	],
@@ -4454,7 +4467,7 @@ private static Map<String,Map> virtualCommands(){
 		//keep emulated flash to not break old pistons
 		emulatedFlash			: [ (sN): "(Old do not use) Emulated Flash",	(sR): [sON, sOFF],			(sI): sTOGON,				(sD): "(Old do not use)Flash on {0} / off {1} for {2} times{3}",							(sP): [[(sN):"On duration", (sT):sDUR],[(sN):"Off duration", (sT):sDUR],[(sN):sNUMFLASH, (sT):sINT], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],																], //add back emulated flash with "o" option so that it overrides the native flash command
 		flash					: [ (sN): "Flash...",	(sR): [sON, sOFF],		(sI): sTOGON,				(sD): "Flash on {0} / off {1} for {2} times{3}",							(sP): [[(sN):"On duration", (sT):sDUR],[(sN):"Off duration", (sT):sDUR],[(sN):sNUMFLASH, (sT):sINT], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],		(sO): true /*override physical command*/													]
-	]
+	] as Map<String,Map>
 	if(graphsOn()){
 		a = a + [
 			readFuelStream		: [ (sN): "Read fuel stream...",		(sA): true,		(sD): "Read entire fuel stream {0}{1} to \$fuel",			(sP): [[(sN): "Canister", (sT):sTXT, (sD):"{v} \\ "], [(sN):"Fuel stream name", (sT):sTXT] ],					],

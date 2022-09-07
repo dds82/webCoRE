@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update September 5, 2022 for Hubitat
+ * Last update September 6, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -4710,18 +4710,17 @@ private Long vcmd_sendEmail(Map r9,device,List prms){
 	Map requestParams=[
 		uri: 'https://api.webcore.co/email/send/'+sMs(r9,sLOCID),
 		query: null,
-		headers: [:],//(auth ? [Authorization: auth]:[:]),
+		headers: [:],
 		requestContentType: sAPPJSON,
 		body: data,
 		timeout:i20
 	]
-	String msg='Unknown error'
 
 	try{
 		asynchttpPost('ahttpRequestHandler',requestParams,[command:sSENDE,em:data])
 		return 24000L
 	}catch(all){
-		error "Error sending email to ${data.t}: $msg",r9,iN2,all
+		error "Error sending email to ${data.t}: Unknown error",r9,iN2,all
 	}
 	return lZ
 }
@@ -5492,7 +5491,7 @@ private Long vcmd_lifxPulse(Map r9,device,List prms){
 }
 
 private Long vcmd_httpRequest(Map r9,device,List prms){
-	String auth,cntntT,uri
+	String uri
 	uri=(sLi(prms,iZ)).replace(sSPC,"%20")
 	if(!uri){
 		error "Error executing external web request:no URI",r9
@@ -5502,10 +5501,11 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 	Boolean useQryS= (method in [sGET,sDELETE,sHEAD])
 	String reqBodyT=sLi(prms,i2)
 	def variables=prms[i3]
+	String auth,cntntT,requestBody,sdata
 	auth=sNL
-	def requestBody,data
-	requestBody=null
 	cntntT=sNL
+	requestBody=sNL
+	sdata=sNL
 	if(prms.size()==i5){
 		auth=sLi(prms,i4)
 	}else if(prms.size()==i7){
@@ -5524,8 +5524,8 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 	}
 	if(uriParts.size()==i2){
 		//remove the httpX:// from the uri
-		protocol=(String)uriParts[iZ].toLowerCase()
-		uri=(String)uriParts[i1]
+		protocol=uriParts[iZ].toLowerCase()
+		uri=uriParts[i1]
 	}
 	//support for user:pass@IP
 	if(uri.contains(sAT)){
@@ -5533,21 +5533,20 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 		userPart=uriSubParts[iZ]+sAT
 		uri=uriSubParts[i1]
 	}
-	data=null
+	Map<String,Object> data; data=[:]
 	if(reqBodyT=='CUSTOM' && !useQryS){
-		data=requestBody
+		sdata=requestBody
 	}else if(variables instanceof List){
 		for(String variable in ((List)variables).findAll{ !!it }){
-			data=data ?: [:]
 			data[variable]=getVariable(r9,variable).v
 		}
 	}
-	if(!useQryS && reqCntntT==sAPPFORM && data instanceof Map){
-		data=data.collect{ String k,v -> encodeURIComponent(k)+'='+encodeURIComponent(v) }.join(sAMP)
+	if(!useQryS && reqCntntT==sAPPFORM && data && data instanceof Map){
+		sdata=data.collect{ String k,v -> encodeURIComponent(k)+'='+encodeURIComponent(v) }.join(sAMP)
 	}
 
-	Boolean internal; internal= uri.startsWith("10.") || uri.startsWith("192.168.")
-	if(!internal && uri.startsWith("172.")){ //check for the 172.16.x.x/12 class
+	Boolean internal; internal= uri.startsWith('10.') || uri.startsWith('192.168.')
+	if(!internal && uri.startsWith('172.')){ //check for the 172.16.x.x/12 class
 		String b; b=uri.tokenize(sDOT)[i1] //substring(4,6)
 		if(b.isInteger()){
 			Integer bi=b.toInteger()
@@ -5558,7 +5557,7 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 	try{
 		Map requestParams=[
 			uri: protocol+'://'+userPart+uri,
-			query: useQryS ? data:null,
+			query: useQryS ? sdata:null,
 			headers: (auth ? (stJson(auth)? (new JsonSlurper().parseText(auth)):[Authorization: auth]):[:]),
 			contentType: '*/*',
 			requestContentType: reqCntntT,
@@ -5645,7 +5644,7 @@ void ahttpRequestHandler(resp,Map callbackData){
 						}
 					}else erMsg= 'http error'+erMsg
 				}catch(all){
-					erMsg= erMsg ?: " Response Status: ${resp.status} error Message: ${all}".toString()
+					erMsg= erMsg ?: " Response Status: ${resp.status} exception Message: ${all}".toString()
 					erMsg= 'http error'+erMsg
 					if(!responseCode) responseCode=500
 				}
@@ -5655,10 +5654,8 @@ void ahttpRequestHandler(resp,Map callbackData){
 			if(!respOk) erMsg="lifx Error lifx sending ${em?.t}".toString()+erMsg
 			break
 		case sSENDE:
-			String msg
-			msg='Unknown error'
-			Boolean success
-			success=false
+			String msg; msg='Unknown error'
+			Boolean success; success=false
 			if(respOk){
 				data=resp.getJson()
 				if(data!=null){
@@ -5717,7 +5714,7 @@ private Map securityLogin(String u, String p){
 	String cookie; cookie=sNL
 	try{
 		Map params= [
-			uri: "http://127.0.0.1:8080",
+			uri: 'http://127.0.0.1:8080',
 			path: "/login",
 			query: [loginRedirect: "/"],
 			body: [
