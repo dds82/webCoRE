@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update September 7, 2022 for Hubitat
+ * Last update September 17, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -30,7 +30,7 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20220822_HE'
+@Field static final String sHVER='v0.3.114.20220917_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -384,7 +384,7 @@ private pageSelectDevices(){
 
 		section (sectionTitleStr('Select devices by capability')){
 			paragraph "If you cannot find a device by type, you may try looking for it by category below"
-			def d=null
+			def d; d=null
 			for (capability in capabilities().findAll{ (!((String)it.value.d in [null, 'actuators', 'sensors'])) }.sort{ (String)it.value.d }){
 				if(capability.value.d!=d) input "dev:${capability.key}", "capability.${capability.key}", multiple: true, (sTIT): "Which ${capability.value.d}", (sREQ): false
 				d=capability.value.d
@@ -445,11 +445,12 @@ def pageSettings(){
 			String DarkSky='DarkSky'
 			String OpnW='OpenWeatherMap'
 			input "weatherType", sENUM, (sTIT): "Weather Type to enable?", defaultValue: sBLK, submitOnChange: true, (sREQ): false, options:[apiXU, DarkSky, OpnW, sBLK]
-			String defaultLoc=sNULL
-			String defaultLoc1=sNULL
+			String defaultLoc,defaultLoc1,zipDesc,zipDesc1
+			defaultLoc=sNULL
+			defaultLoc1=sNULL
 			String mreq=settings.weatherType ? (String)settings.weatherType : sNULL
-			String zipDesc=sNULL
-			String zipDesc1=sNULL
+			zipDesc=sNULL
+			zipDesc1=sNULL
 			if(mreq){
 				input "apixuKey", sTXT, (sTIT): mreq+" key?", (sREQ): true
 				switch(mreq){
@@ -494,7 +495,7 @@ def pageSettings(){
 			paragraph "Custom Endpoints allows use of a local webserver for webCoRE IDE pages and local hub API endpoint address. webCoRE servers are still used for instance registration, non-local backup / restore / import, send email, NFL, store media, and optionally fuel streams"
 			input "customEndpoints", sBOOL, submitOnChange: true, (sTIT): "Use custom endpoints?", default: false, (sREQ): true
 			if((Boolean)customEndpoints){
-				Boolean req=false
+				Boolean req; req=false
 				if((Boolean)customEndPoints && (Boolean)localHubUrl) req=true
 				input "customWebcoreInstanceUrl", sSTR, (sTIT): "Custom webCoRE webserver (local webserver url different from dashboard.webcore.co)", default: null, (sREQ): req
 				if((Boolean)localHubUrl && !customWebcoreInstanceUrl) paragraph "If you use a local hub API url you MUST use a custom webCoRE server url, as dashboard.webcore.co site is restricted to Hubitat and Smartthing's cloud API access only"
@@ -737,14 +738,14 @@ def pageCleanups(){
 	String t= 'cleanup old super'
 	Boolean didw= getTheLock(t)
 
-	Map<String,Map> vars=(Map<String,Map>)atomicState.vars
+	Map<String,Map> vars; vars=(Map<String,Map>)atomicState.vars
 	vars=vars ?: [:]
-	Boolean fnd=false
+	Boolean fnd; fnd=false
 	if(vars){ // clear out obsolete superglobals
-		List<String> b=vars.collect{ (String)it.key }
+		List<String> b; b=vars.collect{ (String)it.key }
 		for (String c in b){
 			if(c.startsWith('@@')){
-				a=vars.remove(c) // @@
+				def a=vars.remove(c) // @@
 				fnd=true
 			}
 		}
@@ -871,9 +872,10 @@ void updated(){
 	unschedule()
 	initialize()
 
-	Boolean chg=false
-	Boolean frcResub=false
-	Boolean verchg=false
+	Boolean chg,frcResub,verchg
+	chg=false
+	frcResub=false
+	verchg=false
 
 	if((Boolean)atomicState.disabled!=(Boolean)settings.disabled){
 		atomicState.disabled=(Boolean)settings.disabled==true
@@ -952,7 +954,7 @@ Map gtPdata(){
 
 private void clearGlobalPistonCache(String meth=null){
 	String n=handlePistn()
-	List t0=wgetChildApps().findAll{ (String)it.name==n }
+	List t0; t0=wgetChildApps().findAll{ (String)it.name==n }
 	def t1=t0[0]
 	if(t1!=null) t1.clearGlobalCache(meth) // will cause a child to read global Vars
 	t0=null
@@ -967,7 +969,7 @@ private void clearParentPistonCache(String meth=sNULL, Boolean frcResub=false, B
 	pStateFLD=pStateFLD
 	mb()
 	String n=handlePistn()
-	List t0=wgetChildApps().findAll{ (String)it.name==n }
+	List t0; t0=wgetChildApps().findAll{ (String)it.name==n }
 	if(t0){
 		def t1=t0[0]
 		if(t1!=null) t1.clearParentCache(meth) // will cause one child to read gtPdata
@@ -993,7 +995,7 @@ void clearChldCaches(Boolean all=false, Boolean clrLogs=false, Boolean uber=fals
 		mb()
 	}
 	Long t1=wnow()
-	List t0=wgetChildApps().findAll{ (String)it.name==n }
+	List t0; t0=wgetChildApps().findAll{ (String)it.name==n }
 	if(t0){
 		if(!cldClearFLD[wName]){ cldClearFLD[wName]=(Map)[:]; cldClearFLD=cldClearFLD }
 		if(clrLogs|uber){
@@ -1005,20 +1007,20 @@ void clearChldCaches(Boolean all=false, Boolean clrLogs=false, Boolean uber=fals
 		}else{
 			Boolean updateCache=true
 			//Long recTime=3660000L // 61 min in ms (regular piston cache cleanup)
-			Long recTime=86460000L // 24hrs + 1 min in ms (regular piston cache cleanup)
+			Long recTime; recTime=86460000L // 24hrs + 1 min in ms (regular piston cache cleanup)
 			if(all) recTime=1000L // aggressive cache cleanup
 			Long threshold=t1 - recTime
 			t0.sort().each{ chld ->
 				String myId=hashPID(chld.id)
 				if(pStateFLD[wName]==null){ pStateFLD[wName]= (Map)[:]; pStateFLD=pStateFLD }
-				Map meta=(Map)pStateFLD[wName][myId]
+				Map meta; meta=(Map)pStateFLD[wName][myId]
 				if(meta==null){
 					meta=(Map)chld.curPState()
 					pStateFLD[wName][myId]=meta
 					pStateFLD=pStateFLD
 				}
 				String schld=chld.id.toString()
-				Long t2=cldClearFLD[wName][schld]
+				Long t2; t2=cldClearFLD[wName][schld]
 				Long t3=(Long)meta?.t
 				Boolean t4=(Boolean)meta?.heCached
 				if(t2==null){
@@ -1036,8 +1038,9 @@ void clearChldCaches(Boolean all=false, Boolean clrLogs=false, Boolean uber=fals
 }
 
 private void initialize(){
-	Boolean chg=false
-	Boolean initT=false
+	Boolean chg,initT
+	chg=false
+	initT=false
 	Boolean reSub=(Boolean)atomicState.forceResub1
 	if((Boolean)reSub==null){
 		atomicState.forceResub1=true
@@ -1123,8 +1126,7 @@ private void checkWeather(){
 
 Map getWCendpoints(){
 	Map t0=[:]
-	String ep
-	String epl
+	String ep,epl
 	ep=apiServerUrl("$hubUID/apps/${app.id}".toString())
 	epl=localApiServerUrl("${app.id}".toString())
 
@@ -1140,8 +1142,7 @@ Map getWCendpoints(){
 
 private void updateEndpoint(){
 	String accessToken=(String)state.accessToken
-	String newEP
-	String newEPLocal
+	String newEP,newEPLocal
 	newEP=apiServerUrl("$hubUID/apps/${app.id}/?access_token=${accessToken}".toString())
 	newEPLocal=localApiServerUrl("${app.id}/?access_token=${accessToken}".toString())
 	state.endpointCloud=newEP
@@ -1158,7 +1159,7 @@ private void updateEndpoint(){
 
 private Boolean initializeWebCoREEndpoint(Boolean disableRetry=false){
 	if(!(String)state.endpoint || !(String)state.endpointCloud){
-		String accessToken=(String)state.accessToken
+		String accessToken; accessToken=(String)state.accessToken
 		if(!accessToken){
 			try{
 				accessToken=createAccessToken() // this fills in state.accessToken
@@ -1284,11 +1285,11 @@ private void wpauseExecution(Long t){ pauseExecution(t) }
 @CompileStatic
 Boolean getTheLock(String meth=sNULL){
 	Long waitT=1600L
-	Boolean wait=false
+	Boolean wait; wait=false
 	Semaphore sema=theSerialLockFLD
 	while(!((Boolean)sema.tryAcquire())){
 		// did not get the lock
-		Long t=lockTimeFLD
+		Long t; t=lockTimeFLD
 		if(t==null){
 			t=wnow()
 			lockTimeFLD=t
@@ -1345,7 +1346,7 @@ private List<Map> presult(String wName){
 				(sS):st,
 				heCached:(Boolean)t0.Cached ?: false
 		] */
-		Map meta=(Map)pStateFLD[wName][myId]
+		Map meta; meta=(Map)pStateFLD[wName][myId]
 		if(meta==null){
 			meta=(Map)it.curPState()
 			meta= meta?:[:]
@@ -1594,8 +1595,8 @@ private api_intf_dashboard_piston_create(){
 	if(verifySecurityToken((String)params.token)){
 		String pname=(String)params.name!=sNULL ? (String)params.name : generatePistonName()
 		String n=handlePistn()
-		List apps=wgetChildApps().findAll{ (String)it.name==n }
-		Boolean found=false
+		List apps; apps=wgetChildApps().findAll{ (String)it.name==n }
+		Boolean found; found=false
 		for(mapp in apps){
 			String tN= (String)mapp.label ?: (String)mapp.name
 			if(tN==pname){
@@ -1629,7 +1630,7 @@ private findPiston(String id, String nm=sNULL){
 	def piston; piston=null
 	if(id!=sNULL || nm!=sNULL){
 		String n=handlePistn()
-		List t0=wgetChildApps().findAll{ (String)it.name==n }
+		List t0; t0=wgetChildApps().findAll{ (String)it.name==n }
 		if(id!=sNULL){
 			piston=t0.find{ hashPID(it.id)==id }
 			if (!piston)piston=t0.find{ hashId(it.id)==id }
@@ -1725,10 +1726,11 @@ private api_intf_dashboard_piston_get(){
 
 private void checkResultSize(Map result, Boolean requireDb=false, String caller=sNULL){
 	if(!isCustomEndpoint() || !(Boolean)localHubUrl){
-		String jsonData= JsonOutput.toJson(result)
+		String jsonData; jsonData= JsonOutput.toJson(result)
 		//data saver for Hubitat ~100K limit
-		Integer responseLength=jsonData.getBytes("UTF-8").length
-		Integer resl= (Integer)(responseLength / 1024)
+		Integer responseLength,resl,svLength
+		responseLength=jsonData.getBytes("UTF-8").length
+		resl= (Integer)(responseLength / 1024)
 		//debug "Check size found ${resl}KB response requireDb: (${requireDb}) caller: ${caller}"
 		if(resl > 95){ //these are loaded anyway right after loading the piston
 			warn "Trimming ${resl}KB response to smaller size (${requireDb}) caller: ${caller}"
@@ -1741,7 +1743,7 @@ private void checkResultSize(Map result, Boolean requireDb=false, String caller=
 				result.data.schedules=[]
 			}
 
-			Integer svLength=responseLength
+			svLength=responseLength
 			jsonData= JsonOutput.toJson(result)
 			responseLength=jsonData.getBytes("UTF-8").length
 			resl= (Integer)(responseLength / 1024)
@@ -1769,7 +1771,8 @@ private void checkResultSize(Map result, Boolean requireDb=false, String caller=
 }
 
 private api_intf_dashboard_piston_backup(){
-	Map result=[
+	Map result
+	result=[
 		pistons: [],
 		now:0L
 	]
@@ -1821,7 +1824,7 @@ private Map api_intf_dashboard_piston_set_save(String id, String data, Map<Strin
 	*/
 		LinkedHashMap p=(LinkedHashMap) new JsonSlurper().parseText(decodeEmoji(new String(data.decodeBase64(), "UTF-8")))
 		Map result=(Map)piston.setup(p, chunks)
-		broadcastPistonList()
+		broadcastPistonList(true)
 		return result
 	}
 	debug myS+" $id $chunks NOT FOUND"
@@ -1900,9 +1903,9 @@ private api_intf_dashboard_piston_set_end(){
 		mb()
 		LinkedHashMap<String,Object> chunks=pPistonChunksFLD[wName]
 		if(chunks && (Integer)chunks.count){
-			Boolean ok=true
-			String data=sBLK
-			Integer i=0
+			Boolean ok; ok=true
+			String data; data=sBLK
+			Integer i; i=iZ
 			Integer count=(Integer)chunks.count
 			while(i<count){
 				String s=chunks["chunk:$i".toString()]
@@ -2038,7 +2041,7 @@ private api_intf_dashboard_piston_set_category(){
 			result=(Map)piston.setCategory(params.category)
 			String myId=(String)params.id
 			if(pStateFLD[wName]==null){ pStateFLD[wName]= (Map)[:]; pStateFLD=pStateFLD }
-			Map st=(Map)pStateFLD[wName][myId]
+			Map st; st=(Map)pStateFLD[wName][myId]
 			if(st==null) st=(Map)piston.curPState() //st=atomicState[myId]
 			if(st){
 				st.c=params.category
@@ -2105,7 +2108,7 @@ private api_intf_dashboard_piston_delete(){
 			result=[(sSTS): sSUCC]
 			//cleanUp()
 			//clearParentPistonCache("piston deleted")
-			runIn(10, broadcastPistonList)
+			runIn(21, broadcastPistonList)
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
 	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
@@ -2149,7 +2152,7 @@ private api_intf_variable_set(){
 			Boolean chgd; chgd=false
 			String vln; vln=value ? (String)value.n : sNULL
 			if( (name && (Boolean)name.startsWith('@@')) || (vln && vln.startsWith('@@')) ){
-				String vn=sNULL
+				String vn; vn=sNULL
 				if(name && !value){
 					// delete a global
 					vn=name.substring(2)
@@ -2562,9 +2565,9 @@ private api_intf_dashboard_piston_activity(){
 }
 
 def api_ifttt(){
-	def data=[:]
+	def data; data=[:]
 	//def remoteAddr=isHubitat() ? "UNKNOWN" : request.getHeader("X-FORWARDED-FOR") ?: request.getRemoteAddr()
-	def remoteAddr=request.headers.'X-forwarded-for' ?: request.headers.Host
+	def remoteAddr; remoteAddr=request.headers.'X-forwarded-for' ?: request.headers.Host
 	if(remoteAddr==null)remoteAddr=request.'X-forwarded-for' ?: request.Host
 	debug "Request received ifttt call IP $remoteAddr Referer: ${request.headers.Referer}"
 //log.debug "params ${params}"
@@ -2646,7 +2649,7 @@ private api_global(){
 	if(remoteAddr==null)remoteAddr='just'
 	debug "web request received to get variable from IP $remoteAddr Referer: ${request.headers.Referer} | $params"
 	Map result=[:]
-	Boolean err=true
+	Boolean err; err=true
 	String varName=(String)params?.varName
 	if(varName && (Boolean)varName.startsWith('@') ){
 		if((Boolean)varName.startsWith('@@')){
@@ -2716,7 +2719,8 @@ void recoveryHandler(){
 	verCheck(wName)
 
 	Long t=wnow()
-	Long lastRecovered=lastRecoveredFLD[wName]
+	Long lastRecovered
+	lastRecovered=lastRecoveredFLD[wName]
 	lastRecovered=lastRecovered ?: 0L
 	Long recTime=900000L // 15 min in ms
 	if(lastRecovered!=0L && (t-lastRecovered) < recTime) return
@@ -2776,7 +2780,8 @@ private void cleanUp(){
 
 		String n=handlePistn()
 		String myId
-		List t0=wgetChildApps().findAll{ (String)it.name==n }
+		List t0
+		t0=wgetChildApps().findAll{ (String)it.name==n }
 		for(it in t0){
 			myId=hashId(it.id)
 			state.remove(myId)
@@ -2790,10 +2795,12 @@ private void cleanUp(){
 
 private getStorageApp(Boolean install=false){
 	String n=handleStor()
-	def storageApp=wgetChildApps().find{ (String)it.name==n }
+	def storageApp
+	storageApp=wgetChildApps().find{ (String)it.name==n }
 
 	String n1=handleWeat()
-	def weatDev=getChildDevices().find{ (String)it.name==n1 }
+	def weatDev
+	weatDev=getChildDevices().find{ (String)it.name==n1 }
 
 	if(storageApp!=null){
 
@@ -2866,7 +2873,8 @@ private getDashboardApp(Boolean install=false){
 	String name=handle()+' Dashboard'
 	String myN= appName()
 	String label=myN+' (dashboard)'
-	def dashboardApp=wgetChildApps().find{ (String)it.name==name }
+	def dashboardApp
+	dashboardApp=wgetChildApps().find{ (String)it.name==name }
 	if(dashboardApp!=null){
 		if(!settings.enableDashNotifications){
 			app.deleteChildApp(dashboardApp.id)
@@ -2885,8 +2893,9 @@ private getDashboardApp(Boolean install=false){
 	return dashboardApp
 }
 
-private String customApiServerUrl(String path){
-	path= path ?: sBLK
+private String customApiServerUrl(String ipath){
+	String path
+	path= ipath ?: sBLK
 	if(!path.startsWith(sDIV)){
 		path=sDIV + path
 	}
@@ -2917,9 +2926,8 @@ private String getDashboardInitUrl(Boolean reg=false){
 	if(eric()) debug "getDashboardInitUrl: reg: $reg"
 	String url=reg ? getDashboardRegistrationUrl() : getDashboardUrl()
 	if(!url) return sNULL
-	String t0
+	String t0,regkey
 	t0=url + (reg ? "register/" : "init/")
-	String regkey
 	if(isCustomEndpoint()){
 		if(eric())debug "getDashboardInitUrl: isCustomEndpoint"
 		//regkey=customApiServerUrl('/')
@@ -3092,9 +3100,8 @@ private Map AddHeGlobals(Map<String,Map> globalVars, String meth){
 	Map<String,Map> res=[:]
 	def heV=getAllGlobalVars()
 	//if(eric()) trace meth+" ALL HE globals $heV"
-	String nm
+	String nm,typ
 	Map ta
-	String typ
 	def vl
 	heV?.each{
 		nm='@@'+(String)it.key
@@ -3146,7 +3153,7 @@ private Boolean verifySecurityToken(String tokenId){
 	LinkedHashMap<String,Long> tokens=state.securityTokens
 	if(!tokens || !tokenId) return false
 	Long threshold=wnow()
-	Boolean modified=false
+	Boolean modified; modified=false
 	//remove all expired tokens
 	for (token in tokens.findAll{ (Long)it.value < threshold }){
 		tokens.remove((String)token.key)
@@ -3168,7 +3175,7 @@ private String createSecurityToken(){
 	String token=UUID.randomUUID().toString()
 	Map a= atomicState.securityTokens
 	LinkedHashMap<String,Long> tokens= (a ?: [:]) as LinkedHashMap<String,Long>
-	Long mexpiry=0L
+	Long mexpiry; mexpiry=0L
 	String eo=((String)settings.expiry).toLowerCase().replace("every ", sBLK).replace("(recommended)", sBLK).replace("(not recommended)", sBLK).trim()
 	switch(eo){
 		case "hour": mexpiry=3600L; break
@@ -3209,7 +3216,8 @@ private void stopDashboard(){
 private String accountSid(){
 	Boolean useNew=state.properSID!=null ? (Boolean)state.properSID : true
 	String t='-A'
-	String accountStr= hubUID.toString() + (useNew ? t : sNULL)
+	String accountStr
+	accountStr= hubUID.toString() + (useNew ? t : sNULL)
 	if(acctANDloc()) accountStr= (String)settings.acctID
 	//if(eric()) debug "instance acct: $accountStr"
 	return hashId(accountStr)
@@ -3220,7 +3228,7 @@ private String accountSid(){
 
 private Boolean acctANDloc(){
 	String wName=sAppId()
-	Boolean t=acctlocFLD[wName]
+	Boolean t; t=acctlocFLD[wName]
 	if(t==null){
 		t= ((String)settings.acctID && (String)settings.locID)
 		acctlocFLD[wName]=t
@@ -3232,7 +3240,7 @@ private Boolean acctANDloc(){
 
 private String locationSid(){
 	String wName=sAppId()
-	String t=locFLD[wName]
+	String t; t=locFLD[wName]
 	if(t==sNULL){
 		if(acctANDloc()) t= (String)settings.acctID + (String)settings.locID + sML
 		else{
@@ -3289,11 +3297,11 @@ private void registerInstance(Boolean force=true){
 	Long lnow=wnow()
 	if((Boolean)state.installed && (Boolean)settings.agreement){
 		if(!force){
-			Long lastReg=lastRegFLD[wName]
+			Long lastReg; lastReg=lastRegFLD[wName]
 			lastReg=lastReg ?: 0L
 			if(lastReg && (lnow - lastReg < 129600000L)) return // 36 hr in ms
 
-			Long lastRegTry=lastRegTryFLD[wName]
+			Long lastRegTry; lastRegTry=lastRegTryFLD[wName]
 			lastRegTry=lastRegTry ?: 0L
 			if(lastRegTry!=0 && (lnow - lastRegTry < 1800000L)) return // 30 min in ms
 		}
@@ -3307,9 +3315,10 @@ private void registerInstance(Boolean force=true){
 		String region=endpoint.contains('graph-eu') ? 'eu' : 'us'
 		String name=handlePistn()
 		if(pStateFLD[wName]==null){ pStateFLD[wName]= (Map)[:]; pStateFLD=pStateFLD }
-		List pistons=wgetChildApps().findAll{ (String)it.name==name }.collect{
+		List pistons
+		pistons=wgetChildApps().findAll{ (String)it.name==name }.collect{
 			String myId=hashPID(it.id)
-			Map meta=(Map)pStateFLD[wName][myId]
+			Map meta; meta=(Map)pStateFLD[wName][myId]
 			if(meta==null){
 				//meta=atomicState[myId]
 				meta=(Map)it.curPState()
@@ -3318,9 +3327,10 @@ private void registerInstance(Boolean force=true){
 			}
 			[ id: myId, (sA): meta?.a ]
 		}
-		List lpa=pistons.findAll{ it.a }.collect{ it.id }
+		List lpa,lpd
+		lpa=pistons.findAll{ it.a }.collect{ it.id }
 		Integer pa=lpa.size()
-		List lpd=pistons.findAll{ !it.a }.collect{ it.id }
+		lpd=pistons.findAll{ !it.a }.collect{ it.id }
 		Integer pd=pistons.size() - pa
 		pistons=null
 
@@ -3373,11 +3383,11 @@ Boolean isInstalled(){
 
 String generatePistonName(){
 	List apps=wgetChildApps()
-	Integer i=i1
+	Integer i; i=i1
 	String bname= handlePistn()+' #'
 	while (true){
 		String name=bname + i.toString()
-		Boolean found=false
+		Boolean found; found=false
 		for (mapp in apps){
 			String tN= (String)mapp.label ?: (String)mapp.name
 			if(tN==name){
@@ -3418,7 +3428,7 @@ void pCallupdateRunTimeData(Map data){
 	String id=(String)data.id
 	String wName=sAppId()
 	if(p_executionFLD[wName]==null){ p_executionFLD[wName]=(Map)[:]; p_executionFLD=p_executionFLD }
-	Long cnt=p_executionFLD[wName][id]!=null ? (Long)p_executionFLD[wName][id] : 0L
+	Long cnt; cnt=p_executionFLD[wName][id]!=null ? (Long)p_executionFLD[wName][id] : 0L
 	cnt +=1L
 	p_executionFLD[wName][id]=cnt
 	p_executionFLD=p_executionFLD
@@ -3445,7 +3455,7 @@ void updateRunTimeData(Map data, String wNi=sNULL, String idi=sNULL){
 
 		def am=gtAS('vars')
 		Map<String,Map> vars= am? (Map<String,Map>)am : [:]
-		Boolean mdfd=false
+		Boolean mdfd; mdfd=false
 		for(var in (Map<String,Map>)data.gvCache){
 			String k=(String)var.key
 			if(k!=sNULL && k.startsWith('@') && vars[k] && var.value.v!=vars[k].v ){
@@ -3462,7 +3472,7 @@ void updateRunTimeData(Map data, String wNi=sNULL, String idi=sNULL){
 
 		def am=gtAS('store')
 		Map<String,Object> store= am? (Map<String,Object>)am : [:]
-		Boolean mdfd=false
+		Boolean mdfd; mdfd=false
 		for(var in (Map<String,Object>)data.gvStoreCache){
 			String k=(String)var.key
 			if(var.value==null) store.remove(k)
@@ -3564,7 +3574,16 @@ private void sendVariableEvent(Map variable, Boolean onlyChildren=false){
 		])
 }
 
-void broadcastPistonList(){
+@Field volatile static Map<String,Long> lastBroadCastFLD= [:]
+void broadcastPistonList(Boolean frc=false){
+	String wName=sAppId()
+	Long lnow=wnow()
+	if(!frc){
+		Long lastbcast; lastbcast=lastBroadCastFLD[wName]
+		lastbcast=lastbcast ?: 0L
+		if(lastbcast && (lnow - lastbcast < 20000L)) return // 20 sec in ms
+	}
+	lastBroadCastFLD[wName]=lnow
 	sendLocationEvent(
 		[
 			(sNM): handle(),
@@ -3579,7 +3598,10 @@ void broadcastPistonList(){
 				}
 			]
 		])
+	trace 'broadcastPistonList sent'
 }
+
+private void wrunInMillis(Long t,String m,Map d){ runInMillis(t,m,d) }
 
 def webCoREHandler(event){
 	String eN=(String)event.name
@@ -3620,8 +3642,9 @@ def webCoREHandler(event){
 	switch (eV){
 		case 'poll':
 			Long delay=Math.round(2000.0D * Math.random())
-			wpauseExecution(delay)
-			broadcastPistonList()
+			wrunInMillis(delay,'broadcastPistonList',[:])
+			//wpauseExecution(delay)
+			//broadcastPistonList()
 			break
 /*		case 'ping':
 		if(data && data.id && data.name && (data.id!=getInstanceSid())){
@@ -3693,8 +3716,8 @@ List t1=getLocationEventsSince('hsmAlert', new Date() - 10)
 */
 	String locStat=(String)location.hsmStatus
 
-	def a=atomicState.hsmAlerts
-	List<Map> alerts= a? (List<Map>)a : []
+	def a; a=atomicState.hsmAlerts
+	List<Map> alerts; alerts= a? (List<Map>)a : []
 	Boolean aa=alerts.push(alert)
 	if(locStat==sALLDISARM || evV in [sCANCEL, sCANRULEA]) alerts=[]
 	atomicState.hsmAlerts=alerts
@@ -3709,15 +3732,16 @@ List t1=getLocationEventsSince('hsmAlert', new Date() - 10)
 private List<Map> getIncidents(){
 	Long incidentThreshold=Math.round(wnow() - 604800000.0D) // 1 week
 	String locStat=(String)location.hsmStatus
-	def a=atomicState.hsmAlerts
-	List<Map> alerts= a? (List<Map>)a : []
-	Integer osz=alerts.size()
+	def a; a=atomicState.hsmAlerts
+	List<Map> alerts,newAlerts,new2Alerts,new3Alerts
+	alerts= a? (List<Map>)a : []
+	Integer osz; osz=alerts.size()
 	if(osz==0) return []
 	if(locStat==sALLDISARM){ alerts=[]; state.remove("hsmAlerts") }
-	List<Map> newAlerts=alerts.collect{it}.findAll{ (Long)it.date >= incidentThreshold }
+	newAlerts=alerts.collect{it}.findAll{ (Long)it.date >= incidentThreshold }
 	String intrusion='intrusion'
-	List<Map> new2Alerts=newAlerts.collect{it}.findAll{ !(locStat==sDISARMD && ((String)it.v).contains(intrusion)) }.sort { (Long)it.date }
-	List<Map> new3Alerts=[]
+	new2Alerts=newAlerts.collect{it}.findAll{ !(locStat==sDISARMD && ((String)it.v).contains(intrusion)) }.sort { (Long)it.date }
+	new3Alerts=[]
 	for(Map myE in new2Alerts){
 		if((String)myE.v in [sCANCEL,sCANRULEA]) new3Alerts=[]
 		else Boolean aa=new3Alerts.push(myE)
@@ -3747,14 +3771,14 @@ void startHandler(evt){
 void startWork(){
 	checkWeather()
 	recoveryHandler()
-	broadcastPistonList()
+	broadcastPistonList(true)
 }
 
 def lifxHandler(response, Map cbkData){
 	if((response.status==200)){
 		def data= response.data instanceof List ? response.data : new JsonSlurper().parseText((String)response.data)
 		//cbkData= cbkData instanceof Map ? cbkData : (LinkedHashMap) new JsonSlurper().parseText(cbkData)
-		Boolean fnd=false
+		Boolean fnd; fnd=false
 		if(data instanceof List){
 			state.lifx= state.lifx ?: [:]
 			switch ((String)cbkData.request){
@@ -3803,8 +3827,8 @@ private Map log(message, Integer shift=-2, err=null, String cmd=sNULL){
 	if(cmd=="timer"){
 		return [(sM): message, (sT): lnow, (sS): shift, e: err]
 	}
-	String myMsg=sNULL
-	def merr=err
+	String myMsg; myMsg=sNULL
+	def merr; merr=err
 	if(message instanceof Map){
 		//shift=(Integer)message.s
 		merr=message.e
@@ -4473,7 +4497,7 @@ private static Map<String,Map> virtualCommands(){
 			readFuelStream		: [ (sN): "Read fuel stream...",		(sA): true,		(sD): "Read entire fuel stream {0}{1} to \$fuel",			(sP): [[(sN): "Canister", (sT):sTXT, (sD):"{v} \\ "], [(sN):"Fuel stream name", (sT):sTXT] ],					],
 			writeFuelStream		: [ (sN): "Overwrite fuel stream...",	(sA): true,		(sD): "Write entire fuel stream {0}{1}{3}",					(sP): [[(sN): "Canister", (sT):sTXT, (sD):"{v} \\ "], [(sN):"Fuel stream name", (sT):sTXT], [(sN): "Data", (sT):sDYN],	[(sN): "Data source", (sT):sTXT, (sD):" from source '{v}'"]],			],
 			clearFuelStream		: [ (sN): "Clear fuel stream...",		(sA): true,		(sD): "Clear fuel stream {0}{1}{2}",						(sP): [[(sN): "Canister", (sT):sTXT, (sD):"{v} \\ "], [(sN):"Fuel stream name", (sT):sTXT], 							[(sN): "Data source", (sT):sTXT, (sD):" from source '{v}'"] ],			],
-			addToFuelStream		: [ (sN): "Add to fuel stream...",		(sA): true,		(sD): "Add data point '{2}' to fuel stream {0}{1}{3}",		(sP): [[(sN): "Canister", (sT):sTXT, (sD):"{v} \\ "], [(sN):"Fuel stream name", (sT):sTXT], [(sN): "Data", (sT):sDYN],	[(sN): "Time stamp", (sT): sDTIME ],	[(sN): "Data source", (sT):sTXT, (sD):" from source '{v}'"]],			],
+		//	addToFuelStream		: [ (sN): "Add to fuel stream...",		(sA): true,		(sD): "Add data point '{2}' to fuel stream {0}{1}{3}",		(sP): [[(sN): "Canister", (sT):sTXT, (sD):"{v} \\ "], [(sN):"Fuel stream name", (sT):sTXT], [(sN): "Data", (sT):sDYN],	[(sN): "Time stamp", (sT): sDTIME ],	[(sN): "Data source", (sT):sTXT, (sD):" from source '{v}'"]],			],
 				// listFuelStreams(includeLTS)
 				// existsFuelStream (canister, name)
 				// removeFuelStream (canister,name)
@@ -5181,7 +5205,7 @@ private static String generateMD5_A(String s){
 private static String md5(String md5){
 	MessageDigest md= MessageDigest.getInstance('MD5')
 	byte[] array=md.digest(md5.getBytes())
-	String result=sBLK
+	String result; result=sBLK
 	Integer l=array.size()
 	for(Integer i=0; i<l; ++i){
 		result += Integer.toHexString((array[i] & 0xFF)| 0x100).substring(i1,i3)
@@ -5246,8 +5270,8 @@ static void mb(String meth=sNULL){
 
 @CompileStatic
 static String dumpListDesc(List data,final Integer level,List<Boolean> lastLevel,final String listLabel,Boolean html=false){
-	String str=sBLK
-	Integer cnt=i1
+	String str; str=sBLK
+	Integer cnt; cnt=i1
 	List<Boolean> newLevel=lastLevel
 
 	final List list1=data?.collect{it}
@@ -5267,8 +5291,9 @@ static String dumpListDesc(List data,final Integer level,List<Boolean> lastLevel
 			newLevel[level]=t1
 			str+=dumpMapDesc(newmap,level,newLevel,!t1,html)
 		}else{
-			String lineStrt=sNL
-			for(Integer i=iZ; i<level; i++)lineStrt+=(i+i1<level)? (!lastLevel[i] ? sSPCSB:sSPCS6):sSPCS6
+			String lineStrt; lineStrt=sNL
+			Integer i
+			for(i=iZ; i<level; i++)lineStrt+=(i+i1<level)? (!lastLevel[i] ? sSPCSB:sSPCS6):sSPCS6
 			lineStrt+=cnt==i1 && sz>i1 ? sSPCST:(cnt<sz ? sSPCSM:sSPCSE)
 			if(html)str+=sSP
 			str+=lineStrt+lbl+": ${par} (${objType(par)})".toString()
@@ -5281,12 +5306,14 @@ static String dumpListDesc(List data,final Integer level,List<Boolean> lastLevel
 
 @CompileStatic
 static String dumpMapDesc(Map<String,Object> data,final Integer level,List<Boolean> lastLevel,Boolean listCall=false,Boolean html=false){
-	String str=sBLK
-	Integer cnt=i1
+	String str; str=sBLK
+	Integer cnt,i
+	cnt=i1
 	final Integer sz=data?.size()
-	Map<String,Object> svMap=[:]
-	Map<String,Object> svLMap=[:]
-	Map<String,Object> newMap=[:]
+	Map<String,Object> svMap,svLMap,newMap
+	svMap=[:]
+	svLMap=[:]
+	newMap=[:]
 	for(par in data){
 		final String k=(String)par.key
 		final def v=par.value
@@ -5303,12 +5330,12 @@ static String dumpMapDesc(Map<String,Object> data,final Integer level,List<Boole
 		List<Boolean> newLevel=lastLevel
 		final Boolean thisIsLast=cnt==sz && !listCall
 		if(level>iZ)newLevel[(level-i1)]=thisIsLast
-		Boolean theLast=thisIsLast
+		Boolean theLast; theLast=thisIsLast
 		if(level==iZ)lineStrt=sDBNL
 		else{
 			theLast=theLast && thisIsLast
 			lineStrt=sNL
-			for(Integer i=iZ; i<level; i++)lineStrt+=(i+i1<level)? (!newLevel[i] ? sSPCSB:sSPCS6):sSPCS6
+			for(i=iZ; i<level; i++)lineStrt+=(i+i1<level)? (!newLevel[i] ? sSPCSB:sSPCS6):sSPCS6
 			lineStrt+=((cnt<sz || listCall) && !thisIsLast) ? sSPCSM:sSPCSE
 		}
 		final String k=(String)par.key

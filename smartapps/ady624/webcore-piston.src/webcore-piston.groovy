@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update September 10, 2022 for Hubitat
+ * Last update September 17, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20220822_HE'
+@Field static final String sHVER='v0.3.114.20220917_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
