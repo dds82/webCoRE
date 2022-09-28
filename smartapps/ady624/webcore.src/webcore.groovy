@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update September 17, 2022 for Hubitat
+ * Last update September 28, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -30,7 +30,7 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20220917_HE'
+@Field static final String sHVER='v0.3.114.20220928_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -4732,6 +4732,7 @@ Map getChildComparisons(){
 	addhours		: [ (sT): sDTIME,	(sD): "addHours"		],
 	adddays			: [ (sT): sDTIME,	(sD): "addDays"		],
 	addweeks		: [ (sT): sDTIME,	(sD): "addWeeks"		],
+	parsedatetime	: [ (sT): sDTIME,	(sD): "parseDateTime"	],
 	isbetween		: [ (sT): sBOOLN,	(sD): "isBetween"		],
 	formatduration	: [ (sT): sSTR,	(sD): "formatDuration"	],
 	formatdatetime	: [ (sT): sSTR,	(sD): "formatDateTime"	],
