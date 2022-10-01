@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update September 30, 2022 for Hubitat
+ * Last update October 1, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -366,6 +366,7 @@ static Boolean eric1(){ return false }
 @Field static final String s1='1'
 @Field static final String s2='2'
 @Field static final Long lZ=0L
+@Field static final Long l1=1L
 @Field static final Integer iN1=-1
 @Field static final Integer iN2=-2
 @Field static final Integer iN3=-3
@@ -3710,7 +3711,7 @@ private void doPause(String mstr,Long delay,Map r9,Boolean ign=false){
 		r9[s]=t1
 		t2=lMs(gtState(),'pauses')
 		t2=t2!=null ? t2:lZ
-		assignSt('pauses',t2+1L)
+		assignSt('pauses',t2+l1)
 	}
 }
 
@@ -4092,7 +4093,7 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ){
 	Long delta,time,rightNow,nxtSchd
 	delta=lZ
 	switch(intervalUnit){
-		case sMS: level=i1; delta=1L; break
+		case sMS: level=i1; delta=l1; break
 		case sS: level=i2; delta=lTHOUS; break
 		case sM: level=i3; delta=dMSMINT.toLong(); break
 		case sH: level=i4; delta=dMSECHR.toLong(); break
@@ -4303,7 +4304,7 @@ private void scheduleTimeCondition(Map r9,Map cndtn){
 			//repeat until we find a day that's matching the restrictions
 			if(checkTimeRestrictions(r9,cLO,n1,5,1)==lZ) break
 			cnt-=i1
-			n1=pushTimeAhead(n1,n1+1L)
+			n1=pushTimeAhead(n1,n1+l1)
 		}
 		if(isDbg(r9) && cnt!=iyr)debug "Adding ${iyr-cnt} days, $n >>> $n1" ,r9
 		if(cnt==iZ)n1=n
@@ -4352,7 +4353,7 @@ private static Long checkTimeRestrictions(Map r9,Map operand,Long time,Integer l
 	Double dminDay=1440.0D
 	Double dsecDay=86400.0D
 
-	Long lMO=-1L
+	Long lMO=-l1
 	Long res; res=lMO
 	//month restrictions
 	Integer dyMonPlus=dyMon+i1
@@ -4464,7 +4465,7 @@ private static Long checkTimeRestrictions(Map r9,Map operand,Long time,Integer l
 
 @CompileStatic
 private static Long pRes(Map r9, Long result){
-	Long res= result>lZ ? result: -1L
+	Long res= result>lZ ? result: -l1
 	return res
 }
 
@@ -7105,7 +7106,7 @@ private List<Map> listPreviousStates(device,String attr,Long threshold,Boolean e
 		for(i=iZ; i<sz; i++){
 			Long startTime=((Date)events[i].date).getTime()
 			Long duration=endTime-startTime
-			if(duration>=1L && (i>iZ || !excludeLast)){
+			if(duration>=l1 && (i>iZ || !excludeLast)){
 				Boolean a=result.push([(sVAL):events[i].value,startTime:startTime,duration:duration])
 			}
 			if(startTime<thresholdTime) break
@@ -7873,8 +7874,8 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 				node.remove('w') // modifies the code
 				lastlvl=lvl[sV]
 				switch(t){
-					case sEVERY: if(lastlvl>1 && !inMem)addWarning(node,'Timers are designed to be top-level statements and should not be used inside other statements. If you need a conditional timer, please look into using a while loop instead.'); break
-					case sON: if(lastlvl>1 && !inMem)addWarning(node,'On event statements are designed to be top-level statements and should not be used inside other statements.'); break
+					case sEVERY: if(lastlvl>i1 && !inMem)addWarning(node,'Timers are designed to be top-level statements and should not be used inside other statements. If you need a conditional timer, please look into using a while loop instead.'); break
+					case sON: if(lastlvl>i1 && !inMem)addWarning(node,'On event statements are designed to be top-level statements and should not be used inside other statements.'); break
 				}
 				//log.warn "found statement $t level ${lvl.v}"
 				if(t in lsub)lvl[sV]=lastlvl+i1
@@ -8936,9 +8937,9 @@ private Map evaluateExpression(Map r9,Map express,String rtndataType=sNL){
 			try{
 				if(st0.isNumber()){
 					Double aa= st0 as Double
-					Long l1=aa.toLong()
-					if( (l1>=lMSDAY && exprType==sDTIME) || (l1<lMSDAY && exprType==sTIME) ){
-						result=rtnMap(exprType,l1)
+					Long tl=aa.toLong()
+					if( (tl>=lMSDAY && exprType==sDTIME) || (tl<lMSDAY && exprType==sTIME) ){
+						result=rtnMap(exprType,tl)
 						break
 					}
 				}
@@ -9999,6 +10000,35 @@ private Map func_title(Map r9,List<Map> prms){
 	rtnMapS(res.tokenize(sSPC)*.toLowerCase()*.capitalize().join(sSPC))
 }
 
+@CompileStatic
+static Boolean isLiStr(String t, String typ, Integer sz){
+	return (sz==i1 && (t!=typ || t in [sSTR,sDYN]))
+}
+
+/** try to convert string, list, or map to list */
+private List listIt(Map r9,List<Map> prms,String t,String typ){
+	def a; a= oMv(prms[iZ])
+	if(t==typ){ //input is a list or map type
+		if(t in [sDYN] && a instanceof String){
+			String s; s= (String)a
+			if(!stJson1(s) && !stJson(s)) s= sLB+s+sRB
+			if(stJson1(s) || stJson(s)){
+				try{
+					a= new JsonSlurper().parseText(s)
+				}catch(ignored){}
+			}
+		}
+	}
+	List res
+	res= a instanceof List ? (List)a : []
+	if(a instanceof Map){
+		Map m= (Map)a
+		if(m) for(j in m) { res << j.value }
+	}
+	if(!res) res= strEvalExpr(r9, prms[iZ]).split(sCOMMA)
+	return res
+}
+
 /** avg calculates the average of a series of numeric values			**/
 /** Usage: avg(values)								**/
 private Map func_avg(Map r9,List<Map> prms){
@@ -10008,10 +10038,8 @@ private Map func_avg(Map r9,List<Map> prms){
 	String t= sMt(prms[iZ])
 	String typ; typ=t.replace(sLRB,sBLK)
 	Integer i,sz; sz=prms.size()
-	if(sz==1 && (t!=typ || t in [sSTR,sDYN])){
-		List res; res=[]
-		def a= oMv(prms[iZ])
-		res= listIt(r9,prms,a,t,typ)
+	if(isLiStr(t,typ,sz)){
+		List res= listIt(r9,prms,t,typ)
 		sz=res.size()
 		if(sz){
 			for(i=iZ;i<sz;i++){
@@ -10031,12 +10059,10 @@ private Map func_median(Map r9,List<Map> prms){
 	String t= sMt(prms[iZ])
 	String typ; typ=t.replace(sLRB,sBLK)
 	Integer i,sz; sz=prms.size()
-	if(sz==1 && (t!=typ || t in [sSTR,sDYN])){
-		List res; res=[]
-		def a= oMv(prms[iZ])
-		res= listIt(r9,prms,a,t,typ).sort()
+	if(isLiStr(t,typ,sz)){
+		List res= listIt(r9,prms,t,typ).sort()
 		sz=res.size()
-		if(sz>1){
+		if(sz>i1){
 			i=Math.floor(sz/i2).toInteger()
 			return rtnMap(sDYN, sz%2==iZ ? (res[i-i1]+res[i])/i2 : res[i])
 		}else return rtnErr('median'+sVALUEN)
@@ -10059,10 +10085,8 @@ private Map func_least(Map r9,List<Map> prms){
 	String t= sMt(prms[iZ])
 	String typ; typ=t.replace(sLRB,sBLK)
 	Integer i,sz; sz=prms.size()
-	if(sz==1 && (t!=typ || t in [sSTR,sDYN])){
-		List res; res=[]
-		def a= oMv(prms[iZ])
-		res= listIt(r9,prms,a,t,typ)
+	if(isLiStr(t,typ,sz)){
+		List res= listIt(r9,prms,t,typ)
 		sz=res.size()
 		if(sz){
 			for(i=iZ;i<sz;i++){
@@ -10092,10 +10116,8 @@ private Map func_most(Map r9,List<Map> prms){
 	String t= sMt(prms[iZ])
 	String typ; typ=t.replace(sLRB,sBLK)
 	Integer i,sz; sz=prms.size()
-	if(sz==1 && (t!=typ || t in [sSTR,sDYN])){
-		List res; res=[]
-		def a= oMv(prms[iZ])
-		res= listIt(r9,prms,a,t,typ)
+	if(isLiStr(t,typ,sz)){
+		List res= listIt(r9,prms,t,typ)
 		sz=res.size()
 		if(sz){
 			for(i=iZ;i<sz;i++){
@@ -10125,10 +10147,8 @@ private Map func_sum(Map r9,List<Map> prms){
 	String t= sMt(prms[iZ])
 	String typ; typ=t.replace(sLRB,sBLK)
 	Integer i,sz; sz=prms.size()
-	if(sz==1 && (t!=typ || t in [sSTR,sDYN])){
-		List res; res=[]
-		def a= oMv(prms[iZ])
-		res= listIt(r9,prms,a,t,typ)
+	if(isLiStr(t,typ,sz)){
+		List res= listIt(r9,prms,t,typ)
 		sz=res.size()
 		if(sz){
 			for(i=iZ;i<sz;i++){ s+=res[i] }
@@ -10149,12 +10169,10 @@ private Map func_variance(Map r9,List<Map> prms){
 	String t= sMt(prms[iZ])
 	String typ; typ=t.replace(sLRB,sBLK)
 	Integer i,sz; sz=prms.size()
-	if(sz==1 && (t!=typ || t in [sSTR,sDYN])){
-		List res; res=[]
-		def a= oMv(prms[iZ])
-		res= listIt(r9,prms,a,t,typ)
+	if(isLiStr(t,typ,sz)){
+		List res= listIt(r9,prms,t,typ)
 		sz=res.size()
-		if(sz>1){
+		if(sz>i1){
 			for(i=iZ;i<sz;i++){
 				def v=res[i]
 				Boolean b=values.push(v)
@@ -10195,9 +10213,8 @@ private Map func_sort(Map r9,List<Map> prms){
 	String t= sMt(prms[iZ])
 	String typ; typ=t.replace(sLRB,sBLK)
 
-	def a= oMv(prms[iZ])
-	if(t0==1 && (t!=typ || t in [sSTR,sDYN])){
-		res= listIt(r9,prms,a,t,typ).sort()
+	if(isLiStr(t,typ,t0)){
+		res= listIt(r9,prms,t,typ).sort()
 	}else{
 		Integer i
 		for(i=iZ; i<t0; i++){ if(sMt(prms[i]).replace(sLRB,sBLK)!=typ){ typ=sNL; break } }
@@ -10211,40 +10228,14 @@ private Map func_sort(Map r9,List<Map> prms){
 	rtnMap(typ+sLRB,res)
 }
 
-/** try to convert string, list, or map to list */
-private List listIt(Map r9,List<Map> prms,a,String t,String typ){
-	List res; res=[]
-	if(t!=typ){ //input is a list or map type
-		res= a instanceof List ? (List)a : null
-		Map m= a instanceof Map ? (Map)a : null
-		if(m) for(j in m){ res << j.value }
-	}else{
-		if(t in [sDYN] && a instanceof String){
-			String s; s= (String)a
-			if(!stJson1(s) && !stJson(s)){
-				s= sLB+s+sRB
-				try{
-					List l= (List)new JsonSlurper().parseText(s)
-					res= l
-				}catch(ignored){}
-			}
-		}
-	}
-	if(!res)
-		res= strEvalExpr(r9, prms[iZ]).split(sCOMMA)
-	return res
-}
-
 /** min calculates the minimum of a series of numeric values			**/
 /** Usage: min(values)								**/
 private Map func_min(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnErr('min'+sVALUEN)
 	String t= sMt(prms[iZ])
 	String typ; typ=t.replace(sLRB,sBLK)
-	if(prms.size()==1 && (t!=typ || t in [sSTR,sDYN])){
-		List res; res=[]
-		def a= oMv(prms[iZ])
-		res= listIt(r9,prms,a,t,typ).sort()
+	if(isLiStr(t,typ,prms.size())){
+		List res= listIt(r9,prms,t,typ).sort()
 		if(res.size()) return rtnMap(sDYN,res[iZ])
 	}
 	List<Map> data=prms.collect{ Map it -> evaluateExpression(r9,it,sDYN)}.sort{ Map it -> oMv(it) }
@@ -10259,10 +10250,8 @@ private Map func_max(Map r9,List<Map> prms){
 	String t= sMt(prms[iZ])
 	String typ; typ=t.replace(sLRB,sBLK)
 	Integer sz
-	if(prms.size()==1 && (t!=typ || t in [sSTR,sDYN])){
-		List res; res=[]
-		def a= oMv(prms[iZ])
-		res= listIt(r9,prms,a,t,typ).sort()
+	if(isLiStr(t,typ,prms.size())){
+		List res= listIt(r9,prms,t,typ).sort()
 		sz=res.size()
 		if(sz) return rtnMap(sDYN,res[sz-i1])
 	}
@@ -10667,7 +10656,7 @@ private Map func_weekdayname(Map r9,List<Map> prms){
 private Map func_monthname(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnErr('monthName(dateTimeOrMonthNumber)')
 	Long value=longEvalExpr(r9,prms[iZ],sLONG)
-	Integer index=((value>=lMSDAY)? utcToLocalDate(value).month: (value-1L).toInteger())%i12+i1
+	Integer index=((value>=lMSDAY)? utcToLocalDate(value).month: (value-l1).toInteger())%i12+i1
 	rtnMapS(yearMonthsFLD[index])
 }
 
@@ -11141,9 +11130,9 @@ private static com_cast(Map r9,ival,String dataType,String srcDt){
 					if(s.isFloat())
 						return Math.floor(s.toDouble()).toLong()
 					if(s in trueStrings)
-						return 1L
+						return l1
 					break
-				case sBOOLN: return (value ? 1L:lZ)
+				case sBOOLN: return (value ? l1:lZ)
 			}
 			Long result
 			try{
@@ -12100,7 +12089,7 @@ private gtSysVarVal(Map r9,String name, Boolean frcStr=false){
 		case '$state': return (String)((Map)r9[sST])?.new
 		case '$tzName': return mTZ().displayName
 		case '$tzId': return mTZ().getID()
-		case '$tzOffset': return mTZ().rawOffset
+		case '$tzOffset': return mTZ().getOffset(wnow())
 		case '$version': return sVER
 		case '$versionH': return sHVER
 		case '$hour': Integer h=localDate().hours; return (h==iZ ? i12:(h>i12 ? h-i12:h))
