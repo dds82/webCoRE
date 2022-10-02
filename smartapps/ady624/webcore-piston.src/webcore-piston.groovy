@@ -12017,6 +12017,7 @@ private static LinkedHashMap<String,LinkedHashMap> getSystemVariables(){
 		'$tzName':t+strT,
 		'$tzId':t+strT,
 		'$tzOffset':t+intT,
+		'$tzInDst':t+boolT,
 		'$version':t+strT,
 		'$versionH':t+strT,
 		'$nfl':t+dynT
@@ -12090,6 +12091,7 @@ private gtSysVarVal(Map r9,String name, Boolean frcStr=false){
 		case '$tzName': return mTZ().displayName
 		case '$tzId': return mTZ().getID()
 		case '$tzOffset': return mTZ().getOffset(wnow())
+		case '$tzInDst': return mTZ().inDaylightTime(new Date())
 		case '$version': return sVER
 		case '$versionH': return sHVER
 		case '$hour': Integer h=localDate().hours; return (h==iZ ? i12:(h>i12 ? h-i12:h))
