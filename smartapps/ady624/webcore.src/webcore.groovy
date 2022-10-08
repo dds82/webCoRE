@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update September 28, 2022 for Hubitat
+ * Last update October 7, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -126,6 +126,10 @@ private static Boolean graphsOn(){ return true }
 @Field static final String sDATA='data'
 @Field static final String sSTS='status'
 @Field static final String sERR='error'
+@Field static final String sINFO='info'
+@Field static final String sWARN='warn'
+@Field static final String sTRC='trace'
+@Field static final String sDBG='debug'
 @Field static final String sSUCC="ST_SUCCESS"
 @Field static final String sERRID="ERR_INVALID_ID"
 @Field static final String sERRTOK="ERR_INVALID_TOKEN"
@@ -531,7 +535,7 @@ def pageSettings(){
 			input "recovery", sENUM, (sTIT): "Run recovery", options: ["Never", "Every 5 minutes", "Every 10 minutes", "Every 15 minutes", "Every 30 minutes", "Every 1 hour", "Every 3 hours"], (sDESC): "Allows recovery procedures to run every so often", defaultValue: "Every 30 minutes", (sREQ): true
 		}
 
-		if(getLogging().debug || eric()){
+		if(getLogging()[sDBG] || eric()){
 			String a='Tap to clear'
 			String b='complete'
 			section("Piston Log Cleanups"){
@@ -587,7 +591,7 @@ def graphDuplicationPage() {
 						if(!childDupMapFLD[myId]) childDupMapFLD[myId] = [:]
 						if(!childDupMapFLD[myId].graphs) childDupMapFLD[myId].graphs = [:]
 						childDupMapFLD[myId].graphs[grfId] = grfData
-						log.debug "Dup Data: ${childDupMapFLD[myId].graphs[grfId]}"
+						doLog(sDBG, "Dup Data: ${childDupMapFLD[myId].graphs[grfId]}")
 					}
 					Map app_name= (Map)grfData.settings['app_name']
 					String nm="${grfData.label}"+' (Dup)' //app_name.value+' (Dup)'
@@ -619,7 +623,7 @@ public void clearDuplicationItems() {
 }
 
 public void childAppDuplicationFinished(String type, String childId) {
-	log.trace "childAppDuplicationFinished($type, $childId)"
+	doLog(sTRC,"childAppDuplicationFinished($type, $childId)")
 //    Map data = [:]
 	String myId=app.getId()
 	if(childDupMapFLD[myId] && childDupMapFLD[myId][type] && childDupMapFLD[myId][type][childId]) {
@@ -905,7 +909,7 @@ void updated(){
 	if(chg){
 		if(verchg){
 			runIn(150, afterRun) // try to deal with people updating this file first vs. last with HPM
-			log.info "webCoRE scheduled install/upgrade completion in 150 seconds"
+			doLog(sINFO,"webCoRE scheduled install/upgrade completion in 150 seconds")
 			return
 		}else{
 			clearParentPistonCache("parent updated", frcResub, chg)
@@ -923,7 +927,7 @@ void afterRun(){
 	cleanUp()
 	resetFuelStreamList()
 	clearBaseResult('updated after')
-	log.info "webCoRE upgrade completed"
+	doLog(sINFO,"webCoRE upgrade completed")
 }
 
 Map getChildPstate(){ gtPdata() }
@@ -1525,7 +1529,7 @@ private api_intf_dashboard_load(){
 	}else result=[:]
 	tlastActivityFLD=t
 
-	if(getLogging().debug) checkResultSize(result, false, s)
+	if(getLogging()[sDBG]) checkResultSize(result, false, s)
 
 	//for accuracy, use the time as close as possible to the render
 	result.now=wnow()
@@ -1705,7 +1709,7 @@ private api_intf_dashboard_piston_get(){
 				result.dbVersion=serverDbVersion
 				//result.db=theDb
 			}
-			if(getLogging().debug) checkResultSize(result, requireDb, "get piston")
+			if(getLogging()[sDBG]) checkResultSize(result, requireDb, "get piston")
 		}else{
 			result=api_get_error_result(sERRID,s)
 			warn "Dashboard: get piston bad ID : ${params?.id}"
@@ -2494,7 +2498,7 @@ Map getWData(){
 String getOpenWeatherData(){
 	def childDevice = getChildDevice("OPEN_WEATHER${app.id}")
 	if (!childDevice){
-		log.debug("Error: No Child Found")
+		doLog(sDBG,"Error: No Child Found")
 		return sNL
 	}
 	return childDevice.getWeatherData()
@@ -2560,7 +2564,7 @@ private api_intf_dashboard_piston_activity(){
 			tlastActivityFLD=wnow()
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
-	if(getLogging().debug) checkResultSize(result, false, "piston activity")
+	if(getLogging()[sDBG]) checkResultSize(result, false, "piston activity")
 	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
@@ -3037,27 +3041,27 @@ Map getDevDetails(dev, Boolean addtransform=false){
 		}
 	}
 	Map res=[
-			(sN): nm,
-			cn: dev.getCapabilities()*.name,
-			(sA): ((List)dev.getSupportedAttributes()).unique{ (String)it.name }.collect{
-				//Map x=[
-				[
-					(sN): (String)it.name,
-					(sT): it.getDataType(),
-					(sO): it.getValues()
-				]
-//				try { // removed from UI in 9/2019
-//					x.v= dev.currentValue(x.n)
-//				} catch(ignored){}
-//				x
-			},
-			/*(sC): dev.getSupportedCommands().unique{ transform ? transformCommand(it, overrides) : it.getName() }.collect{[
-					(sN): transform ? transformCommand(it, overrides) : it.getName(),
-					(sP): it.getArguments()
-			]} */
-			(sC): newCL.unique{ (String)it.n }
+		(sN): nm,
+		cn: dev.getCapabilities()*.name,
+		(sA): ((List)dev.getSupportedAttributes()).unique{ (String)it.name }.collect{
+			//Map x=[
+			[
+				(sN): (String)it.name,
+				(sT): it.getDataType(),
+				(sO): it.getValues()
+			]
+//			try { // removed from UI in 9/2019
+//				x.v= dev.currentValue(x.n)
+//			} catch(ignored){}
+//			x
+		},
+		/*(sC): dev.getSupportedCommands().unique{ transform ? transformCommand(it, overrides) : it.getName() }.collect{[
+				(sN): transform ? transformCommand(it, overrides) : it.getName(),
+				(sP): it.getArguments()
+		]} */
+		(sC): newCL.unique{ (String)it.n }
 	]
-	if(eric1())debug "getDevDetails transform: $addtransform result: $res"
+	//if(eric1())debug "getDevDetails transform: $addtransform result: $res"
 	return res
 }
 
@@ -3824,7 +3828,7 @@ private Map<String,Boolean> getLogging(){
 
 private Map log(message, Integer shift=-2, err=null, String cmd=sNULL){
 	Long lnow=wnow()
-	if(cmd=="timer"){
+	if(cmd=='timer'){
 		return [(sM): message, (sT): lnow, (sS): shift, e: err]
 	}
 	String myMsg; myMsg=sNULL
@@ -3834,12 +3838,12 @@ private Map log(message, Integer shift=-2, err=null, String cmd=sNULL){
 		merr=message.e
 		myMsg=(String)message.m + " (${lnow - (Long)message.t}ms)"
 	}else myMsg=message
-	String mcmd=cmd ? cmd : 'debug'
+	String mcmd=cmd ? cmd : sDBG
 	Map<String,Boolean> myLog=getLogging()
-	if(mcmd!='error' && mcmd!='warn'){
-		if(!myLog.info && mcmd=='info') return [:]
-		if(!myLog.trace && mcmd=='trace') return [:]
-		if(!myLog.debug && mcmd=='debug') return [:]
+	if(mcmd!=sERR && mcmd!=sWARN){
+		if(!myLog[sINFO] && mcmd==sINFO) return [:]
+		if(!myLog[sTRC] && mcmd==sTRC) return [:]
+		if(!myLog[sDBG] && mcmd==sDBG) return [:]
 	}
 	String prefix=sBLK
 /*	Boolean debugging=false
@@ -3884,16 +3888,54 @@ private Map log(message, Integer shift=-2, err=null, String cmd=sNULL){
 	if(merr){
 		myMsg += sSPC+merr.toString()
 	}
-	log."$mcmd" prefix+myMsg
+	doLog(mcmd,prefix+myMsg)
 	return [:]
 }
 
-private void info(String message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, 'info' }
-private void debug(String message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, 'debug' }
-private void trace(message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, 'trace' }
-private void warn(String message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, 'warn' }
-private void error(String message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, 'error' }
+void doLog(String mcmd, String msg){
+	String clr
+	switch(mcmd){
+		case sINFO:
+			clr= '#0299b1'
+			break
+		case sTRC:
+			clr= sCLRGRY
+			break
+		case sDBG:
+			clr= 'purple'
+			break
+		case sWARN:
+			clr= sCLRORG
+			break
+		case sERROR:
+		default:
+			clr= sCLRRED
+	}
+	String myMsg= msg.replaceAll(sLTH, '&lt;').replaceAll(sGTH, '&gt;')
+	log."$mcmd" span(myMsg,clr)
+}
+
+private void info(String message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, sINFO }
+private void debug(String message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, sDBG }
+private void trace(message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, sTRC }
+private void warn(String message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, sWARN }
+private void error(String message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, sERR }
 private Map timer(String message, Integer shift=-2, err=null)	{ log message, shift, err, 'timer' }
+
+@Field static final String sLTH='<'
+@Field static final String sGTH='>'
+@Field static final String sCLR4D9	= '#2784D9'
+@Field static final String sCLRRED	= 'red'
+@Field static final String sCLRRED2	= '#cc2d3b'
+@Field static final String sCLRGRY	= 'gray'
+@Field static final String sCLRGRN	= 'green'
+@Field static final String sCLRGRN2	= '#43d843'
+@Field static final String sCLRORG	= 'orange'
+@Field static final String sLINEBR	= '<br>'
+@CompileStatic
+static String span(String str,String clr=sNL,String sz=sNL,Boolean bld=false,Boolean br=false){
+	return str ? "<span ${(clr || sz || bld) ? "style='${clr ? "color: ${clr};":sBLK}${sz ? "font-size: ${sz};":sBLK}${bld ? "font-weight: bold;":sBLK}'":sBLK}>${str}</span>${br ? sLINEBR:sBLK}": sBLK
+}
 
 /******************************************************************************/
 /*** DATABASE																***/
@@ -4440,7 +4482,7 @@ private static Map<String,Map> virtualCommands(){
 		sendNotification		: [ (sN): "Send notification...",		(sA): true,	(sI): "comment-alt", (is): sR,			(sD): "Send notification \"{0}\"",											(sP): [[(sN):"Message", (sT):sSTR]],												],
 		sendPushNotification	: [ (sN): "Send PUSH notification...",	(sA): true,	(sI): "comment-alt", (is): sR,			(sD): "Send PUSH notification \"{0}\"{1}",									(sP): [[(sN):"Message", (sT):sSTR],[(sN):"Store in Messages", (sT):sBOOLN, (sD):" and store in Messages", (sS):1]],	],
 		sendSMSNotification		: [ (sN): "Send SMS notification...",	(sA): true,	(sI): "comment-alt", (is): sR,			(sD): "Send SMS notification \"{0}\" to {1}{2}",							(sP): [[(sN):"Message", (sT):sSTR],[(sN):"Phone number", (sT):"phone",w:"HE requires +countrycode in phone number."],[(sN):"Store in Messages", (sT):sBOOLN, (sD):" and store in Messages", (sS):1]],	],
-		log						: [ (sN): "Log to console...",			(sA): true,	(sI): "bug",				(sD): "Log {0} \"{1}\"{2}",												(sP): [[(sN):"Log type", (sT):sENUM, (sO):["info","trace","debug","warn","error"]],[(sN):"Message", (sT):sSTR],[(sN):"Store in Messages", (sT):sBOOLN, (sD):" and store in Messages", (sS):1]],	],
+		log						: [ (sN): "Log to console...",			(sA): true,	(sI): "bug",				(sD): "Log {0} \"{1}\"{2}",												(sP): [[(sN):"Log type", (sT):sENUM, (sO):[sINFO,sTRC,sDBG,sWARN,sERR]],[(sN):"Message", (sT):sSTR],[(sN):"Store in Messages", (sT):sBOOLN, (sD):" and store in Messages", (sS):1]],	],
 		httpRequest				: [ (sN): "Make a web request",			(sA): true,	(sI): "anchor", (is): sR,		(sD): "Make a {1} request to {0}",					(sP): [[(sN):"URL", (sT):"uri"],[(sN):"Method", (sT):sENUM, (sO):["GET","POST","PUT","DELETE","HEAD"]],[(sN):"Request body type", (sT):sENUM, (sO):["JSON","FORM","CUSTOM"]],[(sN):"Send variables", (sT):"variables", (sD):"data {v}"],[(sN):"Request body", (sT):sSTR, (sD):"data {v}"],[(sN):"Request content type", (sT):sENUM, (sO):["text/plain","text/html",sAPPJSON,"application/x-www-form-urlencoded","application/xml"]],[(sN):"Authorization header", (sT):sSTR, (sD):sBVB]],	],
 		setVariable				: [ (sN): "Set variable...",			(sA): true,	(sI): "superscript", (is):sR,	(sD): "Set variable {0} = {1}",											(sP): [[(sN):"Variable", (sT):sVARIABLE],[(sN):"Value", (sT):sDYN]],	],
 		setState				: [ (sN): "Set piston state...",		(sA): true,	(sI): "align-left", (is):sL,	(sD): "Set piston state to \"{0}\"",										(sP): [[(sN):"State", (sT):sSTR]],	],
