@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update October 7, 2022 for Hubitat
+ * Last update October 13, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -116,7 +116,7 @@ private static Boolean graphsOn(){ return true }
 /*** webCoRE CONSTANTS														***/
 /******************************************************************************/
 
-@Field static final String sNULL=(String)null
+@Field static final String sNL=(String)null
 @Field static final String sBLK=''
 @Field static final String sSPC=' '
 @Field static final String sCOLON=':'
@@ -307,7 +307,7 @@ private pageInitializeDashboard(){
 	//webCoRE Dashboard initialization
 	Boolean success=initializeWebCoREEndpoint()
 	Boolean hasTZ=mTZ()!=null
-	dynamicPage((sNM): "pageInitializeDashboard", nextPage: success && hasTZ ? "pageSelectDevices" : sNULL){
+	dynamicPage((sNM): "pageInitializeDashboard", nextPage: success && hasTZ ? "pageSelectDevices" : sNL){
 		if(!(Boolean)state.installed){
 			if(success){
 				if(hasTZ){
@@ -316,7 +316,7 @@ private pageInitializeDashboard(){
 					}
 					section(){
 						paragraph "Now, please choose a name for this webCoRE instance"
-						label( (sNM): "name", (sTIT): "Name", state: (name ? "complete" : sNULL), defaultValue: app.name, (sREQ): false)
+						label( (sNM): "name", (sTIT): "Name", state: (name ? "complete" : sNL), defaultValue: app.name, (sREQ): false)
 					}
 
 					pageSectionDisclaimer()
@@ -425,7 +425,7 @@ def pageSettings(){
 	//clear devices cache
 	dynamicPage((sNM): "pageSettings", install: false, uninstall: false){
 		section("General"){
-			label ((sNM): "name", (sTIT): "Name", state: (name ? "complete" : sNULL), defaultValue: app.name, (sREQ): false)
+			label ((sNM): "name", (sTIT): "Name", state: (name ? "complete" : sNL), defaultValue: app.name, (sREQ): false)
 		}
 
 /*
@@ -450,11 +450,11 @@ def pageSettings(){
 			String OpnW='OpenWeatherMap'
 			input "weatherType", sENUM, (sTIT): "Weather Type to enable?", defaultValue: sBLK, submitOnChange: true, (sREQ): false, options:[apiXU, DarkSky, OpnW, sBLK]
 			String defaultLoc,defaultLoc1,zipDesc,zipDesc1
-			defaultLoc=sNULL
-			defaultLoc1=sNULL
-			String mreq=settings.weatherType ? (String)settings.weatherType : sNULL
-			zipDesc=sNULL
-			zipDesc1=sNULL
+			defaultLoc=sNL
+			defaultLoc1=sNL
+			String mreq=settings.weatherType ? (String)settings.weatherType : sNL
+			zipDesc=sNL
+			zipDesc1=sNL
 			if(mreq){
 				input "apixuKey", sTXT, (sTIT): mreq+" key?", (sREQ): true
 				switch(mreq){
@@ -476,7 +476,11 @@ def pageSettings(){
 					break
 				}
 				input "zipCode", sTXT, (sTIT): zipDesc, defaultValue: defaultLoc, (sREQ): false
-				if(mreq==OpnW) input "zipCode1", sTXT, (sTIT): zipDesc1, defaultValue: defaultLoc1, (sREQ): false
+				if(mreq==OpnW){
+					input "zipCode1", sTXT, (sTIT): zipDesc1, defaultValue: defaultLoc1, (sREQ): false
+					input "apiVer", sBOOL, (sTIT): "Api key version (2.5 - Off, 3.0 - On)?", defaultValue: false, submitOnChange: true
+					paragraph "OpenWeatherMap Integration uses onecall api.  Ensure your key is compatible"
+				}
 			}
 		}
 
@@ -508,9 +512,9 @@ def pageSettings(){
 				app.clearSetting('localHubUrl')
 				app.clearSetting('customWebcoreInstanceUrl')
 			}
-			state.endpointCloud=sNULL
-			state.endpoint=sNULL
-			state.endpointLocal=sNULL
+			state.endpointCloud=sNL
+			state.endpoint=sNL
+			state.endpointLocal=sNL
 			if((String)state.accessToken) updateEndpoint()
 		}
 
@@ -670,7 +674,7 @@ private pageSectionAcctId(Boolean ins=false){
 		}
 		String wName=sAppId()
 		acctlocFLD[wName]=null
-		locFLD[wName]=sNULL
+		locFLD[wName]=sNL
 		clearHashMap(wName)
 	}
 }
@@ -851,9 +855,9 @@ def pageRemove(){
 
 void revokeAccessToken(){
 	state.accessToken=null
-	state.endpointCloud=sNULL
-	state.endpoint=sNULL
-	state.endpointLocal=sNULL
+	state.endpointCloud=sNL
+	state.endpoint=sNL
+	state.endpointLocal=sNL
 	resetFuelStreamList()
 	initTokens()
 }
@@ -964,11 +968,11 @@ private void clearGlobalPistonCache(String meth=null){
 	t0=null
 }
 
-private void clearParentPistonCache(String meth=sNULL, Boolean frcResub=false, Boolean callAll=false){
+private void clearParentPistonCache(String meth=sNL, Boolean frcResub=false, Boolean callAll=false){
 	String wName=sAppId()
 	clearHashMap(wName)
 	acctlocFLD[wName]=null
-	locFLD[wName]=sNULL
+	locFLD[wName]=sNL
 	pStateFLD[wName]=(Map)[:]
 	pStateFLD=pStateFLD
 	mb()
@@ -1062,7 +1066,7 @@ private void initialize(){
 	}
 	String wName=sAppId()
 	acctlocFLD[wName]=null
-	locFLD[wName]=sNULL
+	locFLD[wName]=sNL
 	String a=accountSid()
 	String l=locationSid()
 	String a1=(String)atomicState.aSID
@@ -1113,11 +1117,14 @@ private void checkWeather(){
 		def storageApp=getStorageApp(t0)
 		if(storageApp!=null){
 			state.storAppOn=true
-			String weatherTyp= settings.weatherType ? (String)settings.weatherType : sNULL
+			String weatherTyp= settings.weatherType ? (String)settings.weatherType : sNL
 			storageApp.settingsToState("weatherType", weatherTyp)
 			storageApp.settingsToState("apixuKey", settings.apixuKey)
 			storageApp.settingsToState("zipCode", settings.zipCode)
-			if(weatherTyp=='OpenWeatherMap') storageApp.settingsToState("zipCode1", (String)settings.zipCode1)
+			if(weatherTyp=='OpenWeatherMap') {
+				storageApp.settingsToState("zipCode1", (String)settings.zipCode1)
+				storageApp.settingsToState("apiVer", (Boolean)settings.apiVer?:false)
+			}
 			if(t0){
 				storageApp.startWeather()
 			}else{
@@ -1169,9 +1176,9 @@ private Boolean initializeWebCoREEndpoint(Boolean disableRetry=false){
 				accessToken=createAccessToken() // this fills in state.accessToken
 			}catch(e){
 				error "An error has occurred during endpoint initialization: ", null, e
-				state.endpointCloud=sNULL
-				state.endpoint=sNULL
-				state.endpointLocal=sNULL
+				state.endpointCloud=sNL
+				state.endpoint=sNL
+				state.endpointLocal=sNL
 			}
 		}
 		if(accessToken){
@@ -1181,7 +1188,7 @@ private Boolean initializeWebCoREEndpoint(Boolean disableRetry=false){
 			return initializeWebCoREEndpoint(true)
 		}else error "Could not get access token"
 	}
-	return (String)state.endpoint!=sNULL
+	return (String)state.endpoint!=sNL
 }
 
 private void enableOauth(){
@@ -1262,7 +1269,7 @@ mappings{
 	path("/tap/:tapId"){action: [GET: "api_tap"]}
 }
 
-private Map api_get_error_result(String error,String m=sNULL){
+private Map api_get_error_result(String error,String m=sNL){
 	debug "Dashboard: error: ${error} m:$m"
 	return [
 		(sNM): (String)location.name + ' \\ ' + appName(),
@@ -1279,7 +1286,7 @@ private static String normalizeLabel(pisN){
 	String label=(String)pisN.label
 	String regex=' <span style.*$'
 	String t0=label.replaceAll(regex, sBLK)
-	return t0!=sNULL ? t0 : label
+	return t0!=sNL ? t0 : label
 }
 
 @Field static Semaphore theSerialLockFLD=new Semaphore(1)
@@ -1287,7 +1294,7 @@ private static String normalizeLabel(pisN){
 private void wpauseExecution(Long t){ pauseExecution(t) }
 
 @CompileStatic
-Boolean getTheLock(String meth=sNULL){
+Boolean getTheLock(String meth=sNL){
 	Long waitT=1600L
 	Boolean wait; wait=false
 	Semaphore sema=theSerialLockFLD
@@ -1311,7 +1318,7 @@ Boolean getTheLock(String meth=sNULL){
 }
 
 @CompileStatic
-static void releaseTheLock(String meth=sNULL){
+static void releaseTheLock(String meth=sNL){
 	lockTimeFLD=null
 	Semaphore sema=theSerialLockFLD
 	sema.release()
@@ -1319,14 +1326,14 @@ static void releaseTheLock(String meth=sNULL){
 
 @Field static final String sCB='clearB'
 @CompileStatic
-private void clearBaseResult(String meth=sNULL,String wNi=sNULL){
+private void clearBaseResult(String meth=sNL,String wNi=sNL){
 	String wName= wNi ?: sAppId()
 	Boolean didw=getTheLock(sCB)
 	Map a=null
 	base_resultFLD[wName]=a
 	base_resultFLD=base_resultFLD
-	lastActivityFLD=sNULL
-	lastActivityTOKFLD=sNULL
+	lastActivityFLD=sNL
+	lastActivityTOKFLD=sNL
 	tlastActivityFLD=0L
 	releaseTheLock(sCB)
 	//if(eric())debug "clearBaseResult "+meth
@@ -1472,7 +1479,7 @@ Boolean useLocalFuelStreams(){
 @SuppressWarnings('GroovyFallthrough')
 @CompileStatic
 private static String transformHsmStatus(String status){
-	if(status==sNULL) return "unconfigured"
+	if(status==sNL) return "unconfigured"
 	switch(status){
 		case sDISARMD:
 		case sALLDISARM:
@@ -1507,7 +1514,7 @@ private api_intf_dashboard_load(){
 			if((String)state.dashboard!=sINACT) stopDashboard()
 		}
 	}else{
-		if((String)params.pin!=sNULL){
+		if((String)params.pin!=sNL){
 			if(settings.PIN && md5('pin:'+(String)settings.PIN)==(String)params.pin){
 				result=api_get_base_result(true)
 				result.instance.token=createSecurityToken()
@@ -1597,7 +1604,7 @@ private api_intf_dashboard_piston_create(){
 	Map result
 	debug "Dashboard: Request received to create a new piston"
 	if(verifySecurityToken((String)params.token)){
-		String pname=(String)params.name!=sNULL ? (String)params.name : generatePistonName()
+		String pname=(String)params.name!=sNL ? (String)params.name : generatePistonName()
 		String n=handlePistn()
 		List apps; apps=wgetChildApps().findAll{ (String)it.name==n }
 		Boolean found; found=false
@@ -1613,7 +1620,7 @@ private api_intf_dashboard_piston_create(){
 			try{
 				def piston=addChildApp("ady624", handlePistn(), pname)
 				debug "created piston $piston.id  params $params"
-				if((String)params.author!=sNULL || (String)params.bin!=sNULL){
+				if((String)params.author!=sNL || (String)params.bin!=sNL){
 					piston.config([bin: (String)params.bin, author: (String)params.author, initialVersion: sVER])
 				}
 				debug "Created Piston "+pname
@@ -1630,16 +1637,16 @@ private api_intf_dashboard_piston_create(){
 	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
-private findPiston(String id, String nm=sNULL){
+private findPiston(String id, String nm=sNL){
 	def piston; piston=null
-	if(id!=sNULL || nm!=sNULL){
+	if(id!=sNL || nm!=sNL){
 		String n=handlePistn()
 		List t0; t0=wgetChildApps().findAll{ (String)it.name==n }
-		if(id!=sNULL){
+		if(id!=sNL){
 			piston=t0.find{ hashPID(it.id)==id }
 			if (!piston)piston=t0.find{ hashId(it.id)==id }
 		}
-		if(nm!=sNULL && !piston) piston=t0.find{ (String)it.label==nm }
+		if(nm!=sNL && !piston) piston=t0.find{ (String)it.label==nm }
 		t0=null
 	}
 	return piston
@@ -1653,8 +1660,8 @@ private api_intf_dashboard_piston_getDb() {
 		Map theDb=[
 				capabilities: capabilities().sort{ (String)it.value.d },
 				commands: [
-						physical: commands().sort{ (String)it.value.d!=sNULL ? (String)it.value.d : (String)it.value.n },
-						virtual: virtualCommands().sort{ (String)it.value.d!=sNULL ? (String)it.value.d : (String)it.value.n }
+						physical: commands().sort{ (String)it.value.d!=sNL ? (String)it.value.d : (String)it.value.n },
+						virtual: virtualCommands().sort{ (String)it.value.d!=sNL ? (String)it.value.d : (String)it.value.n }
 				],
 				attributes: attributesFLD.sort{ (String)it.key },
 				comparisons: comparisonsFLD,
@@ -1695,8 +1702,8 @@ private api_intf_dashboard_piston_get(){
 				/*Map theDb=[
 					capabilities: capabilities().sort{ (String)it.value.d },
 					commands: [
-						physical: commands().sort{ (String)it.value.d!=sNULL ? (String)it.value.d : (String)it.value.n },
-						virtual: virtualCommands().sort{ (String)it.value.d!=sNULL ? (String)it.value.d : (String)it.value.n }
+						physical: commands().sort{ (String)it.value.d!=sNL ? (String)it.value.d : (String)it.value.n },
+						virtual: virtualCommands().sort{ (String)it.value.d!=sNL ? (String)it.value.d : (String)it.value.n }
 					],
 					attributes: attributesFLD.sort{ (String)it.key },
 					comparisons: comparisonsFLD,
@@ -1728,7 +1735,7 @@ private api_intf_dashboard_piston_get(){
 	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
-private void checkResultSize(Map result, Boolean requireDb=false, String caller=sNULL){
+private void checkResultSize(Map result, Boolean requireDb=false, String caller=sNL){
 	if(!isCustomEndpoint() || !(Boolean)localHubUrl){
 		String jsonData; jsonData= JsonOutput.toJson(result)
 		//data saver for Hubitat ~100K limit
@@ -2144,7 +2151,7 @@ private api_intf_variable_set(){
 	Map result
 	String meth="dashboard variable_set "
 	debug meth+"Request received to set a variable"
-	String meth1; meth1=sNULL
+	String meth1; meth1=sNL
 	if(verifySecurityToken((String)params.token)){
 		String pid=(String)params.id
 		String name; name=(String)params.name
@@ -2154,9 +2161,9 @@ private api_intf_variable_set(){
 		Map<String,Object> localVars
 		if(!pid){
 			Boolean chgd; chgd=false
-			String vln; vln=value ? (String)value.n : sNULL
+			String vln; vln=value ? (String)value.n : sNL
 			if( (name && (Boolean)name.startsWith('@@')) || (vln && vln.startsWith('@@')) ){
-				String vn; vn=sNULL
+				String vn; vn=sNL
 				if(name && !value){
 					// delete a global
 					vn=name.substring(2)
@@ -2170,7 +2177,7 @@ private api_intf_variable_set(){
 					//result=[(sNM): name, (sVAL): null, type: null]
 				}else if(value && value.n){
 					vln=((String)value.n).substring(2)
-					if(name=='null') name=sNULL
+					if(name=='null') name=sNL
 					if(!name || name!=(String)value.n ){
 						if(name){
 							vn= name.substring(2)
@@ -2192,7 +2199,7 @@ private api_intf_variable_set(){
 							if(eric()) debug "att is adjustment is $mmtvl"
 							vl=vl - mmtvl
 						}
-						Map ta=fixHeGType(true, (String)value.t, vl, sNULL)
+						Map ta=fixHeGType(true, (String)value.t, vl, sNL)
 						for(it in ta){
 							String typ=(String)it.key
 							vl=it.value
@@ -2477,10 +2484,10 @@ Boolean ltsQuant(sensorId, String attribute){
 	return false
 }
 
-Map openWeatherConfig(){
-	String weatherTyp= settings.weatherType ? (String)settings.weatherType : sNULL
+Map openWeatherConfig(){ // used by graphs/fuel stream
+	String weatherTyp= settings.weatherType ? (String)settings.weatherType : sNL
 	if( state.storAppOn && weatherTyp=='OpenWeatherMap') {
-		return [latitude: settings.zipCode, longitude: settings.zipCode1, apiKey: settings.apixuKey, pollInterval: '30 Minutes']
+		return [latitude: settings.zipCode, longitude: settings.zipCode1, apiVer: settings.apiVer, apiKey: settings.apixuKey, pollInterval: '30 Minutes']
 	}
 	return null
 }
@@ -2705,7 +2712,7 @@ void resetMemSt(String meth,String wName){
 @CompileStatic
 void verCheck(String wName){
 	if(verFLD[wName]==sVER && HverFLD[wName]==sHVER) return
-	if(verFLD[wName]==sNULL || HverFLD[wName]==sNULL){
+	if(verFLD[wName]==sNL || HverFLD[wName]==sNL){
 		if((String)gtSt('cV')==sVER && (String)gtSt('hV')==sHVER){
 			resetMemSt(sVC,wName)
 			clearBaseResult(sVC,wName)
@@ -2914,7 +2921,7 @@ private Boolean isCustomEndpoint(){
 }
 
 String getDashboardUrl(){
-	if(!(String)state.endpoint) return sNULL
+	if(!(String)state.endpoint) return sNL
 
 	String aa= settings.customWebcoreInstanceUrl
 	if((Boolean)customEndpoints && aa){
@@ -2929,7 +2936,7 @@ String getDashboardUrl(){
 private String getDashboardInitUrl(Boolean reg=false){
 	if(eric()) debug "getDashboardInitUrl: reg: $reg"
 	String url=reg ? getDashboardRegistrationUrl() : getDashboardUrl()
-	if(!url) return sNULL
+	if(!url) return sNL
 	String t0,regkey
 	t0=url + (reg ? "register/" : "init/")
 	if(isCustomEndpoint()){
@@ -2959,7 +2966,7 @@ private String getDashboardInitUrl(Boolean reg=false){
 
 private String getDashboardRegistrationUrl(){
 	if((String)state.accessToken) updateEndpoint()
-	if(!(String)state.endpoint) return sNULL
+	if(!(String)state.endpoint) return sNL
 	//if((Boolean)state.installed && (Boolean)settings.agreement){
 	return "https://api.${domain()}/dashboard/".toString()
 }
@@ -3091,7 +3098,7 @@ private String transformCommand(command, Map<String,Map> overrides, String dvn){
 			return mcommand
 		}
 	}
-	return sNULL
+	return sNL
 }
 
 private void setPowerSource(String powerSource, Boolean atomic=true){
@@ -3109,7 +3116,7 @@ private Map AddHeGlobals(Map<String,Map> globalVars, String meth){
 	def vl
 	heV?.each{
 		nm='@@'+(String)it.key
-		ta=fixHeGType(false, (String)it.value.type, it.value.value, sNULL)
+		ta=fixHeGType(false, (String)it.value.type, it.value.value, sNL)
 		for(iit in ta){
 			typ=(String)iit.key
 			vl=iit.value
@@ -3221,7 +3228,7 @@ private String accountSid(){
 	Boolean useNew=state.properSID!=null ? (Boolean)state.properSID : true
 	String t='-A'
 	String accountStr
-	accountStr= hubUID.toString() + (useNew ? t : sNULL)
+	accountStr= hubUID.toString() + (useNew ? t : sNL)
 	if(acctANDloc()) accountStr= (String)settings.acctID
 	//if(eric()) debug "instance acct: $accountStr"
 	return hashId(accountStr)
@@ -3245,7 +3252,7 @@ private Boolean acctANDloc(){
 private String locationSid(){
 	String wName=sAppId()
 	String t; t=locFLD[wName]
-	if(t==sNULL){
+	if(t==sNL){
 		if(acctANDloc()) t= (String)settings.acctID + (String)settings.locID + sML
 		else{
 			Boolean useNew=state.properSID!=null ? (Boolean)state.properSID : true
@@ -3451,7 +3458,7 @@ List wgetChildApps() { return (List)getChildApps() }
 
 @Field static final String sURT='updateRunTimeData'
 @CompileStatic
-void updateRunTimeData(Map data, String wNi=sNULL, String idi=sNULL){
+void updateRunTimeData(Map data, String wNi=sNL, String idi=sNL){
 	if(!data || !data.id) return
 	List<Map> variableEvents=[]
 	if(data.gvCache!=null){
@@ -3462,7 +3469,7 @@ void updateRunTimeData(Map data, String wNi=sNULL, String idi=sNULL){
 		Boolean mdfd; mdfd=false
 		for(var in (Map<String,Map>)data.gvCache){
 			String k=(String)var.key
-			if(k!=sNULL && k.startsWith('@') && vars[k] && var.value.v!=vars[k].v ){
+			if(k!=sNL && k.startsWith('@') && vars[k] && var.value.v!=vars[k].v ){
 				Boolean a=variableEvents.push([(sNM): k, oldValue: vars[k].v, (sVAL): var.value.v, type: var.value.t])
 				vars[k].v=var.value.v
 				mdfd=true
@@ -3816,22 +3823,22 @@ def lifxHandler(response, Map cbkData){
 /******************************************************************************/
 
 private Map<String,Boolean> getLogging(){
-	String logging=settings.logging ? (String)settings.logging : sNULL
+	String logging=settings.logging ? (String)settings.logging : sNL
 	return [
 		(sERR): true,
 		warn: true,
-		info: (logging!='None' && logging!=sNULL),
+		info: (logging!='None' && logging!=sNL),
 		trace: (logging=='Medium') || (logging=='Full'),
 		debug: (logging=='Full')
 	]
 }
 
-private Map log(message, Integer shift=-2, err=null, String cmd=sNULL){
+private Map log(message, Integer shift=-2, err=null, String cmd=sNL){
 	Long lnow=wnow()
 	if(cmd=='timer'){
 		return [(sM): message, (sT): lnow, (sS): shift, e: err]
 	}
-	String myMsg; myMsg=sNULL
+	String myMsg; myMsg=sNL
 	def merr; merr=err
 	if(message instanceof Map){
 		//shift=(Integer)message.s
@@ -4176,6 +4183,7 @@ Map getChildAttributes(){
 //	schedule			: [ (sN): "schedule",			(sT): "object",											],
 	securityKeypad		: [ (sN): "security keypad",	(sT): sENUM,		(sO): [sDISARMD, "armed home", "armed away", "unknown"],			],
 	sessionStatus		: [ (sN): "session status",		(sT): sENUM,		(sO): ["canceled", "paused", "running", "stopped"],			],
+	settings			: [ (sN): "settings",			(sT): "object",											],
 	shock				: [ (sN): "shock",				(sT): sENUM,		(sO): [sCLEAR, sDETECTED],						],
 	sleeping			: [ (sN): "sleeping",			(sT): sENUM,		(sO): ["not sleeping", "sleeping"],					],
 	smoke				: [ (sN): "smoke",				(sT): sENUM,		(sO): [sCLEAR, sDETECTED, "tested"],					],
@@ -4185,8 +4193,13 @@ Map getChildAttributes(){
 	soundPressureLevel	: [ (sN): "sound pressure level",		(sT): sINT,	(sR): [0, null],		u: "dB",						],
 	speed				: [ (sN): "speed",				(sT): sENUM,		(sO): ["low", "medium-low", "medium", "medium-high", "high", sON, sOFF, "auto"],						],
 	status				: [ (sN): "status",				(sT): sENUM,		(sO): ["playing", "stopped"],						],
+	statusMessage		: [ (sN): "status message",		(sT): sSTR,								],
 //	status				: [ (sN): "status",				(sT): sSTR,											],
 	steps				: [ (sN): "steps",				(sT): sINT,		(sR): [0, null],									],
+	supportedFanSpeeds	: [ (sN): "supported fan speeds",	(sT): "object",											],
+	supportedInputs		: [ (sN): "supported inputs",	(sT): "object",											],
+	supportedThermostatFanModes		: [ (sN): "supported thermostat fan modes",	(sT): "object",											],
+	supportedThermostatModes		: [ (sN): "supported thermostat modes",	(sT): "object",											],
 	(sSWITCH)			: [ (sN): sSWITCH,				(sT): sENUM,		(sO): [sOFF, sON],		(sP): true,					],
 	tamper				: [ (sN): "tamper",				(sT): sENUM,		(sO): [sCLEAR, sDETECTED],						],
 	temperature			: [ (sN): "temperature",		(sT): sDEC,		(sR): [-460, 10000],	u: '°?',						],
@@ -4821,7 +4834,7 @@ private Map getLocationModeOptions(Boolean updateCache=false){
 	}
 	return result
 }
-private static Map getAlarmSystemStatusActions(){
+private static Map<String,String> getAlarmSystemStatusActions(){
 	return [
 		armAway:		"Arm Away",
 		armHome:		"Arm Home",
@@ -4907,7 +4920,7 @@ import hubitat.helper.RMUtils
 private Map getRuleOptions(Boolean updateCache){
 	Map result=[:]
 	['4.1', '5.0'].each { String ver ->
-		def rules=RMUtils.getRuleList(ver ?: sNULL)
+		def rules=RMUtils.getRuleList(ver ?: sNL)
 		rules.each{rule->
 			rule.each{pair->
 				result[hashId(pair.key)]=pair.value
@@ -5051,14 +5064,18 @@ private static String inputTitleStr(String title)	{ return '<u>'+title+'</u>' }
 //private static String pageTitleStr(String title)	{ return '<h1>'+title+'</h1>' }
 //private static String paraTitleStr(String title)	{ return '<b>'+title+'</b>' }
 
+@Field static final String sGITP='https://raw.githubusercontent.com/ady624/webCoRE/master/resources/icons/'
+private static String gimg(String imgSrc){ return sGITP+imgSrc }
+
 @CompileStatic
-private static String imgTitle(String imgSrc,String titleStr,String color=sNULL,Integer imgWidth=30,Integer imgHeight=0){
-	String imgStyle=sBLK
-	String myImgSrc='https://raw.githubusercontent.com/ady624/webCoRE/master/resources/icons/'+imgSrc
-	imgStyle += imgWidth>0 ? 'width: '+imgWidth.toString()+'px !important;':sBLK
-	imgStyle += imgHeight>0 ? imgWidth!=0 ? sSPC:sBLK+'height:'+imgHeight.toString()+'px !important;':sBLK
-	if(color!=sNULL){ return """<div style="color: ${color}; font-weight:bold;"><img style="${imgStyle}" src="${myImgSrc}"> ${titleStr}</img></div>""".toString() }
-	else{ return """<img style="${imgStyle}" src="${myImgSrc}"> ${titleStr}</img>""".toString() }
+private static String imgTitle(String imgSrc,String titleStr,String color=sNL,Integer imgWidth=30,Integer imgHeight=iZ){
+	String imgStyle
+	imgStyle=sBLK
+	String myImgSrc=gimg(imgSrc)
+	imgStyle+=imgWidth>iZ ? 'width: '+imgWidth.toString()+'px !important;':sBLK
+	imgStyle+=imgHeight>iZ ? imgWidth!=iZ ? sSPC:sBLK+'height:'+imgHeight.toString()+'px !important;':sBLK
+	if(color!=sNL) return """<div style="color: ${color}; font-weight:bold;"><img style="${imgStyle}" src="${myImgSrc}"> ${titleStr}</img></div>""".toString()
+	else return """<img style="${imgStyle}" src="${myImgSrc}"> ${titleStr}</img>""".toString()
 }
 
 static String myObj(obj){
@@ -5100,7 +5117,7 @@ Map<String,Object> fixHeGType(Boolean toHubV, String typ, v, String dtyp){
 				// HE this is a List<String> -> String of words separated by a space (can split())
 				List<String> dL= v instanceof List ? (List<String>)v : (v ? (List<String>)[v]:[])
 				String res
-				res=sNULL
+				res=sNL
 				Boolean ok
 				ok=true
 				dL.each{ String it->
@@ -5277,7 +5294,7 @@ private String hashId(id){
 	String wName= sAppId()
 	if(theHashMapVFLD[wName]==null){ theHashMapVFLD[wName]= [:]; theHashMapVFLD=theHashMapVFLD }
 	result=(String)theHashMapVFLD[wName][myId]
-	if(result==sNULL){
+	if(result==sNL){
 		result=sCOLON+md5('core.' + myId)+sCOLON
 		theHashMapVFLD[wName][myId]=result
 		theHashMapVFLD=theHashMapVFLD
@@ -5289,58 +5306,73 @@ private String hashId(id){
 @Field static Semaphore theMBLockFLD=new Semaphore(0)
 
 // Memory Barrier
-static void mb(String meth=sNULL){
+static void mb(String meth=sNL){
 	if((Boolean)theMBLockFLD.tryAcquire()){
 		theMBLockFLD.release()
 	}
 }
 
-
-@Field static final String sSP='<span>'
-@Field static final String sSSP='</span>'
-@Field static final String sSPCSB='     │'
-@Field static final String sSPCS6='      '
-@Field static final String sSPCST='┌─ '
-@Field static final String sSPCSM='├─ '
-@Field static final String sSPCSE='└─ '
-@Field static final String sNL='\n'
-@Field static final String sDBNL='\n\n • '
-@Field static final String sSPORNG="<span style='color:orange'>"
 @Field static final Integer iZ=0
 @Field static final Integer i1=1
 @Field static final Integer i2=2
 @Field static final Integer i3=3
 
+@Field static final String sSPCSB7='      │'
+@Field static final String sSPCSB6='     │'
+@Field static final String sSPCS6 ='      '
+@Field static final String sSPCS5 ='     '
+@Field static final String sSPCST='┌─ '
+@Field static final String sSPCSM='├─ '
+@Field static final String sSPCSE='└─ '
+@Field static final String sNWL='\n'
+@Field static final String sDBNL='\n\n • '
+
 @CompileStatic
-static String dumpListDesc(List data,final Integer level,List<Boolean> lastLevel,final String listLabel,Boolean html=false){
+static String spanStr(Boolean html,String s){ return html? span(s) : s }
+
+@CompileStatic
+static String doLineStrt(Integer level,List<Boolean>newLevel){
+	String lineStrt; lineStrt=sNWL
+	Boolean dB; dB=false
+	Integer i
+	for(i=iZ;i<level;i++){
+		if(i+i1<level){
+			if(!newLevel[i]){
+				if(!dB){ lineStrt+=sSPCSB7; dB=true }
+				else lineStrt+=sSPCSB6
+			}else lineStrt+= !dB ? sSPCS6:sSPCS5
+		}else lineStrt+= !dB ? sSPCS6:sSPCS5
+	}
+	return lineStrt
+}
+
+@CompileStatic
+static String dumpListDesc(List data,Integer level,List<Boolean> lastLevel,String listLabel,Boolean html=false,Boolean reorder=true){
 	String str; str=sBLK
 	Integer cnt; cnt=i1
 	List<Boolean> newLevel=lastLevel
 
-	final List list1=data?.collect{it}
-	final Integer sz=list1.size()
+	List list1=data?.collect{it}
+	Integer sz=list1.size()
 	for(Object par in list1){
-		final String lbl=listLabel+"[${cnt-i1}]".toString()
+		String lbl=listLabel+"[${cnt-i1}]".toString()
 		if(par instanceof Map){
-			Map<String,Object> newmap=[:]
+			Map newmap=[:]
 			newmap[lbl]=(Map)par
 			Boolean t1=cnt==sz
 			newLevel[level]=t1
-			str+=dumpMapDesc(newmap,level,newLevel,!t1,html)
+			str+=dumpMapDesc(newmap,level,newLevel,cnt,sz,!t1,html,reorder)
 		}else if(par instanceof List || par instanceof ArrayList){
-			Map<String,Object> newmap=[:]
+			Map newmap=[:]
 			newmap[lbl]=par
 			Boolean t1=cnt==sz
 			newLevel[level]=t1
-			str+=dumpMapDesc(newmap,level,newLevel,!t1,html)
+			str+=dumpMapDesc(newmap,level,newLevel,cnt,sz,!t1,html,reorder)
 		}else{
-			String lineStrt; lineStrt=sNL
-			Integer i
-			for(i=iZ; i<level; i++)lineStrt+=(i+i1<level)? (!lastLevel[i] ? sSPCSB:sSPCS6):sSPCS6
+			String lineStrt
+			lineStrt=doLineStrt(level,lastLevel)
 			lineStrt+=cnt==i1 && sz>i1 ? sSPCST:(cnt<sz ? sSPCSM:sSPCSE)
-			if(html)str+=sSP
-			str+=lineStrt+lbl+": ${par} (${objType(par)})".toString()
-			if(html)str+=sSSP
+			str+=spanStr(html, lineStrt+lbl+": ${par} (${objType(par)})".toString() )
 		}
 		cnt+=i1
 	}
@@ -5348,60 +5380,51 @@ static String dumpListDesc(List data,final Integer level,List<Boolean> lastLevel
 }
 
 @CompileStatic
-static String dumpMapDesc(Map<String,Object> data,final Integer level,List<Boolean> lastLevel,Boolean listCall=false,Boolean html=false){
+static String dumpMapDesc(Map data,Integer level,List<Boolean> lastLevel,Integer listCnt=null,Integer listSz=null,Boolean listCall=false,Boolean html=false,Boolean reorder=true){
 	String str; str=sBLK
-	Integer cnt,i
-	cnt=i1
-	final Integer sz=data?.size()
-	Map<String,Object> svMap,svLMap,newMap
-	svMap=[:]
-	svLMap=[:]
-	newMap=[:]
+	Integer cnt; cnt=i1
+	Integer sz=data?.size()
+	Map svMap,svLMap,newMap; svMap=[:]; svLMap=[:]; newMap=[:]
 	for(par in data){
-		final String k=(String)par.key
-		final def v=par.value
-		if(v instanceof Map){
+		String k=(String)par.key
+		def v=par.value
+		if(reorder && v instanceof Map){
 			svMap+=[(k): v]
-		}else if(v instanceof List || v instanceof ArrayList){
+		}else if(reorder && (v instanceof List || v instanceof ArrayList)){
 			svLMap+=[(k): v]
 		}else newMap+=[(k):v]
 	}
 	newMap+=svMap+svLMap
-	final Integer lvlpls=level+i1
+	Integer lvlpls=level+i1
 	for(par in newMap){
 		String lineStrt
 		List<Boolean> newLevel=lastLevel
-		final Boolean thisIsLast=cnt==sz && !listCall
+		Boolean thisIsLast=cnt==sz && !listCall
 		if(level>iZ)newLevel[(level-i1)]=thisIsLast
-		Boolean theLast; theLast=thisIsLast
+		Boolean theLast
+		theLast=thisIsLast
 		if(level==iZ)lineStrt=sDBNL
 		else{
 			theLast=theLast && thisIsLast
-			lineStrt=sNL
-			for(i=iZ; i<level; i++)lineStrt+=(i+i1<level)? (!newLevel[i] ? sSPCSB:sSPCS6):sSPCS6
-			lineStrt+=((cnt<sz || listCall) && !thisIsLast) ? sSPCSM:sSPCSE
+			lineStrt=doLineStrt(level,newLevel)
+			if(listSz && listCnt && listCall)lineStrt+=listCnt==i1 && listSz>i1 ? sSPCST:(listCnt<listSz ? sSPCSM:sSPCSE)
+			else lineStrt+=((cnt<sz || listCall) && !thisIsLast) ? sSPCSM:sSPCSE
 		}
-		final String k=(String)par.key
-		final def v=par.value
+		String k=(String)par.key
+		def v=par.value
 		String objType=objType(v)
 		if(v instanceof Map){
-			if(html)str+=sSP
-			str+=lineStrt+"${k}: (${objType})".toString()
-			if(html)str+=sSSP
+			str+=spanStr(html, lineStrt+"${k}: (${objType})".toString() )
 			newLevel[lvlpls]=theLast
-			str+=dumpMapDesc((Map)v,lvlpls,newLevel,false,html)
+			str+=dumpMapDesc((Map)v,lvlpls,newLevel,null,null,false,html,reorder)
 		}
 		else if(v instanceof List || v instanceof ArrayList){
-			if(html)str+=sSP
-			str+=lineStrt+"${k}: [${objType}]".toString()
-			if(html)str+=sSSP
+			str+=spanStr(html, lineStrt+"${k}: [${objType}]".toString() )
 			newLevel[lvlpls]=theLast
-			str+=dumpListDesc((List)v,lvlpls,newLevel,sBLK,html)
+			str+=dumpListDesc((List)v,lvlpls,newLevel,sBLK,html,reorder)
 		}
 		else{
-			if(html)str+=sSP
-			str+=lineStrt+"${k}: (${v}) (${objType})".toString()
-			if(html)str+=sSSP
+			str+=spanStr(html, lineStrt+"${k}: (${v}) (${objType})".toString() )
 		}
 		cnt+=i1
 	}
@@ -5409,12 +5432,12 @@ static String dumpMapDesc(Map<String,Object> data,final Integer level,List<Boole
 }
 
 @CompileStatic
-static String objType(obj){ return sSPORNG+myObj(obj)+sSSP }
+static String objType(obj){ return span(myObj(obj),sCLRORG) }
 
 @CompileStatic
-static String getMapDescStr(Map<String,Object> data){
+static String getMapDescStr(Map data,Boolean reorder=true){
 	List<Boolean> lastLevel=[true]
-	String str=dumpMapDesc(data,iZ,lastLevel,false,true)
+	String str=dumpMapDesc(data,iZ,lastLevel,null,null,false,true,reorder)
 	return str!=sBLK ? str:'No Data was returned'
 }
 

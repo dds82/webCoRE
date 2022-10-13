@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update July 31, 2022 for Hubitat
+ *  Last update October 10, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -13693,6 +13693,7 @@ Boolean hubiTools_check_list(List<Map> dataSources, List<Map> list_){
 @Field static final String sTIT='title'
 @Field static final String sVAL='value'
 @Field static final String sERROR='error'
+@Field static final String sINFO='info'
 @Field static final String sWARN='warn'
 @Field static final String sTRC='trace'
 @Field static final String sDBG='debug'
@@ -13841,12 +13842,35 @@ private Map log(message,Map r9,Integer shift=iN2,Exception err=null,String cmd=s
 	}
 	String myPad=sSPC
 	if(hasErr) myMsg+="$merr".toString()
-	if((mcmd in [sERROR,sWARN]) || hasErr || force || !svLog || !r9 || r9Is(r9,'logsToHE') || isEric())log."$mcmd" myPad+prefix+sSPC+myMsg
+	if((mcmd in [sERROR,sWARN]) || hasErr || force || !svLog || !r9 || r9Is(r9,'logsToHE') || isEric())doLog(mcmd, myPad+prefix+sSPC+myMsg)
 	//}else log."$mcmd" myMsg
 	return [:]
 }
 
-private void info(message,Map r9,Integer shift=iN2,Exception err=null){ Map a=log(message,r9,shift,err,'info')}
+void doLog(String mcmd, String msg){
+	String clr
+	switch(mcmd){
+		case sINFO:
+			clr= '#0299b1'
+			break
+		case sTRC:
+			clr= sCLRGRY
+			break
+		case sDBG:
+			clr= 'purple'
+			break
+		case sWARN:
+			clr= sCLRORG
+			break
+		case sERROR:
+		default:
+			clr= sCLRRED
+	}
+	String myMsg= msg.replaceAll(sLTH, '&lt;').replaceAll(sGTH, '&gt;')
+	log."$mcmd" span(myMsg,clr)
+}
+
+private void info(message,Map r9,Integer shift=iN2,Exception err=null){ Map a=log(message,r9,shift,err,sINFO)}
 private void trace(message,Map r9,Integer shift=iN2,Exception err=null){ Map a=log(message,r9,shift,err,sTRC)}
 private void debug(message,Map r9,Integer shift=iN2,Exception err=null){ Map a=log(message,r9,shift,err,sDBG)}
 private void warn(message,Map r9,Integer shift=iN2,Exception err=null){ Map a=log(message,r9,shift,err,sWARN)}
@@ -13873,6 +13897,8 @@ private static Long lMt(Map m){ (Long)m[sT] }
 
 private Map timer(String message,Map r9,Integer shift=iN2,err=null){ log(message,r9,shift,err,sTIMER)}
 
+@Field static final String sLTH='<'
+@Field static final String sGTH='>'
 @Field static final String sCLR4D9	= '#2784D9'
 @Field static final String sCLRRED	= 'red'
 @Field static final String sCLRRED2	= '#cc2d3b'
@@ -13888,8 +13914,6 @@ static String span(String str,String clr=sNL,String sz=sNL,Boolean bld=false,Boo
 @CompileStatic
 private Long elapseT(Long t,Long n=wnow()){ return Math.round(d1*n-t) }
 
-@Field static final String sSP='<span>'
-@Field static final String sSSP='</span>'
 @Field static final String sSPCSB7='      │'
 @Field static final String sSPCSB6='     │'
 @Field static final String sSPCS6 ='      '
@@ -13899,14 +13923,14 @@ private Long elapseT(Long t,Long n=wnow()){ return Math.round(d1*n-t) }
 @Field static final String sSPCSE='└─ '
 @Field static final String sNWL='\n'
 @Field static final String sDBNL='\n\n • '
-@Field static final String sSPORNG="<span style='color:orange'>"
+
+@CompileStatic
+static String spanStr(Boolean html,String s){ return html? span(s) : s }
 
 @CompileStatic
 static String doLineStrt(Integer level,List<Boolean>newLevel){
-	String lineStrt
-	lineStrt=sNWL
-	Boolean dB
-	dB=false
+	String lineStrt; lineStrt=sNWL
+	Boolean dB; dB=false
 	Integer i
 	for(i=iZ;i<level;i++){
 		if(i+i1<level){
@@ -13920,11 +13944,9 @@ static String doLineStrt(Integer level,List<Boolean>newLevel){
 }
 
 @CompileStatic
-static String dumpListDesc(List data,final Integer level,List<Boolean> lastLevel,final String listLabel,Boolean html=false,Boolean reorder=true){
-	String str
-	str=sBLK
-	Integer cnt
-	cnt=i1
+static String dumpListDesc(List data,Integer level,List<Boolean> lastLevel,String listLabel,Boolean html=false,Boolean reorder=true){
+	String str; str=sBLK
+	Integer cnt; cnt=i1
 	List<Boolean> newLevel=lastLevel
 
 	List list1=data?.collect{it}
@@ -13947,9 +13969,7 @@ static String dumpListDesc(List data,final Integer level,List<Boolean> lastLevel
 			String lineStrt
 			lineStrt=doLineStrt(level,lastLevel)
 			lineStrt+=cnt==i1 && sz>i1 ? sSPCST:(cnt<sz ? sSPCSM:sSPCSE)
-			if(html)str+=sSP
-			str+=lineStrt+lbl+": ${par} (${objType(par)})".toString()
-			if(html)str+=sSSP
+			str+=spanStr(html, lineStrt+lbl+": ${par} (${objType(par)})".toString() )
 		}
 		cnt+=i1
 	}
@@ -13957,16 +13977,11 @@ static String dumpListDesc(List data,final Integer level,List<Boolean> lastLevel
 }
 
 @CompileStatic
-static String dumpMapDesc(Map data,final Integer level,List<Boolean> lastLevel,Integer listCnt=null,Integer listSz=null,Boolean listCall=false,Boolean html=false,Boolean reorder=true){
-	String str
-	str=sBLK
-	Integer cnt
-	cnt=i1
-	final Integer sz=data?.size()
-	Map svMap, svLMap, newMap
-	svMap=[:]
-	svLMap=[:]
-	newMap=[:]
+static String dumpMapDesc(Map data,Integer level,List<Boolean> lastLevel,Integer listCnt=null,Integer listSz=null,Boolean listCall=false,Boolean html=false,Boolean reorder=true){
+	String str; str=sBLK
+	Integer cnt; cnt=i1
+	Integer sz=data?.size()
+	Map svMap,svLMap,newMap; svMap=[:]; svLMap=[:]; newMap=[:]
 	for(par in data){
 		String k=(String)par.key
 		def v=par.value
@@ -13977,11 +13992,11 @@ static String dumpMapDesc(Map data,final Integer level,List<Boolean> lastLevel,I
 		}else newMap+=[(k):v]
 	}
 	newMap+=svMap+svLMap
-	final Integer lvlpls=level+i1
+	Integer lvlpls=level+i1
 	for(par in newMap){
 		String lineStrt
 		List<Boolean> newLevel=lastLevel
-		final Boolean thisIsLast=cnt==sz && !listCall
+		Boolean thisIsLast=cnt==sz && !listCall
 		if(level>iZ)newLevel[(level-i1)]=thisIsLast
 		Boolean theLast
 		theLast=thisIsLast
@@ -13992,27 +14007,21 @@ static String dumpMapDesc(Map data,final Integer level,List<Boolean> lastLevel,I
 			if(listSz && listCnt && listCall)lineStrt+=listCnt==i1 && listSz>i1 ? sSPCST:(listCnt<listSz ? sSPCSM:sSPCSE)
 			else lineStrt+=((cnt<sz || listCall) && !thisIsLast) ? sSPCSM:sSPCSE
 		}
-		final String k=(String)par.key
-		final def v=par.value
+		String k=(String)par.key
+		def v=par.value
 		String objType=objType(v)
 		if(v instanceof Map){
-			if(html)str+=sSP
-			str+=lineStrt+"${k}: (${objType})".toString()
-			if(html)str+=sSSP
+			str+=spanStr(html, lineStrt+"${k}: (${objType})".toString() )
 			newLevel[lvlpls]=theLast
 			str+=dumpMapDesc((Map)v,lvlpls,newLevel,null,null,false,html,reorder)
 		}
 		else if(v instanceof List || v instanceof ArrayList){
-			if(html)str+=sSP
-			str+=lineStrt+"${k}: [${objType}]".toString()
-			if(html)str+=sSSP
+			str+=spanStr(html, lineStrt+"${k}: [${objType}]".toString() )
 			newLevel[lvlpls]=theLast
 			str+=dumpListDesc((List)v,lvlpls,newLevel,sBLK,html,reorder)
 		}
 		else{
-			if(html)str+=sSP
-			str+=lineStrt+"${k}: (${v}) (${objType})".toString()
-			if(html)str+=sSSP
+			str+=spanStr(html, lineStrt+"${k}: (${v}) (${objType})".toString() )
 		}
 		cnt+=i1
 	}
@@ -14020,7 +14029,7 @@ static String dumpMapDesc(Map data,final Integer level,List<Boolean> lastLevel,I
 }
 
 @CompileStatic
-static String objType(obj){ return sSPORNG+myObj(obj)+sSSP }
+static String objType(obj){ return span(myObj(obj),sCLRORG) }
 
 @CompileStatic
 static String getMapDescStr(Map data,Boolean reorder=true){
@@ -14028,7 +14037,6 @@ static String getMapDescStr(Map data,Boolean reorder=true){
 	String str=dumpMapDesc(data,iZ,lastLevel,null,null,false,true,reorder)
 	return str!=sBLK ? str:'No Data was returned'
 }
-
 
 private static String sectionTitleStr(String title)	{ return '<h3>'+title+'</h3>' }
 private static String inputTitleStr(String title)	{ return '<u>'+title+'</u>' }

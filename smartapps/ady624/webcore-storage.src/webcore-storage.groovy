@@ -16,15 +16,21 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update July 14, 2022 for Hubitat
+ * Last update October 13, 2022 for Hubitat
  */
 
 //file:noinspection unused
 //file:noinspection GroovyUnusedAssignment
 //file:noinspection GrDeprecatedAPIUsage
+//file:noinspection SpellCheckingInspection
+//file:noinspection GrMethodMayBeStatic
 
-static String version(){ return 'v0.3.114.20220203' }
-static String HEversion(){ return 'v0.3.114.20220714_HE' }
+@Field static final String sVER='v0.3.114.20220203'
+@Field static final String sHVER='v0.3.114.20220928_HE'
+
+static String version(){ return sVER }
+static String HEversion(){ return sHVER }
+
 /******************************************************************************/
 /*** webCoRE DEFINITION														***/
 /******************************************************************************/
@@ -53,7 +59,11 @@ preferences {
 
 import groovy.json.JsonOutput
 import groovy.transform.Field
+import groovy.transform.CompileStatic
 
+import java.security.MessageDigest
+
+@Field static final String sNL=(String)null
 @Field static final String sBLK=''
 @Field static final String sSPC=' '
 @Field static final String sCOLON=':'
@@ -74,7 +84,7 @@ def pageSettings(){
 				paragraph "If you are trying to install webCoRE, please go back one step and choose webCoRE, not webCoRE Piston. You can also visit wiki.webcore.co for more information on how to install and use webCoRE"
 				if(parent){
 					def t0 = parent.getWikiUrl()
-					href sBLK, title: imgTitle("https://cdn.rawgit.com/ady624/webCoRE/master/resources/icons/app-CoRE.png", inputTitleStr("More information")), description: t0, style: "external", url: t0, required: false
+					href sBLK, title: imgTitle("app-CoRE.png", inputTitleStr("More information")), description: t0, style: "external", url: t0, required: false
 				}
 			}
 		}
@@ -128,14 +138,18 @@ private static String inputTitleStr(String title)	{ return '<u>'+title+'</u>' }
 //private static String pageTitleStr(String title)	{ return '<h1>'+title+'</h1>' }
 //private static String paraTitleStr(String title)	{ return '<b>'+title+'</b>' }
 
-private static String imgTitle(String imgSrc, String titleStr, String color=(String)null, Integer imgWidth=30, Integer imgHeight=0){
-	String imgStyle = sBLK
-	imgStyle += imgWidth ? "width: ${imgWidth}px !important;" : sBLK
-	imgStyle += imgHeight ? "${imgWidth ? " " : ""}height: ${imgHeight}px !important;" : sBLK
-	if(color!=(String)null){ return """<div style="color: ${color}; font-weight: bold;"><img style="${imgStyle}" src="${imgSrc}"> ${titleStr}</img></div>""".toString()
-	}
-	else { return """<img style="${imgStyle}" src="${imgSrc}"> ${titleStr}</img>""".toString()
-	}
+@Field static final String sGITP='https://raw.githubusercontent.com/ady624/webCoRE/master/resources/icons/'
+private static String gimg(String imgSrc){ return sGITP+imgSrc }
+
+@CompileStatic
+private static String imgTitle(String imgSrc,String titleStr,String color=sNL,Integer imgWidth=30,Integer imgHeight=iZ){
+	String imgStyle
+	imgStyle=sBLK
+	String myImgSrc=gimg(imgSrc)
+	imgStyle+=imgWidth>iZ ? 'width: '+imgWidth.toString()+'px !important;':sBLK
+	imgStyle+=imgHeight>iZ ? imgWidth!=iZ ? sSPC:sBLK+'height:'+imgHeight.toString()+'px !important;':sBLK
+	if(color!=sNL) return """<div style="color: ${color}; font-weight:bold;"><img style="${imgStyle}" src="${myImgSrc}"> ${titleStr}</img></div>""".toString()
+	else return """<img style="${imgStyle}" src="${myImgSrc}"> ${titleStr}</img>""".toString()
 }
 
 /******************************************************************************/
@@ -157,8 +171,8 @@ void updated(){
 }
 
 public void startWeather(){
-	String myKey = (String)state.apixuKey ?: (String)null
-	String weatherType = (String)state.weatherType ?: (String)null
+	String myKey = (String)state.apixuKey ?: sNL
+	String weatherType = (String)state.weatherType ?: sNL
 	if(myKey && weatherType){
 		unschedule()
 		runEvery30Minutes(updateWeatherD)
@@ -167,7 +181,7 @@ public void startWeather(){
 }
 
 public void stopWeather(){
-	state.apixuKey = (String)null
+	state.apixuKey = sNL
 	unschedule()
 	stateRemove("obs")
 }
@@ -181,11 +195,12 @@ private void initialize(){
 private gtSetting(String nm){ return settings."${nm}" }
 
 public void updateWeatherD(){
-	String myKey = (String)state.apixuKey ?: (String)null
-	String weatherType = (String)state.weatherType ?: (String)null
-	String myZip = state.zipCode
-	String myZip1 = state.zipCode1
-	if((String)state.zipCode==(String)null || (String)state.zipCode == sBLK){
+	String myKey = (String)state.apixuKey ?: sNL
+	String weatherType = (String)state.weatherType ?: sNL
+	String myZip, myZip1
+	myZip = state.zipCode
+	myZip1 = state.zipCode1
+	if((String)state.zipCode==sNL || (String)state.zipCode == sBLK){
 		switch(weatherType){
 		case 'apiXU':
 			myZip = location.zipCode
@@ -209,10 +224,13 @@ public void updateWeatherD(){
 			break
 		case 'OpenWeatherMap':
 			//myUri = 'https://api.openweathermap.org/data/2.5/onecall?lat=' + myZip + '&lon=' + myZip1 + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + myKey
-			myUri = 'https://api.openweathermap.org/data/2.5/onecall?lat=' + myZip + '&lon=' + myZip1 + '&exclude=minutely&mode=json&units=imperial&appid=' + myKey
+			Boolean apiVer = (Boolean)state.apiVer ?: false
+			myUri = 'https://api.openweathermap.org/data/'+(apiVer ? '3.0':'2.5')+'/onecall?lat=' + myZip + '&lon=' + myZip1 + '&exclude=minutely&mode=json&units=imperial&appid=' + myKey
 		}
 		if(myUri){
-			Map params = [ uri: myUri ]
+			Map header; header=[:]
+			header += ['Accept-Encoding': 'gzip,deflate']
+			Map params = [ uri: myUri, headers: header, timeout:20 ]
 			try {
 				asynchttpGet('ahttpRequestHandler', params, [tt: 'finishPoll'])
 			} catch (e){
@@ -230,7 +248,7 @@ public void ahttpRequestHandler(resp, callbackData){
 	def obs
 	obs = [:]
 //	def err
-	String weatherType = (String)state.weatherType ?: (String)null
+	String weatherType = (String)state.weatherType ?: sNL
 	if((resp.status == 200) && resp.data){
 		try {
 			json = resp.getJson()
@@ -244,8 +262,9 @@ public void ahttpRequestHandler(resp, callbackData){
 
 		if(weatherType == 'apiXU'){
 			if(json.forecast && json.forecast.forecastday){
-				List<Map> lt0=(List)json.forecast.forecastday
-				for(Integer i = 0; i <= 6; i++){
+				List<Map> lt0=(List<Map>)json.forecast.forecastday
+				Integer i
+				for(i = 0; i <= 6; i++){
 					Integer t0 = lt0[i]?.day?.condition?.code
 					if(!t0) continue
 					String t1 = getWUIconName(t0,1)
@@ -263,35 +282,38 @@ public void ahttpRequestHandler(resp, callbackData){
 		} else if(weatherType == 'DarkSky'){
 
 			def sunTimes = app.getSunriseAndSunset()
-			Long sunrise = sunTimes.sunrise.time
-			Long sunset = sunTimes.sunset.time
-			Long time = wnow()
+			Long sunrise, sunset, time
 
-			Boolean is_day = true
-			if(sunrise <= time && sunset >= time){
-				;
-			}else{
-				is_day = false
-			}
+			sunrise = sunTimes.sunrise.time
+			sunset = sunTimes.sunset.time
+			time = wnow()
+
+			Boolean is_day
+			is_day = (sunrise <= time && sunset >= time)
 
 			json.name = location.name
 			json.zipCode = location.zipCode
 			if(json.currently){
-				Map t0 = (Map)json.currently
-				String c_code = getdsIconCode((String)t0.icon, (String)t0.summary, !is_day)
+				Map t0
+				t0 = (Map)json.currently
+				String c_code
+				c_code = getdsIconCode((String)t0.icon, (String)t0.summary, !is_day)
 				json.currently.condition_code = c_code
 				json.currently.condition_text = getcondText(c_code)
 
 				c_code = getdsIconCode((String)t0.icon, (String)t0.summary)
 				String c1 = getStdIcon(c_code)
-				Integer wuCode = getWUConditionCode(c1)
-				String tt2 = getWUIconNum(wuCode)
+				Integer wuCode
+				wuCode = getWUConditionCode(c1)
+				String tt2
+				tt2 = getWUIconNum(wuCode)
 				json.currently.code = wuCode
 				json.currently.wuicon = tt2
 
 				List<Map> lt0=(List)json?.daily?.data
 				t0 = lt0 ? (Map)lt0[0] : [:]
-				String f_code = getdsIconCode((String)t0?.icon, (String)t0?.summary, !is_day)
+				String f_code
+				f_code = getdsIconCode((String)t0?.icon, (String)t0?.summary, !is_day)
 				json.currently.forecast_code = f_code
 				json.currently.forecast_text = getcondText(f_code)
 
@@ -305,11 +327,12 @@ public void ahttpRequestHandler(resp, callbackData){
 				json.currently.fwuicon = tt2
 			}
 			if(json.hourly && json.hourly.data){
-				List<Map> lt0=(List)json?.hourly?.data
-				List<Map> lt1=(List)json?.daily?.data
-				Integer hr = new Date(wnow()).hours
-				Integer indx = 0
-				for(Integer i = 0; i <= 50; i++){
+				List<Map> lt0=(List<Map>)json?.hourly?.data
+				List<Map> lt1=(List<Map>)json?.daily?.data
+				Integer i,indx,hr
+				hr = new Date(wnow()).hours
+				indx = 0
+				for(i = 0; i <= 50; i++){
 					Map t0 = (Map)lt0[i]
 					if(!t0) continue
 
@@ -318,25 +341,25 @@ public void ahttpRequestHandler(resp, callbackData){
 					sunrise = (Long)t1.sunriseTime
 					sunset = (Long)t1.sunsetTime
 					time = (Long)t0.time.toLong()
-					is_day = true
-					if(sunrise <= time && sunset >= time){
-						;
-					}else{
-						is_day = false
-					}
 
-					String c_code = getdsIconCode((String)t0.icon, (String)t0.summary, !is_day)
+					is_day = (sunrise <= time && sunset >= time)
+
+					String c_code
+					c_code = getdsIconCode((String)t0.icon, (String)t0.summary, !is_day)
 					lt0[i].condition_code = c_code
 					lt0[i].condition_text = getcondText(c_code)
 
 					c_code = getdsIconCode((String)t0.icon, (String)t0.summary)
 					String c1 = getStdIcon(c_code)
-					Integer wuCode = getWUConditionCode(c1)
-					String tt2 = getWUIconNum(wuCode)
+					Integer wuCode
+					wuCode = getWUConditionCode(c1)
+					String tt2
+					tt2 = getWUIconNum(wuCode)
 					lt0[i].code = wuCode
 					lt0[i].wuicon = tt2
 
-					String f_code = getdsIconCode((String)t1?.icon, (String)t1?.summary)
+					String f_code
+					f_code = getdsIconCode((String)t1?.icon, (String)t1?.summary)
 					lt0[i].forecast_code = f_code
 					lt0[i].forecast_text = getcondText(f_code)
 
@@ -356,8 +379,9 @@ public void ahttpRequestHandler(resp, callbackData){
 				json.hourly.data=lt0
 			}
 			if(json.daily && json.daily.data){
-				List<Map> lt0=(List)json?.daily?.data
-				for(Integer i = 0; i <= 31; i++){
+				List<Map> lt0=(List<Map>)json?.daily?.data
+				Integer i
+				for(i = 0; i <= 31; i++){
 					Map t0 = lt0 ? (Map)lt0[i] : [:]
 					if(!t0) continue
 					String c_code = getdsIconCode((String)t0.icon, (String)t0.summary)
@@ -393,14 +417,14 @@ public void ahttpRequestHandler(resp, callbackData){
 }
 
 public Map getWData(){
-	Map obs = [:]
-	String weatherType = (String)state.weatherType ?: (String)null
+	Map obs; obs = [:]
+	String weatherType = (String)state.weatherType ?: sNL
 	if(theObsFLD){
 		if(weatherType == 'apiXU'){
 			obs = theObsFLD
 			String t0 = "${obs.current.last_updated}".toString()
 			String t1 = formatDt(Date.parse("yyyy-MM-dd HH:mm", t0))
-			Integer s = GetTimeDiffSeconds(t1, (String)null, "getApiXUData").toInteger()
+			Integer s = GetTimeDiffSeconds(t1, sNL, "getApiXUData").toInteger()
 			if(s > (60*60*6)){ // if really old
 				log.warn "removing very old weather data $t0   $s"
 				theObsFLD = null
@@ -414,114 +438,165 @@ public Map getWData(){
 	return obs
 }
 
-static String dumpListDesc(data, Integer level, List lastLevel, String listLabel, Boolean html=false){
-	String str=sBLK
-	Integer cnt=1
-	List newLevel=lastLevel
+@Field static final Integer iZ=0
+@Field static final Integer i1=1
+@Field static final Integer i2=2
+@Field static final Integer i3=3
+
+@Field static final String sSPCSB7='      │'
+@Field static final String sSPCSB6='     │'
+@Field static final String sSPCS6 ='      '
+@Field static final String sSPCS5 ='     '
+@Field static final String sSPCST='┌─ '
+@Field static final String sSPCSM='├─ '
+@Field static final String sSPCSE='└─ '
+@Field static final String sNWL='\n'
+@Field static final String sDBNL='\n\n • '
+
+@CompileStatic
+static String spanStr(Boolean html,String s){ return html? span(s) : s }
+
+@CompileStatic
+static String doLineStrt(Integer level,List<Boolean>newLevel){
+	String lineStrt; lineStrt=sNWL
+	Boolean dB; dB=false
+	Integer i
+	for(i=iZ;i<level;i++){
+		if(i+i1<level){
+			if(!newLevel[i]){
+				if(!dB){ lineStrt+=sSPCSB7; dB=true }
+				else lineStrt+=sSPCSB6
+			}else lineStrt+= !dB ? sSPCS6:sSPCS5
+		}else lineStrt+= !dB ? sSPCS6:sSPCS5
+	}
+	return lineStrt
+}
+
+@CompileStatic
+static String dumpListDesc(List data,Integer level,List<Boolean> lastLevel,String listLabel,Boolean html=false,Boolean reorder=true){
+	String str; str=sBLK
+	Integer cnt; cnt=i1
+	List<Boolean> newLevel=lastLevel
 
 	List list1=data?.collect{it}
-	Integer sz=(Integer)list1.size()
-	list1?.each{ par ->
-		Integer t0=cnt-1
-		String myStr="${listLabel}[${t0}]".toString()
+	Integer sz=list1.size()
+	for(Object par in list1){
+		String lbl=listLabel+"[${cnt-i1}]".toString()
 		if(par instanceof Map){
 			Map newmap=[:]
-			newmap[myStr]=(Map)par
-			Boolean t1= cnt==sz
+			newmap[lbl]=(Map)par
+			Boolean t1=cnt==sz
 			newLevel[level]=t1
-			str += dumpMapDesc(newmap, level, newLevel, !t1, html)
+			str+=dumpMapDesc(newmap,level,newLevel,cnt,sz,!t1,html,reorder)
 		}else if(par instanceof List || par instanceof ArrayList){
 			Map newmap=[:]
-			newmap[myStr]=par
-			Boolean t1= cnt==sz
+			newmap[lbl]=par
+			Boolean t1=cnt==sz
 			newLevel[level]=t1
-			str += dumpMapDesc(newmap, level, newLevel, !t1, html)
+			str+=dumpMapDesc(newmap,level,newLevel,cnt,sz,!t1,html,reorder)
 		}else{
-			String lineStrt='\n'
-			for(Integer i=0; i<level; i++){
-				lineStrt += (i+1<level)? (!lastLevel[i] ? '     │' : '      '):'      '
-			}
-			lineStrt += (cnt==1 && sz>1)? '┌─ ':(cnt<sz ? '├─ ' : '└─ ')
-			if(html)str += '<span>'
-			str += "${lineStrt}${listLabel}[${t0}]: ${par} (${getObjType(par)})".toString()
-			if(html)str += '</span>'
+			String lineStrt
+			lineStrt=doLineStrt(level,lastLevel)
+			lineStrt+=cnt==i1 && sz>i1 ? sSPCST:(cnt<sz ? sSPCSM:sSPCSE)
+			str+=spanStr(html, lineStrt+lbl+": ${par} (${objType(par)})".toString() )
 		}
-		cnt=cnt+1
+		cnt+=i1
 	}
 	return str
 }
 
-static String dumpMapDesc(Map data, Integer level, List lastLevel, Boolean listCall=false, Boolean html=false){
-	String str=sBLK
-	Integer cnt=1
+@CompileStatic
+static String dumpMapDesc(Map data,Integer level,List<Boolean> lastLevel,Integer listCnt=null,Integer listSz=null,Boolean listCall=false,Boolean html=false,Boolean reorder=true){
+	String str; str=sBLK
+	Integer cnt; cnt=i1
 	Integer sz=data?.size()
-	data?.each{ par ->
+	Map svMap,svLMap,newMap; svMap=[:]; svLMap=[:]; newMap=[:]
+	for(par in data){
+		String k=(String)par.key
+		def v=par.value
+		if(reorder && v instanceof Map){
+			svMap+=[(k): v]
+		}else if(reorder && (v instanceof List || v instanceof ArrayList)){
+			svLMap+=[(k): v]
+		}else newMap+=[(k):v]
+	}
+	newMap+=svMap+svLMap
+	Integer lvlpls=level+i1
+	for(par in newMap){
 		String lineStrt
-		List newLevel=lastLevel
-		Boolean thisIsLast= cnt==sz && !listCall
-		if(level>0){
-			newLevel[(level-1)]=thisIsLast
+		List<Boolean> newLevel=lastLevel
+		Boolean thisIsLast=cnt==sz && !listCall
+		if(level>iZ)newLevel[(level-i1)]=thisIsLast
+		Boolean theLast
+		theLast=thisIsLast
+		if(level==iZ)lineStrt=sDBNL
+		else{
+			theLast=theLast && thisIsLast
+			lineStrt=doLineStrt(level,newLevel)
+			if(listSz && listCnt && listCall)lineStrt+=listCnt==i1 && listSz>i1 ? sSPCST:(listCnt<listSz ? sSPCSM:sSPCSE)
+			else lineStrt+=((cnt<sz || listCall) && !thisIsLast) ? sSPCSM:sSPCSE
 		}
-		Boolean theLast=thisIsLast
-		if(level==0){
-			lineStrt='\n\n • '
-		}else{
-			theLast= theLast && thisIsLast
-			lineStrt='\n'
-			for(Integer i=0; i<level; i++){
-				lineStrt += (i+1<level)? (!newLevel[i] ? '     │' : '      '):'      '
-			}
-			lineStrt += ((cnt<sz || listCall) && !thisIsLast) ? '├─ ' : '└─ '
+		String k=(String)par.key
+		def v=par.value
+		String objType=objType(v)
+		if(v instanceof Map){
+			str+=spanStr(html, lineStrt+"${k}: (${objType})".toString() )
+			newLevel[lvlpls]=theLast
+			str+=dumpMapDesc((Map)v,lvlpls,newLevel,null,null,false,html,reorder)
 		}
-		String objType=getObjType(par.value)
-		if(par.value instanceof Map){
-			if(html)str += '<span>'
-			str += "${lineStrt}${(String)par.key}: (${objType})".toString()
-			if(html)str += '</span>'
-			newLevel[(level+1)]=theLast
-			str += dumpMapDesc((Map)par.value, level+1, newLevel, false, html)
-		}
-		else if(par.value instanceof List || par.value instanceof ArrayList){
-			if(html)str += '<span>'
-			str += "${lineStrt}${(String)par.key}: [${objType}]".toString()
-			if(html)str += '</span>'
-			newLevel[(level+1)]=theLast
-			str += dumpListDesc(par.value, level+1, newLevel, sBLK, html)
+		else if(v instanceof List || v instanceof ArrayList){
+			str+=spanStr(html, lineStrt+"${k}: [${objType}]".toString() )
+			newLevel[lvlpls]=theLast
+			str+=dumpListDesc((List)v,lvlpls,newLevel,sBLK,html,reorder)
 		}
 		else{
-			if(html)str += '<span>'
-			str += "${lineStrt}${(String)par.key}: (${par.value}) (${objType})".toString()
-			if(html)str += '</span>'
+			str+=spanStr(html, lineStrt+"${k}: (${v}) (${objType})".toString() )
 		}
-		cnt=cnt+1
+		cnt+=i1
 	}
 	return str
+}
+
+@CompileStatic
+static String objType(obj){ return span(myObj(obj),sCLRORG) }
+
+@CompileStatic
+static String getMapDescStr(Map data,Boolean reorder=true){
+	List<Boolean> lastLevel=[true]
+	String str=dumpMapDesc(data,iZ,lastLevel,null,null,false,true,reorder)
+	return str!=sBLK ? str:'No Data was returned'
+}
+
+@Field static final String sLTH='<'
+@Field static final String sGTH='>'
+@Field static final String sCLR4D9	= '#2784D9'
+@Field static final String sCLRRED	= 'red'
+@Field static final String sCLRRED2	= '#cc2d3b'
+@Field static final String sCLRGRY	= 'gray'
+@Field static final String sCLRGRN	= 'green'
+@Field static final String sCLRGRN2	= '#43d843'
+@Field static final String sCLRORG	= 'orange'
+@Field static final String sLINEBR	= '<br>'
+@CompileStatic
+static String span(String str,String clr=sNL,String sz=sNL,Boolean bld=false,Boolean br=false){
+	return str ? "<span ${(clr || sz || bld) ? "style='${clr ? "color: ${clr};":sBLK}${sz ? "font-size: ${sz};":sBLK}${bld ? "font-weight: bold;":sBLK}'":sBLK}>${str}</span>${br ? sLINEBR:sBLK}": sBLK
 }
 
 static String myObj(obj){
-	if(obj instanceof String){return 'String'}
-	else if(obj instanceof Map){return 'Map'}
-	else if(obj instanceof List){return 'List'}
-	else if(obj instanceof ArrayList){return 'ArrayList'}
-	else if(obj instanceof Integer){return 'Int'}
-	else if(obj instanceof BigInteger){return 'BigInt'}
-	else if(obj instanceof Long){return 'Long'}
-	else if(obj instanceof Boolean){return 'Bool'}
-	else if(obj instanceof BigDecimal){return 'BigDec'}
-	else if(obj instanceof Float){return 'Float'}
-	else if(obj instanceof Byte){return 'Byte'}
-	else{ return 'unknown'}
-}
-
-static String getObjType(obj){
-	return "<span style='color:orange'>"+myObj(obj)+"</span>"
-}
-
-static String getMapDescStr(Map data){
-	String str
-	List lastLevel=[true]
-	str=dumpMapDesc(data, 0, lastLevel, false, true)
-	return str!=sBLK ? str:'No Data was returned'
+	if(obj instanceof String)return 'String'
+	else if(obj instanceof Map)return 'Map'
+	else if(obj instanceof List)return 'List'
+	else if(obj instanceof ArrayList)return 'ArrayList'
+	else if(obj instanceof BigInteger)return 'BigInt'
+	else if(obj instanceof Long)return 'Long'
+	else if(obj instanceof Integer)return 'Int'
+	else if(obj instanceof Boolean)return 'Bool'
+	else if(obj instanceof BigDecimal)return 'BigDec'
+	else if(obj instanceof Double)return 'Double'
+	else if(obj instanceof Float)return 'Float'
+	else if(obj instanceof Byte)return 'Byte'
+	else if(obj instanceof com.hubitat.app.DeviceWrapper)return 'Device'
+	else return 'unknown'
 }
 
 def pageDumpWeather(){
@@ -534,10 +609,11 @@ def pageDumpWeather(){
 	}
 }
 
-def getTimeZone(){
-	def tz = null
-	if(location?.timeZone){ tz = location?.timeZone }
-	if(!tz){ log.error "getTimeZone: Hub or Nest TimeZone not found" }
+private static TimeZone mTZ(){ return TimeZone.getDefault() } // (TimeZone)location.timeZone
+
+TimeZone getTimeZone(){
+	TimeZone tz = mTZ()
+	if(!tz){ log.error "getTimeZone: Hub TimeZone not found" }
 	return tz
 }
 
@@ -549,14 +625,14 @@ String getDtNow(){
 import java.text.SimpleDateFormat
 //import groovy.time.*
 
-String formatDt(dt){
-	def tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
+String formatDt(Date dt){
+	SimpleDateFormat tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
 	if(getTimeZone()){ tf.setTimeZone(getTimeZone()) }
 	else { log.error "HE TimeZone is not set; Please open your location and Press Save" }
 	return tf.format(dt)
 }
 
-Long GetTimeDiffSeconds(String strtDate, String stpDate=(String)null, String methName=(String)null){
+Long GetTimeDiffSeconds(String strtDate, String stpDate=sNL, String methName=sNL){
 	if((strtDate && !stpDate) || (strtDate && stpDate)){
 		//if(strtDate?.contains("dtNow")){ return 10000 }
 		Date now = new Date()
@@ -603,9 +679,10 @@ public void initData(devices, contacts){
 
 public Map listAvailableDevices(Boolean raw=false, Integer offset=0){
 	Long time = wnow()
-	Map response = [:]
+	Map response; response = [:]
 	List myDevices = (List)settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().sort{ it.getDisplayName() }
-	List devices = (List)myDevices.unique{ it.id }
+	List devices
+	devices = (List)myDevices.unique{ it.id }
 	if(raw){
 		response = devices.collectEntries{ dev -> [(hashId(dev.id)): dev]}
 	}else{
@@ -630,7 +707,8 @@ public Map listAvailableDevices(Boolean raw=false, Integer offset=0){
 						p: it.getArguments()
 					]}
 				] */
-				Boolean stop = false
+				Boolean stop
+				stop = false
 				String jsonData = JsonOutput.toJson(response)
 				Integer responseLength = jsonData.getBytes("UTF-8").length
 				if(responseLength > (50 * 1024)){
@@ -682,11 +760,11 @@ private static String transformCommand(command, Map<String,Map> overrides){
 }
 
 public Map getDashboardData(){
-	def value
-	value=null
 //	def start = wnow()
 	return settings.findAll{ it.key.startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}.collectEntries{ id, dev ->
 		[ (id): dev.getSupportedAttributes().collect{ it.name }.unique().collectEntries{
+			def value
+			value=null
 			try { value = dev.currentValue(it) } catch (ignored){ value = null}
 			return [ (it) : value]
 		}]
@@ -711,14 +789,17 @@ private static Map<String, Map> commandOverrides(){
 /*** SECURITY METHODS														***/
 /***																		***/
 /******************************************************************************/
-private String md5(String md5){
-		java.security.MessageDigest md = java.security.MessageDigest.getInstance("MD5")
-		byte[] array = md.digest(md5.getBytes())
-		String result = sBLK
-		for (Integer i = 0; i < array.length; ++i){
-			result += Integer.toHexString((array[i] & 0xFF) | 0x100).substring(1,3)
-		}
-		return result
+@CompileStatic
+private static String md5(String md5){
+	MessageDigest md=MessageDigest.getInstance('MD5')
+	byte[] array=md.digest(md5.getBytes())
+	String result
+	result=sBLK
+	Integer l=array.size()
+	for(Integer i=iZ; i<l;++i){
+		result+=Integer.toHexString((array[i] & 0xFF)| 0x100).substring(i1,i3)
+	}
+	return result
 }
 
 @Field static Map theHashMapFLD=[:]
@@ -726,8 +807,9 @@ private String md5(String md5){
 private String hashId(id){
 	//enabled hash caching for faster processing
 	String myId=id.toString()
-	String result = (String)theHashMapFLD[myId]
-	if(result==(String)null){
+	String result
+	result = (String)theHashMapFLD[myId]
+	if(result==sNL){
 		result=sCOLON+md5('core.'+myId)+sCOLON
 		theHashMapFLD[myId]=result
 	}
@@ -740,7 +822,8 @@ private String hashId(id){
 
 String getWUIconName(Integer condition_code, Integer is_day=0)	 {
 	Integer cC = condition_code
-	String wuIcon = (conditionFactor[cC] ? (String)conditionFactor[cC][2] : sBLK)
+	String wuIcon
+	wuIcon = (conditionFactor[cC] ? (String)conditionFactor[cC][2] : sBLK)
 	if(is_day != 1 && wuIcon) wuIcon = 'nt_' + wuIcon
 	return wuIcon
 }
@@ -892,8 +975,9 @@ private String getImgName(Integer wCode, is_day){
 // From Darksky.net driver for HE https://community.hubitat.com/t/release-darksky-net-weather-driver-no-pws-required/22699
 @SuppressWarnings('GroovyFallthrough')
 static String getdsIconCode(String iicon='unknown', String idcs='unknown', Boolean isNight=false){
-	String dcs=idcs
-	String icon=iicon
+	String dcs, icon
+	dcs=idcs
+	icon=iicon
 	String unk='unknown'
 	if(dcs==null) dcs=unk
 	if(icon==null) icon=unk
@@ -971,7 +1055,7 @@ static String getdsIconCode(String iicon='unknown', String idcs='unknown', Boole
 			} else if(dcs.contains('Breezy')){
 				icon = 'breezy'
 				if	(dcs.contains('Overcast'))	icon = 'breezyovercast'
-				else if(dcs.summary.contains('Mostly Cloudy')) icon = 'breezymostlycloudy'
+				else if(dcs.contains('Mostly Cloudy')) icon = 'breezymostlycloudy'
 				else if(dcs.contains('Partly Cloudy')) icon = 'breezypartlycloudy'
 				else if(dcs.contains('Foggy'))		icon = 'breezyfoggy'
 			}
