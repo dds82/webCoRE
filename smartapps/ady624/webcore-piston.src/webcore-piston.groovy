@@ -4863,7 +4863,7 @@ private Long vcmd_toggleRandom(Map r9,device,List prms){
 	return lZ
 }
 
-@Field static List<List<String>> cls1=[
+@Field static final List<List<String>> cls1=[
 	// attr          value      cmd1    cmd2
 	['switch',       'off',     'on',   'off'],
 	['door',       'closed',   'open', 'close'],
@@ -6671,6 +6671,7 @@ void stNeedUpdate(){
 	needUpdateFLD=needUpdateFLD
 }
 
+@Field static final List<String> lNTRK=['happens_daily_at','arrives','event_occurs','executes','gets','gets_any','receives']
 
 @Field static final String sEVCN='evaluateCondition '
 @CompileStatic
@@ -6756,9 +6757,10 @@ private Boolean evaluateCondition(Map r9,Map cndtn,String collection,Boolean asy
 
 			String myId=sAppId()
 			//save new values to cache
+			Boolean isTracking= trigger && !(co in lNTRK)
 			if(lo)for(Map value in liMs(lo,sVALUES)){
 				Map tm= mMv(value)
-				if(trigger){
+				if(isTracking){
 					Boolean isd= tm.d && tm.a //if has d and a its a device
 					Boolean ok; ok=true
 					if(isd){
@@ -7788,7 +7790,6 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 			}
 		}
 		List<String> ltsub=['happens_daily_at']
-		List<String> lntrk=ltsub+rg+['arrives','event_occurs','executes','gets','gets_any','receives']
 		conditionTraverser={ Map cndtn,parentCondition ->
 			Map svCond=curCondition
 			curCondition=cndtn
@@ -7813,7 +7814,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 						m=sNL
 						tm="trigger comparison type"
 						String tn=" that relies on runtime "
-						Boolean isTracking= !(co in lntrk)
+						Boolean isTracking= !(co in lNTRK)
 						Boolean isSub= co in ltsub
 						Boolean isStays= co.startsWith(sSTAYS)
 						Map lo=mMs(cndtn,sLO) ?: [:]
