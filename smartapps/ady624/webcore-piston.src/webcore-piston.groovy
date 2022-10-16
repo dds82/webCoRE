@@ -7816,16 +7816,19 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 						Boolean isTracking= !(co in lntrk)
 						Boolean isSub= co in ltsub
 						Boolean isStays= co.startsWith(sSTAYS)
-						Map lo=mMs(cndtn,sLO)
-						Integer dsz= lo?.d ? ((List)lo[sD]).size():iZ
-						Boolean isAll= isTracking && !isStays && lo && lo.a && sMs(lo,sG)==sALL &&
-								(dsz>i1 || (dsz==i1 && !(((List<String>)lo.d)[iZ].startsWith(sCLN))))
+						Map lo=mMs(cndtn,sLO) ?: [:]
+						Integer dsz= lo[sD] ? ((List)lo[sD]).size():iZ
+						Boolean isAll= isTracking && !isStays && lo && lo[sA] && sMs(lo,sG)==sALL &&
+								(dsz>i1 || (dsz==i1 && !(((List<String>)lo[sD])[iZ].startsWith(sCLN))))
 						if(didDwnGrd) m= "downgraded "+tm+" not subscribed to in EVERY or ON statement, or forced never subscribe - should use condition comparison rather than trigger"
 						else{
+							Boolean isbadVar= isTracking && lo && sMt(lo)==sX && !(sMs(lo,sX).startsWith(sAT))
+							if(isbadVar) tm += " using a non global variable,"
 							if(isAll) tm += " using multiple devices with ALL (ANDed trigger),"
 							else if(isTracking) tm+=tn+"event tracking,"
 							else if(isSub) tm+=tn+"timer scheduling,"
-							if(isTracking || isSub){
+							if(isTracking || isSub || isbadVar){
+								if(isbadVar) m=tm
 								if(isAll) m=tm
 								else if(stmtLvl[sV]>i2) m="nested (level ${stmtLvl[sV]}) "+tm
 								else if(bIs(stmtData,'restrictActive')) m="nested by restriction "+tm
