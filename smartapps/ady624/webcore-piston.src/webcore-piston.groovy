@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update October 23, 2022 for Hubitat
+ * Last update October 25, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -154,6 +154,8 @@ static Boolean eric1(){ return false }
 @Field static final String sRULE='rule'
 @Field static final String sHSMSTS='hsmStatus'
 @Field static final String sALRMSSTATUS='alarmSystemStatus'
+@Field static final String sALRMSYSALRT='alarmSystemAlert'
+@Field static final String sALRMSYSEVT='alarmSystemEvent'
 @Field static final String sHSMALRT='hsmAlert'
 @Field static final String sHSMSARM='hsmSetArm'
 @Field static final String sPEVDATE='$previousEventDate'
@@ -273,6 +275,9 @@ static Boolean eric1(){ return false }
 @Field static final String sALLLOC='allLocations'
 @Field static final String sSTAYUNCH='stays_unchanged'
 @Field static final String sSTAYS='stays'
+@Field static final String sMATCHES='matches'
+@Field static final String sMATCHED='matched'
+@Field static final String sUNMATCHED='unmatched'
 
 @Field static final String sZ6='000000'
 @Field static final String sHTTPR='httpRequest'
@@ -456,6 +461,7 @@ private static String sMvt(Map m){ sMs(m,sVT) }
 /** m.t  */
 @CompileStatic
 private static Long lMt(Map m){ (Long)m[sT] }
+
 /** m.string  */
 @CompileStatic
 private static Long lMs(Map m,String v){ (Long)m[v] }
@@ -483,6 +489,10 @@ private static List<String> liMd(Map m){ (List<String>)m[sD] }
 /** returns m.string */
 @CompileStatic
 private static List<Map> liMs(Map m,String s){ (List)m[s] }
+
+/** m[v]  */
+@CompileStatic
+private static oMs(Map m,String v){ m[v] }
 
 /** returns m.v */
 @CompileStatic
@@ -2794,6 +2804,7 @@ private Boolean executeEvent(Map r9,Map event){
 		try{
 			Map pis=mMs(r9,sPIS)
 			List<Map> r=liMs(pis,sR)
+			// piston restriction
 			Boolean allowed=!r || r.size()==iZ || evaluateConditions(r9,pis,sR,true)
 			Boolean restr=!gtPOpt(r9,'aps') && !allowed //allowPreScheduled tasks to execute during restrictions
 			r9.restricted=restr
@@ -2823,6 +2834,7 @@ private Boolean executeEvent(Map r9,Map event){
 							}
 						}
 					}else{ // iN5
+						//repeat related time schedules
 						if(!restr){
 							Map jq=mMs(es,'jq')
 							if(jq!=null){
@@ -3243,6 +3255,7 @@ private Boolean executeStatements(Map r9,List<Map>statements,Boolean async=false
 @Field static final String sFFT='ffTo'
 @CompileStatic
 private static Boolean prun(Map r9){ bIs(r9,sRUN) }
+/**  ffto != 0 */
 @CompileStatic
 private static Boolean ffwd(Map r9){ !prun(r9) }
 @CompileStatic
@@ -6430,6 +6443,7 @@ private Boolean evaluateConditions(Map r9,Map cndtns,String collection,Boolean a
 	return res
 }
 
+/**  run followed by updates */
 @CompileStatic
 private void runFBupdates(Map r9,Integer st,Integer sz,List<Map> cndtns,Boolean async){
 	if(st<sz){
@@ -6552,12 +6566,12 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 					if(!mv)mv=getDeviceAttribute(r9,deviceId,oV)
 					break
 				case sHSMALRT:
-				case 'alarmSystemAlert':
+				case sALRMSYSALRT:
 					String valStr=evntVal+(rEN==sHSMALRT && evntVal==sRULE ? sCOMMA+sMs(ce,sDESCTXT) :sBLK)
 					mv=rtnMapS((rEN==sHSMALRT ? valStr:sNL))
 					break
 				case sHSMSARM:
-				case 'alarmSystemEvent':
+				case sALRMSYSEVT:
 					mv=rtnMapS((rEN==sHSMSARM ? evntVal:sNL))
 					break
 				case 'alarmSystemRule':
@@ -6767,16 +6781,19 @@ private Boolean evaluateCondition(Map r9,Map cndtn,String collection,Boolean asy
 			}
 
 			//we now have all the operands,their values, and the comparison, let's get to work
-			Boolean t_and_compt=(trigger && comparison.t!=null)
+			Boolean compt= sMt(comparison)!=sNL
+			Boolean t_and_compt=(trigger && compt)
 			loOp=mMs(lo,sOPERAND)
+			String dmv=sMs(loOp,'dm')
+			String dnv=sMs(loOp,'dn')
 			LinkedHashMap options=[
 				//we ask for matching/non-matching devices if the user requested it or if the trigger is timed
 				//setting matches to true will force the condition group to evaluate all members (disables evaluation optimizations)
 				(sDEVS): [:],
-				matches: t_and_compt || loOp.dm!=null || loOp.dn!=null,
-				forceAll: t_and_compt
+				(sMATCHES): t_and_compt || !!dmv || !!dnv,
+				('forceAll'): t_and_compt
 			] as LinkedHashMap
-			Map to=(comparison.t!=null || (ro!=null && sMt(loOp)==sV && sMv(loOp)==sTIME && sMt(mMs(ro,sOPERAND))!=sC)) && cndtn[sTO]!=null ? [(sOPERAND): mMs(cndtn,sTO),(sVALUES): mevaluateOperand(r9,mMs(cndtn,sTO))]:null
+			Map to=(compt || (ro!=null && sMt(loOp)==sV && sMv(loOp)==sTIME && sMt(mMs(ro,sOPERAND))!=sC)) && cndtn[sTO]!=null ? [(sOPERAND): mMs(cndtn,sTO),(sVALUES): mevaluateOperand(r9,mMs(cndtn,sTO))]:null
 			Map to2=ro2!=null && sMt(loOp)==sV && sMv(loOp)==sTIME && sMt(mMs(ro2,sOPERAND))!=sC && cndtn[sTO2]!=null ? [(sOPERAND): mMs(cndtn,sTO2),(sVALUES): mevaluateOperand(r9,mMs(cndtn,sTO2))]:null
 
 			res=evaluateComparison(r9,co,lo,ro,ro2,to,to2,options)
@@ -6787,10 +6804,10 @@ private Boolean evaluateCondition(Map r9,Map cndtn,String collection,Boolean asy
 			if(lo)for(Map value in liMs(lo,sVALUES)){
 				Map tm= mMv(value)
 				if(isTracking){
-					Boolean isd= tm.d && tm.a //if has d and a its a device
+					Boolean isd= tm[sD] && tm[sA] //if has d and a its a device
 					Boolean ok; ok=true
 					if(isd){
-						Boolean eXcluded=!!tm.x
+						Boolean eXcluded=!!tm[sX]
 						ok= bIs(cndtn,sS) && (!isStays || (isStays && co==sSTAYUNCH)) &&
 							(ffwd(r9) || !eXcluded || needUpdateFLD[myId]!=false)
 					}
@@ -6802,11 +6819,11 @@ private Boolean evaluateCondition(Map r9,Map cndtn,String collection,Boolean asy
 			//if(ro2)for(Map value in liMs(ro2,sVALUES))updateCache(r9,value,t)
 			loOp=mMs(lo,sOPERAND)
 			Map ods=mMs(options,sDEVS)
-			List om=(List)ods?.matched
-			List oum=(List)ods?.unmatched
-			if(ods!=null){
-				if(loOp.dm!=null)Map m=setVariable(r9,sMs(loOp,'dm'),om!=null ? om:[])
-				if(loOp.dn!=null)Map m=setVariable(r9,sMs(loOp,'dn'),oum!=null ? oum:[])
+			List om=(List)ods[sMATCHED]
+			List oum=(List)ods[sUNMATCHED]
+			if(ods){
+				if(dmv)Map m=setVariable(r9,dmv,om)
+				if(dnv)Map m=setVariable(r9,dnv,oum)
 			}
 
 			//do the stays logic here
@@ -6927,6 +6944,8 @@ void doStaysProcess(Map r9,List<Map>schedules,String co,Map cndtn,Integer cndNm,
 	}
 }
 
+@Field static final List<String> lGENERIC=['event_occurs','gets_any']
+
 @CompileStatic
 private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,Map ro2=null,Map to=null,Map to2=null,Map options=[:]){
 	String mySt; mySt=sBLK
@@ -6941,37 +6960,38 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 	String loG= sMs(mMs(lo,sOPERAND),sG) ?: sANY
 	Boolean result,res
 	result= loG!=sANY
-	Boolean oM=bIs(options,'matches')
-	if(oM) options[sDEVS]=[matched: [],unmatched: []] as LinkedHashMap
+	Boolean oM=bIs(options,sMATCHES)
+	if(oM) options[sDEVS]=[(sMATCHED): [],(sUNMATCHED): []] as LinkedHashMap
 	//if multiple left values go through each
 	Map tvalue=to && to[sOPERAND] && to[sVALUES] ? mMs(to,sVALUES)+[(sF): mMs(to,sOPERAND).f]:null
 	Map tvalue2=to2 && to2[sOPERAND] && to2[sVALUES]? mMs(to2,sVALUES):null
 	if(!LT1) LT1=fill_TIM()
+	Boolean fa=bIs(options,'forceAll')
 	for(Map<String,Map> value in liMs(lo,sVALUES)){
 		res=false
 		//x=eXclude- if a momentary attribute is requested and the device does not match the current device, then we must ignore this during comparisons
-		if(value && mMv(value) && (!(mMv(value)[sX]) || bIs(options,'forceAll'))){
+		if(value && mMv(value) && (!(mMv(value)[sX]) || fa)){
 			Map msg; msg=[:]
 			try{
 				//physical support
 				//value.p=lo.operand.p
-				if(value && sMt(mMv(value))==sDEV) value.v=evaluateExpression(r9,mMv(value),sDYN)
+				if(value && sMt(mMv(value))==sDEV) value[sV]=evaluateExpression(r9,mMv(value),sDYN)
 				Map vvalMap= mMv(value)
 				String m1; m1=sNL
-				if(lg) m1= "Comparison (${vvalMap.t}) ${vvalMap.v} $comparison "
+				if(lg) m1= "Comparison (${vvalMap[sT]}) ${vvalMap[sV]} $comparison "
 				if(!ro){
 					if(lg)msg= timer sBLK,r9
-					if(comparison in ['event_occurs','gets_any']){
-						Map ce= mMs(r9,sCUREVT)
-						String rEN= ce ? sMs(ce,sNM) : sNL
+					if(comparison in lGENERIC){ // generic trigger gets_any
+						Map ce= mMs(r9,sCUREVT) ?: [:]
+						String rEN= sMs(ce,sNM)
 						String compS
 						compS= sMv(mMs(lo,sOPERAND))
 						if(compS == sALRMSSTATUS) compS=sHSMSTS
-						else if(compS == 'alarmSystemAlert') compS=sHSMALRT
-						else if(compS == 'alarmSystemEvent') compS=sHSMSARM
+						else if(compS == sALRMSYSALRT) compS=sHSMALRT
+						else if(compS == sALRMSYSEVT) compS=sHSMSARM
 						if(sMt(mMs(lo,sOPERAND))==sV && rEN==compS){
 							res= true
-						}else if(sMs(vvalMap,sD)==(String)ce?.device && sMa(vvalMap)==rEN){
+						}else if(sMs(vvalMap,sD)==sMs(ce,sDEV) && sMa(vvalMap)==rEN){
 							res= true
 							compS= sMa(vvalMap)
 						}
@@ -6987,7 +7007,7 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 					res= roG!=sANY
 					//if multiple right values go through each
 					for(Map<String,Map> rvalue in liMs(ro,sVALUES)){
-						if(rvalue && sMt(rvalue.v)==sDEV) rvalue.v= evaluateExpression(r9,mMv(rvalue),sDYN)
+						if(rvalue && sMt(mMv(rvalue))==sDEV) rvalue[sV]= evaluateExpression(r9,mMv(rvalue),sDYN)
 						String m2; m2=sNL
 						if(lg) m2= m1+"(${rvalue?.v?.t}) ${rvalue?.v?.v} "
 						if(!ro2){
@@ -7002,7 +7022,7 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 							rres= ro2G!=sANY
 							//if multiple right2 values go through each
 							for(Map<String,Map> r2value in liMs(ro2,sVALUES)){
-								if(r2value && sMt(r2value.v)==sDEV) r2value.v= evaluateExpression(r9,r2value.v,sDYN)
+								if(r2value && sMt(mMv(r2value))==sDEV) r2value[sV]= evaluateExpression(r9,mMv(r2value),sDYN)
 								if(lg)msg= timer sBLK,r9
 								Boolean r2res= callComp(r9,fn,value,rvalue,r2value,tvalue,tvalue2)
 								if(lg){
@@ -7032,15 +7052,13 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 		}
 		result= loG==sANY ? result||res : result&&res
 		if(oM){
-			String vVD=sMs(value.v,sD)
+			String vVD=sMs(mMv(value),sD)
 			if(vVD){
-				Boolean a
 				Map ods=mMs(options,sDEVS)
-				if(res) a=((List)ods.matched).push(vVD)
-				else a=((List)ods.unmatched).push(vVD)
+				Boolean a= ((List)oMs(ods, res ? sMATCHED:sUNMATCHED)).push(vVD)
 			}
 		}else{
-			// if not matching, see if we are done
+			// if not matching, evaluation optimization
 			//logical OR if using the ANY keyword
 			if(loG==sANY && res) break
 			//logical AND if using the ALL keyword
@@ -7740,12 +7758,12 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 							attr=sHSMSTS
 							break
 						case sHSMALRT:
-						case 'alarmSystemAlert':
+						case sALRMSYSALRT:
 							subsId=tsubId
 							attr=sHSMALRT
 							break
 						case sHSMSARM:
-						case 'alarmSystemEvent':
+						case sALRMSYSEVT:
 							subsId=tsubId
 							attr=sHSMSARM
 							break
@@ -7851,7 +7869,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 						Boolean isSub= co in ltsub
 						Boolean isStays= co.startsWith(sSTAYS)
 						Map lo=mMs(cndtn,sLO) ?: [:]
-						Integer dsz= lo[sD] ? ((List)lo[sD]).size():iZ
+						Integer dsz= lo[sD] ? liMd(lo).size():iZ
 						Boolean isAll= isTracking && !isStays && lo && lo[sA] && sMs(lo,sG)==sALL &&
 								(dsz>i1 || (dsz==i1 && !isWcDev(liMd(lo)[iZ])))
 						if(didDwnGrd) m= "downgraded "+tm+" not subscribed to in EVERY or ON statement, or forced never subscribe - should use condition comparison rather than trigger"
