@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update October 25, 2022 for Hubitat
+ * Last update October 27, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -266,6 +266,7 @@ static Boolean eric1(){ return false }
 @Field static final String sTS='ts'
 @Field static final String sFS='fs'
 @Field static final String sCO='co'
+@Field static final String sCT='ct'
 @Field static final String sMPS='mps'
 @Field static final String sCONDITIONS='conditions'
 @Field static final String sTRIGGERS='triggers'
@@ -278,6 +279,7 @@ static Boolean eric1(){ return false }
 @Field static final String sMATCHES='matches'
 @Field static final String sMATCHED='matched'
 @Field static final String sUNMATCHED='unmatched'
+@Field static final String sALLOWR='allowResume'
 
 @Field static final String sZ6='000000'
 @Field static final String sHTTPR='httpRequest'
@@ -414,7 +416,6 @@ static Boolean eric1(){ return false }
 @Field static final Double d2=2.0D
 @Field static final Double d60=60.0D
 @Field static final Double d100=100.0D
-@Field static final Double d3d6=3.6D
 @Field static final Double d360=360.0D
 @Field static final Double d1000=1000.0D
 @Field static final Double dSECHR=3600.0D
@@ -1532,7 +1533,7 @@ Map resume(LinkedHashMap piston=null,Boolean sndEvt=true){
 	nRtd.result=[(sACT):true,(sSUBS):(Map)state[sSUBS]]
 	tmpRtD=null
 	r9=null
-	if(sndEvt && bIs(gtState(),'allowResume')) // pistonResume
+	if(sndEvt && bIs(gtState(),sALLOWR)) // pistonResume
 		wrunInMillis(600L,'resumeHandler',[(sDATA): [:]])
 	return nRtd
 }
@@ -4608,8 +4609,12 @@ private Long cmd_setLevel(Map r9,device,List prms){ return do_setLevel(r9,device
 
 private Long cmd_setInfraredLevel(Map r9,device,List prms){ return do_setLevel(r9,device,prms,sSTIFLVL) }
 
+@Field static final Double d3d6=3.6D
+private static Integer wcHue2DevHue(Integer v){ return Math.round(v/d3d6).toInteger() }
+private static Integer devHue2WcHue(Integer v){ return Math.round(v*d3d6).toInteger() }
+
 private Long cmd_setHue(Map r9,device,List prms){
-	Integer hue=Math.round((Integer)prms[iZ]/d3d6).toInteger()
+	Integer hue=wcHue2DevHue((Integer)prms[iZ])
 	return do_setLevel(r9,device,prms,sSTHUE,hue)
 }
 
@@ -4624,7 +4629,7 @@ private static Map gtColor(Map r9,String colorValue){
 	if(color!=null){
 		color=[
 			hex:sMs(color,'rgb'),
-			(sHUE):Math.round((iMs(color,sH)/d3d6).toDouble()).toInteger(),
+			(sHUE): wcHue2DevHue(iMs(color,sH)),
 			(sSATUR):iMsS(color),
 			(sLVL):iMs(color,sL)
 		]
@@ -4670,7 +4675,7 @@ private Long cmd_setAdjustedHSLColor(Map r9,device,List prms){
 	if(ntMatSw(r9,mat,device,'setAdjustedHSLColor'))return lZ
 
 	Long duration=matchCastL(r9,prms[i3])
-	Integer hue=Math.round((Integer)prms[iZ]/d3d6).toInteger()
+	Integer hue=wcHue2DevHue((Integer)prms[iZ])
 	Integer saturation=(Integer)prms[i1]
 	Integer level=(Integer)prms[i2]
 	Map color=[
@@ -4948,7 +4953,7 @@ private Long vcmd_adjustInfraredLevel(Map r9,device,List prms){ return do_adjust
 private Long vcmd_adjustSaturation(Map r9,device,List prms){ return do_adjustLevel(r9,device,prms,sSATUR,sSTSATUR) }
 
 private Long vcmd_adjustHue(Map r9,device,List prms){
-	Integer hue=Math.round((Integer)prms[iZ]/d3d6).toInteger()
+	Integer hue=wcHue2DevHue((Integer)prms[iZ])
 	return do_adjustLevel(r9,device,prms,sHUE,sSTHUE,hue)
 }
 
@@ -4983,8 +4988,8 @@ private Long vcmd_fadeInfraredLevel(Map r9,device,List prms){ return do_fadeLeve
 private Long vcmd_fadeSaturation(Map r9,device,List prms){ return do_fadeLevel(r9,device,prms,sSATUR,sSTSATUR) }
 
 private Long vcmd_fadeHue(Map r9,device,List prms){
-	Integer startLevel=prms[iZ]!=null ? Math.round((Integer)prms[iZ]/d3d6).toInteger() : matchCastI(r9,getDeviceAttributeValue(r9,device,sHUE))
-	Integer endLevel=Math.round((Integer)prms[i1]/d3d6).toInteger()
+	Integer startLevel=prms[iZ]!=null ? wcHue2DevHue((Integer)prms[iZ]) : matchCastI(r9,getDeviceAttributeValue(r9,device,sHUE))
+	Integer endLevel=wcHue2DevHue((Integer)prms[i1])
 	return do_fadeLevel(r9,device,prms,sHUE,sSTHUE,startLevel,endLevel)
 }
 
@@ -5407,7 +5412,7 @@ private Long vcmd_executeRule(Map r9,device,List prms){
 }
 
 private Long vcmd_setHSLColor(Map r9,device,List prms){
-	Integer hue=Math.round((Integer)prms[iZ]/d3d6).toInteger()
+	Integer hue=wcHue2DevHue((Integer)prms[iZ])
 	Integer saturation=(Integer)prms[i1]
 	Integer level=(Integer)prms[i2]
 	Map color=[
@@ -6118,7 +6123,7 @@ private Long vcmd_saveStateLocally(Map r9,device,List prms,Boolean global=false)
 		}
 		if(overwrite || (global ? (r9.globalStore[n]==null):(r9[sSTORE][n]==null))){
 			def value; value=getDeviceAttributeValue(r9,device,attr)
-			if(attr==sHUE)value=value*d3d6
+			if(attr==sHUE)value=devHue2WcHue(value as Integer)
 			if(global){
 				r9.globalStore[n]=value
 				LinkedHashMap cache= (LinkedHashMap)r9.gvStoreCache ?: [:] as LinkedHashMap
@@ -6160,7 +6165,7 @@ private Long vcmd_loadStateLocally(Map r9,device,List prms,Boolean global=false)
 		}
 		if(value==null)continue
 
-		if(attr==sHUE)value=dcast(r9,value)/d3d6
+		if(attr==sHUE)value= wcHue2DevHue(value as Integer)
 		if(attr in [sSWITCH,sLVL,sSATUR,sHUE,sCLRTEMP]) sD[attr]=value
 		else{
 			newattrs.push(attr)
@@ -6398,7 +6403,7 @@ private Boolean evaluateConditions(Map r9,Map cndtns,String collection,Boolean a
 				Integer i
 				i=iZ
 				for(Map cndtn in cndtnsCOL){
-					if( i!=iZ && (cndtn['ct']==sT || cndtn.s) ){ canopt=false; break }
+					if( i!=iZ && (cndtn[sCT]==sT || cndtn[sS]) ){ canopt=false; break }
 					i++
 				}
 			}
@@ -6543,27 +6548,7 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 				case sMODE:
 				case sHSMSTS:
 				case sALRMSSTATUS:
-					String deviceId=sMs(r9,sLOCID)
-					Map e=mMs(r9,sEVENT)
-					if(trigger && e){
-						String r9EvN=sMs(e,sNM)
-						Boolean r9EdID=sMs(e,sDEV)==deviceId
-						String v=sMs(e,sVAL)
-						if(v && r9EvN in [sMODE,sHSMSTS,sALRMSSTATUS] && r9EdID){
-							switch(oV){
-								case sMODE:
-									Map mode= fndMode(r9,v)
-									mv= mode ? rtnMapS(hashId(r9,lMs(mode,sID))) + [(sN):sMs(mode,sNM)] :null
-									break
-								case sHSMSTS:
-								case sALRMSSTATUS:
-									String n= VirtualDevices()[sALRMSSTATUS]?.o[v]
-									mv= n ? rtnMapS(v) + [(sN): n] : null
-							}
-							if(lg && mv)myDetail r9,myS+"matched trigger $oV $r9EvN $mv",iN2
-						}
-					}
-					if(!mv)mv=getDeviceAttribute(r9,deviceId,oV)
+					mv=getDeviceAttribute(r9,sMs(r9,sLOCID),oV,null,trigger)
 					break
 				case sHSMALRT:
 				case sALRMSYSALRT:
@@ -7419,9 +7404,9 @@ private void traverseStatements(node,Closure closure,parentNode=null,Map<String,
 		for(Map item in (List<Map>)node)
 			if(!item[sDI]){
 				Boolean lastTimer= data!=null && bIs(data,sTIMER)
-				if(data!=null && sMt(item)==sEVERY) data.timer=true // force downgrade of triggers
+				if(data!=null && sMt(item)==sEVERY) data[sTIMER]=true // force downgrade of triggers
 				traverseStatements(item,closure,parentNode,data,lvl)
-				if(data!=null) data.timer=lastTimer
+				if(data!=null) data[sTIMER]=lastTimer
 			}
 		lvl[sV]=lastlvl
 		if(data!=null) data.restrictActive=lastRes
@@ -7433,7 +7418,7 @@ private void traverseStatements(node,Closure closure,parentNode=null,Map<String,
 
 	Boolean lastTimer= data!=null && bIs(data,sTIMER)
 	String ty=sMt(node)
-	if(ty==sON && data!=null) data.timer=true // force downgrade of triggers
+	if(ty==sON && data!=null) data[sTIMER]=true // force downgrade of triggers
 	if(ty in [sIF,sWHILE,sREPEAT]){
 		Integer cnt=doCcheck(sMs(node,sO),liMs(node,sC))
 		if(cnt>i1)
@@ -7456,7 +7441,7 @@ private void traverseStatements(node,Closure closure,parentNode=null,Map<String,
 	if(node.s instanceof List) traverseStatements(liMs(node,sS),closure,node,data,lvl)
 	if(ty==sDO) lvl[sV]=lastlvl
 
-	if(data!=null) data.timer=lastTimer
+	if(data!=null) data[sTIMER]=lastTimer
 
 	if(node.e instanceof List) traverseStatements(liMs(node,sE),closure,node,data,lvl)
 }
@@ -7474,7 +7459,7 @@ private static Integer doCcheck(String grouping,List<Map> cndtns){
 				Integer i=doCcheck(sMs(cndtn,sO),liMs(cndtn,sC))
 				cnt+=i
 				if(!isAND && i==i1)cnt--
-			}else if(ty==sCONDITION && sMs(cndtn,'ct')==sT && isAND)cnt++
+			}else if(ty==sCONDITION && sMs(cndtn,sCT)==sT && isAND)cnt++
 		}
 	}
 	return cnt
@@ -7580,8 +7565,6 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 			controls:iZ,
 			(sDEVS) :iZ,
 		]
-		String sALLOWR='allowResume'
-		String sCT='ct'
 		String sSM='sm'
 		state[sALLOWR]=false
 		Integer lg=iMs(r9,sLOGNG)
@@ -7874,8 +7857,13 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 								(dsz>i1 || (dsz==i1 && !isWcDev(liMd(lo)[iZ])))
 						if(didDwnGrd) m= "downgraded "+tm+" not subscribed to in EVERY or ON statement, or forced never subscribe - should use condition comparison rather than trigger"
 						else{
-							Boolean isbadVar= isTracking && lo && sMt(lo)==sX && !(sMs(lo,sX).startsWith(sAT))
-							if(isbadVar) tm += " using a non global variable,"
+							Boolean isbadVar
+							isbadVar= isTracking && lo && sMt(lo)==sX && !(sMs(lo,sX).startsWith(sAT))
+							/*if(isbadVar){
+								Map a=getVariable(r9,sMs(lo,sX))
+								if(!isErr(a)) isbadVar=sMt(a)!=sDEV
+							}*/
+							if(isbadVar) tm += " using a non global or non physical device variable,"
 							if(isAll) tm += " using multiple devices with ALL (ANDed trigger),"
 							else if(isTracking) tm+=tn+"event tracking,"
 							else if(isSub) tm+=tn+"timer scheduling,"
@@ -7889,6 +7877,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 						}
 						if(m && !inMem) addWarning(curStatement,'Found '+m+"; comparison: $co  num: ${cndtn.$}")
 					}
+					if(cndtn.containsKey(sS)) cndtn.remove(sS) // modifies the code
 					cndtn[sCT]=(String)cmpTyp.take(i1) // modifies the code
 					Integer pCnt= comparison[sP]!=null ? iMs(comparison,sP):iZ
 					Integer i
@@ -7924,7 +7913,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 		List<String> lsub=[sIF,sFOR,sWHILE,sREPEAT,sSWITCH,sON,sEACH,sEVERY]
 		statementTraverser={ Map node,parentNode,Map<String,Boolean>data,Map<String,Integer>lvl ->
 			dwnGrdTrig= data!=null && bIs(data,sTIMER)
-			if(node.r)traverseRestrictions(node.r,restrictionTraverser,node,data)
+			if(node[sR])traverseRestrictions(node[sR],restrictionTraverser,node,data)
 			for(String mdeviceId in liMd(node)){
 				String deviceId; deviceId=mdeviceId
 				if(deviceId in oLIDS)deviceId=LID
@@ -7990,7 +7979,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 						operandTraverser(c,mMs(c,sRO),null,sNL)
 						//if case is a range traverse the second operand too
 						if(sMt(c)==sR) operandTraverser(c,mMs(c,sRO2),null,sNL)
-						if(c.s instanceof List) traverseStatements(liMs(c,sS),statementTraverser,node,data,lvl)
+						if(c[sS] instanceof List) traverseStatements(liMs(c,sS),statementTraverser,node,data,lvl)
 					}
 					break
 				case sEVERY:
@@ -8049,7 +8038,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 			if(doit && lge)myDetail r9,"evaluating sub: $subscription",iN2
 			for(Map cndtn in subconds){
 				if(cndtn){
-					cndtn[sS]=false // modifies the code
+					if(cndtn.containsKey(sS)) cndtn.remove(sS) // modifies the code
 					String tt0=sMs(cndtn,sSM)
 					altSub= tt0==always ? tt0:(altSub!=always && tt0!=never ? tt0:altSub)
 				}
@@ -8126,7 +8115,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 			}else{
 				for(Map cndtn in subconds){
 					if(cndtn){
-						cndtn.s=false // modifies the code
+						cndtn[sS]=false // modifies the code
 						if(a==sPSTNRSM && bIs(gtState(),sALLOWR)){
 							state[sALLOWR]=false
 							if(lge)myDetail r9,"Disabled piston resume event due to subscription control: $subscription",iN2
@@ -8279,59 +8268,59 @@ private getDevice(Map r9,String idOrName){
 
 @Field static List<String> LDAV
 @Field static final String sSTS='$status'
-
-private getDeviceAttributeValue(Map r9,device,String attr){
-	Map e=mMs(r9,sEVENT)
-	String r9EvN=e!=null ? sMs(e,sNM):sBLK
-	Boolean r9EdID=e!=null ? sMs(e,sDEV)==hashD(r9,device):false
-	if(r9EvN==attr && r9EdID)return e[sVAL]
-	else{
-		def result
-		String msg="Error reading current value for ${device}.".toString()
-		if(!LDAV){
-			if(!LTHR) LTHR=fill_THR()
-			LDAV=[sSTS]+LTHR
-			mb()
-		}
-		if(attr in LDAV){
-			switch(attr){
-				case sSTS:
-					return device.getStatus()
-				default:
-					Map xyz
-					try{ xyz= r9EvN==sTHREAX && r9EdID && e[sVAL] ? e[sVAL]:null }catch(ignored){}
-					if(xyz==null){
-						try{
-							xyz=device.currentValue(sTHREAX,true)
-						}catch(al){
-							error msg+sTHREAX+sCLN,r9,iN2,al
-							break
-						}
-					}
-					switch(attr){
-						case sORIENT:
-							return getThreeAxisOrientation(xyz)
-						case sAXISX:
-							return xyz.x
-						case sAXISY:
-							return xyz.y
-						case sAXISZ:
-							return xyz.z
-					}
-			}
-		}else{
-			try{
-				result=device.currentValue(attr,true)
-			}catch(all){
-				error msg+attr+sCLN,r9,iN2,all
-			}
-		}
-		return result!=null ? result:sBLK
-	}
-}
-
 @Field static List<String> LTHR
 private static List<String> fill_THR(){ return [sORIENT,sAXISX,sAXISY,sAXISZ] }
+
+private getDeviceAttributeValue(Map r9,device,String attr,Boolean skipCurEvt=true){
+	Map ce=mMs(r9,sEVENT)
+	String r9EvN=ce!=null ? sMs(ce,sNM):sBLK
+	Boolean r9EdID=ce!=null ? sMs(ce,sDEV)==hashD(r9,device):false
+
+	if(isEric(r9))myDetail r9,"getDeviceAttributeValue device: $device attr: $attr skipCurEvt: $skipCurEvt ce: ${ce}",iN2
+	if(!skipCurEvt && r9EvN==attr && r9EdID)return ce[sVAL]
+
+	def result
+	String msg="Error reading current value for ${device}.".toString()
+	if(!LDAV){
+		if(!LTHR) LTHR=fill_THR()
+		LDAV=[sSTS]+LTHR
+		mb()
+	}
+	if(attr in LDAV){
+		switch(attr){
+			case sSTS:
+				return device.getStatus()
+			default:
+				Map xyz
+				xyz= !skipCurEvt && r9EvN==sTHREAX && r9EdID && ce && ce[sVAL] ? ce[sVAL]:null
+				if(xyz==null){
+					try{
+						xyz=device.currentValue(sTHREAX,true)
+					}catch(al){
+						error msg+sTHREAX+sCLN,r9,iN2,al
+						break
+					}
+				}
+				switch(attr){
+					case sORIENT:
+						return getThreeAxisOrientation(xyz)
+					case sAXISX:
+						return xyz.x
+					case sAXISY:
+						return xyz.y
+					case sAXISZ:
+						return xyz.z
+				}
+		}
+	}else{
+		try{
+			result=device.currentValue(attr,true)
+		}catch(all){
+			error msg+attr+sCLN,r9,iN2,all
+		}
+	}
+	return result!=null ? result:sBLK
+}
 
 private static Map devAttrT(Map r9,String attr,device){
 	Map attribute; attribute=[(sT):sSTR]
@@ -8349,21 +8338,38 @@ private static Map devAttrT(Map r9,String attr,device){
 	return res
 }
 
+/**  get device attr value,trigger means can use current event value */
+@CompileStatic
 private Map getDeviceAttribute(Map r9,String deviceId,String attr,subDeviceIndex=null,Boolean trigger=false){
-	if(deviceId in (List<String>)r9[sALLLOC]){ //backward compatibility
-		//we have the location here
+	Map ce=mMs(r9,sCUREVT)
+	String cdev
+	cdev= ce? (sMs(ce,sDEV) ?: sNL) : sNL
+
+	if(isEric(r9))myDetail r9,"getDeviceAttribute deviceId: $deviceId attr: $attr  trigger: $trigger ce: ${ce}",iN2
+
+	if(deviceId in (List<String>)r9[sALLLOC]){ //backward compatibility; we have the location device
+		Boolean useEvt; useEvt=false
+		String v; v=sNL
+		if(trigger && ce){ //ERS
+			String r9EvN=sMs(ce,sNM)
+			v=sMs(ce,sVAL)
+			List<String> l=[sHSMSTS,sALRMSSTATUS]
+			useEvt= v && (r9EvN==attr || (r9EvN in l && attr in l))
+		}
 		switch(attr){
 			case sMODE:
-				Map mode=gtCurrentMode()
-				return rtnMapS(hashId(r9,(Long)mode.id))+[(sN):sMs(mode,sNM)]
+				Map mode; mode= useEvt ? fndMode(r9,v):null
+				mode= mode ?: gtCurrentMode()
+				return rtnMapS(hashId(r9,lMs(mode,sID)))+[(sN):sMs(mode,sNM)]
 			case sHSMSTS:
 			case sALRMSSTATUS:
-				String v=gtLhsmStatus()
-				String n=VirtualDevices()[sALRMSSTATUS]?.o[v]
-				return rtnMapS(v)+[(sN):n]
+				String inm= useEvt ? v : gtLhsmStatus()
+				String n=VirtualDevices()[sALRMSSTATUS]?.o[inm]
+				return rtnMapS(inm)+[(sN):n]
 		}
 		return rtnMapS(gtLname())
 	}
+
 	def device=getDevice(r9,deviceId)
 	if(device!=null){
 		def value,t0
@@ -8372,8 +8378,8 @@ private Map getDeviceAttribute(Map r9,String deviceId,String attr,subDeviceIndex
 		Map attribute=devAttrT(r9,attr,device)
 		String atT=sMt(attribute)
 		if(attr!=sNL){
-			t0=getDeviceAttributeValue(r9,device,attr)
-			if(attr==sHUE) t0=t0*d3d6
+			t0=getDeviceAttributeValue(r9,device,attr,!trigger)
+			if(attr==sHUE) t0=devHue2WcHue(t0 as Integer)
 			if(t0 instanceof BigDecimal){
 				if(atT==sINT) t0=t0 as Integer
 				else if(atT==sDEC) t0=t0 as Double
@@ -8381,11 +8387,9 @@ private Map getDeviceAttribute(Map r9,String deviceId,String attr,subDeviceIndex
 			value= matchCast(r9,t0,atT) ? t0:cast(r9,t0,atT)
 		}
 		//have to compare ids and type for hubitat since the locationid can be the same as the deviceid
-		Map ce=mMs(r9,sCUREVT)
-		String tt0
-		tt0= ce? (sMs(ce,sDEV) ?: sNL) : sNL
-		tt0=tt0 ?: sMs(r9,sLOCID)
-		Boolean deviceMatch= hashD(r9,device)==tt0 || (isDeviceLocation(device) && tt0 in (List<String>)r9[sALLLOC])
+		Boolean isLoc= isDeviceLocation(device)
+		cdev=cdev ?: sMs(r9,sLOCID)
+		Boolean deviceMatch= (!isLoc && hashD(r9,device)==cdev) || (isLoc && cdev in (List<String>)r9[sALLLOC])
 		//x=eXclude- if a momentary attribute is looked for and the device does not match the current device, then we must ignore during comparisons
 		if(!LTHR) LTHR=fill_THR()
 		return [
@@ -8394,12 +8398,13 @@ private Map getDeviceAttribute(Map r9,String deviceId,String attr,subDeviceIndex
 			(sD):deviceId,
 			(sA):attr,
 //			(sI):subDeviceIndex,
-			(sX):(attribute.m!=null || trigger) && (!deviceMatch || (ce && (attr in LTHR ? sTHREAX:attr)!=sMs(ce,sNM)))
+			(sX):(attribute[sM]!=null || trigger) && (!deviceMatch || (ce && (attr in LTHR ? sTHREAX:attr)!=sMs(ce,sNM)))
 		]
 	}
 	return rtnMapE("Device '${deviceId}':${attr} not found".toString())
 }
 
+@CompileStatic
 private Map getJsonData(Map r9,data,String name,String feature=sNL){
 	if(data){
 		String mpart; mpart=sNL
