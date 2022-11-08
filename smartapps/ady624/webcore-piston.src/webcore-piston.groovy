@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update November 3, 2022 for Hubitat
+ * Last update November 7, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -6445,7 +6445,7 @@ private Boolean evaluateConditions(Map r9,Map cndtns,String collection,Boolean a
 				Integer i
 				i=iZ
 				for(Map cndtn in cndtnsCOL){
-					if( i!=iZ && (cndtn[sCT]==sT || cndtn[sS]) ){ canopt=false; break }
+					if( i!=iZ && (sMt(cndtn)==sGROUP || cndtn[sCT]==sT || cndtn[sS]) ){ canopt=false; break }
 					i++
 				}
 			}
