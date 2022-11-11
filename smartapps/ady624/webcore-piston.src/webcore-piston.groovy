@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update November 7, 2022 for Hubitat
+ * Last update November 8, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -5567,7 +5567,7 @@ private Long vcmd_lifxScene(Map r9,device,List prms){
 		return lZ
 	}
 	String path="/v1/scenes/scene_id:${sceneId}/activate"
-	Map body=duration ? [duration: duration]:null
+	Map body=duration ? [(sDURATION): duration]:null
 	return do_lifx(r9,'Put',path,body,duration,'scene')
 }
 
@@ -5598,7 +5598,7 @@ private Long vcmd_lifxState(Map r9,device,List prms){
 	Integer infrared=iLi(prms,i4)
 	Long duration=Math.round( matchCastL(r9,prms[i5]) / d1000 )
 	String path="/v1/lights/${selector}/state"
-	Map body= [:]+(power ? ([power: power]) : [:])+(color ? ([color: color.hex]) : [:])+(level!=null ? ([brightness: level / d100]) : [:])+(infrared!=null ? [infrared: infrared] : [:])+(duration ? [duration: duration] : [:])
+	Map body= [:]+(power ? ([power: power]) : [:])+(color ? ([color: color.hex]) : [:])+(level!=null ? ([brightness: level / d100]) : [:])+(infrared!=null ? [infrared: infrared] : [:])+(duration ? [(sDURATION): duration] : [:])
 	return do_lifx(r9,'Put',path,body,duration,sST)
 }
 
@@ -5607,7 +5607,7 @@ private Long vcmd_lifxToggle(Map r9,device,List prms){
 	if(!selector)return lifxErr(r9)
 	Long duration=Math.round( matchCastL(r9,prms[i1]) / d1000 )
 	String path="/v1/lights/${selector}/toggle"
-	Map body= [:]+(duration ? [duration: duration]:[:])
+	Map body= [:]+(duration ? [(sDURATION): duration]:[:])
 	return do_lifx(r9,'Post',path,body,duration,'toggle')
 }
 
@@ -7143,6 +7143,7 @@ private void cancelStatementSchedules(Map r9,Integer stmtId,String data=sNL){
 		if(fnd)break
 	}
 	if(isDbg(r9))whatStatementsCncl(r9,stmtId,data)
+	// if not already in list, add to list
 	if(!fnd) Boolean a=liMs(mMs(r9,sCNCLATNS),sSTMTS).push([(sID): stmtId,(sDATA): data])
 }
 
@@ -7189,10 +7190,11 @@ private List<Map> listPreviousStates(device,String attr,Long threshold,Boolean e
 		Long endTime; endTime=wnow()
 		Integer i
 		for(i=iZ; i<sz; i++){
-			Long startTime=((Date)events[i].date).getTime()
+			def curEvt=events[i]
+			Long startTime=((Date)curEvt[sDATE]).getTime()
 			Long duration=endTime-startTime
 			if(duration>=l1 && (i>iZ || !excludeLast)){
-				Boolean a=result.push([(sVAL):events[i].value,startTime:startTime,duration:duration])
+				Boolean a=result.push([(sVAL):curEvt[sVAL],startTime:startTime,(sDURATION):duration])
 			}
 			if(startTime<thresholdTime) break
 			endTime=startTime
@@ -7201,7 +7203,7 @@ private List<Map> listPreviousStates(device,String attr,Long threshold,Boolean e
 		def currentState=device.currentState(attr,true)
 		if(currentState){
 			Long startTime=((Date)currentState.getDate()).getTime()
-			Boolean a=result.push([(sVAL):currentState.value,startTime:startTime,duration:elapseT(startTime)])
+			Boolean a=result.push([(sVAL):currentState[sVAL],startTime:startTime,(sDURATION):elapseT(startTime)])
 		}
 	}
 	return result
