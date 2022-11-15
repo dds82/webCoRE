@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update November 13, 2022 for Hubitat
+ * Last update November 15, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -4957,7 +4957,7 @@ private void smart_toggle(Map r9,device,Boolean prob=null){
 		def b
 		for(List<String> a in cls1){
 			a0=a[iZ]
-			b= da.find{ (String)it.name==a0 }
+			b= da.find{ (String)it.getName()==a0 }
 			if(b){
 				Boolean t= prob==null ? (String)getDeviceAttributeValue(r9,device,a0)==a[i1] : !!prob
 				c= t ? a[i2]:a[i3]
@@ -6553,10 +6553,10 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 				//updateCache(r9,value,t)
 				a=vals.push(value)
 			}
+			//if we have multiple values and a grouping other than any or all we need to apply that function
+			// avg,median,least,most,sum,variance,stdev,min,max,count,size etc
 			String g=sMs(operand,sG)
 			if(vals.size()>i1 && !(g in [sANY,sALL])){
-				//if we have multiple values and a grouping other than any or all we need to apply that function
-				// avg,median,least,most,sum,variance,stdev,min,max,count,size etc
 				try{
 					mv=callFunc(r9,g,vals*.v)+movt
 				}catch(ignored){
@@ -6649,14 +6649,12 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 			if(ovt==sDEV && operand[sX] instanceof List){
 				//we could have multiple devices selected
 				List asum; asum=[]
-				Map avar
-				for(String x in (List)operand[sX]){
-					avar=getVariable(r9,x)
-					def tmp=oMv(avar)
+				Boolean a
+				for(String x in (List)oMs(operand,sX)){
+					def tmp=oMv(getVariable(r9,x))
 					if(tmp instanceof List){
-						List l=(List)tmp
-						asum+=l
-					}else Boolean a=asum.push(tmp)
+						asum+= (List)tmp
+					}else a=asum.push(tmp)
 				}
 				mv=rtnMap(sDEV,asum)+movt
 			}else{
@@ -6819,7 +6817,7 @@ private Boolean evaluateCondition(Map r9,Map cndtn,String collection,Boolean asy
 			if(lo)for(Map value in liMs(lo,sVALUES)){
 				Map tm= mMv(value)
 				if(isTracking){
-					Boolean isd= tm[sD] && tm[sA] //if has d and a its a device
+					Boolean isd= tm[sD] && sMa(tm) //if has d and a its a device
 					Boolean ok; ok=true
 					if(isd){
 						Boolean eXcluded=!!tm[sX]
@@ -7168,7 +7166,7 @@ private static Boolean matchDeviceInteraction(Map lv,Map r9){
 
 private List<Map> listPreviousStates(device,String attr,Long threshold,Boolean excludeLast){
 	List<Map> result=[]
-	List events=device.events([all: true,max: i100]).findAll{ it -> (String)it.name==attr}
+	List events=device.events([all: true,max: i100]).findAll{ it -> (String)it.getName()==attr}
 	//if we got any events let's go through them
 	//if we need to exclude last event we start at the second event as the first one is the event that triggered execution. The attribute's value has to be different from the current one to qualify for quiet
 	Integer sz=events.size()
@@ -7596,7 +7594,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 			controls:iZ,
 			(sDEVS) :iZ,
 		]
-		String sSM='sm'
+		String sSM='sm' // subscription method, always, never, auto/''
 		assignSt(sALLOWR,false)
 		Integer lg=iMs(r9,sLOGNG)
 		String LID=sMs(r9,sLOCID)
@@ -7621,6 +7619,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 		curStatement=null
 		curCondition=[:]
 		String never='never'
+		String always='always'
 
 		Closure incrementDevices
 		incrementDevices={String deviceId, String cmpTyp, String attr ->
@@ -7886,7 +7885,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 						Boolean isStays= co.startsWith(sSTAYS)
 						Map lo=mMs(cndtn,sLO) ?: [:]
 						Integer dsz= lo[sD] ? liMd(lo).size():iZ
-						Boolean isAll= isTracking && !isStays && lo && lo[sA] && sMs(lo,sG)==sALL &&
+						Boolean isAll= isTracking && !isStays && lo && sMa(lo) && sMs(lo,sG)==sALL &&
 								(dsz>i1 || (dsz==i1 && !isWcDev(liMd(lo)[iZ])))
 						if(didDwnGrd) m= "downgraded "+tm+" not subscribed to in EVERY or ON statement, or forced never subscribe - should use condition comparison rather than trigger"
 						else{
@@ -8049,7 +8048,6 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 		if(!LT1)LT1=fill_TIM()
 		if(!LTHR)LTHR=fill_THR()
 		Map<String,Integer> dds=[:]
-		String always='always'
 		List<String>nosub=[sTILE,sPSTNRSM]
 		Boolean des=gtPOpt(r9,'des')
 		if(doit && lg>i2){
@@ -8356,13 +8354,12 @@ private getDeviceAttributeValue(Map r9,device,String attr,Boolean skipCurEvt=tru
 }
 
 private static Map devAttrT(Map r9,String attr,device){
-	Map attribute; attribute=[(sT):sSTR]
-	Map a1; a1=null
+	Map attribute, a1; attribute=[(sT):sSTR]; a1=null
 	if(attr){
 		a1=Attributes()[attr]
 		if(a1==null && device){
 			// ask the device what is the type
-			def at=device.getSupportedAttributes().find{ (String)it.name==attr }
+			def at=device.getSupportedAttributes().find{ (String)it.getName()==attr }
 			// enum,string,json_object -> string; number, date?, vector3?
 			if(at && at.getDataType()=='NUMBER') attribute=[(sT):sDEC]
 		}
@@ -8405,12 +8402,11 @@ private Map getDeviceAttribute(Map r9,String deviceId,String attr,subDeviceIndex
 
 	def device=getDevice(r9,deviceId)
 	if(device!=null){
-		def value,t0
-		value=gtLbl(device)
-		t0=null
+		def value; value=gtLbl(device)
 		Map attribute=devAttrT(r9,attr,device)
 		String atT=sMt(attribute)
 		if(attr!=sNL){
+			def t0
 			t0=getDeviceAttributeValue(r9,device,attr,!trigger)
 			if(attr==sHUE) t0=devHue2WcHue(t0 as Integer)
 			if(t0 instanceof BigDecimal){
@@ -10370,37 +10366,32 @@ private Map func_sort(Map r9,List<Map> prms){
 	rtnMap(typ+sLRB,res)
 }
 
-/** min calculates the minimum of a series of numeric values			**/
-/** Usage: min(values)								**/
-private Map func_min(Map r9,List<Map> prms){
-	if(badParams(r9,prms,i1))return rtnErr('min'+sVALUEN)
-	String t= sMt(prms[iZ])
-	String typ; typ=t.replace(sLRB,sBLK)
-	if(isLiStr(t,typ,prms.size())){
-		List res= listIt(r9,prms,t,typ).sort()
-		if(res.size()) return rtnMap(sDYN,res[iZ])
-	}
-	List<Map> data=prms.collect{ Map it -> evaluateExpression(r9,it,sDYN)}.sort{ Map it -> oMv(it) }
-	if(data)return data[iZ]
-	rtnMap(sDYN,sBLK)
-}
-
-/** max calculates the maximum of a series of numeric values			**/
-/** Usage: max(values)								**/
-private Map func_max(Map r9,List<Map> prms){
-	if(badParams(r9,prms,i1))return rtnErr('max'+sVALUEN)
+private Map minmax(Map r9,List<Map>prms,String m,Boolean first=true){
+	if(badParams(r9,prms,i1))return rtnErr(m+sVALUEN)
 	String t= sMt(prms[iZ])
 	String typ; typ=t.replace(sLRB,sBLK)
 	Integer sz
 	if(isLiStr(t,typ,prms.size())){
 		List res= listIt(r9,prms,t,typ).sort()
 		sz=res.size()
-		if(sz) return rtnMap(sDYN,res[sz-i1])
+		if(sz) return rtnMap(sDYN,res[ (first ? iZ:sz-i1)])
 	}
 	List<Map> data=prms.collect{ Map it -> evaluateExpression(r9,it,sDYN)}.sort{ Map it -> oMv(it) }
 	sz=data.size()
-	if(sz)return data[sz-i1]
+	if(sz)return data[ (first ? iZ:sz-i1)]
 	rtnMap(sDYN,sBLK)
+}
+
+/** min calculates the minimum of a series of numeric values			**/
+/** Usage: min(values)								**/
+private Map func_min(Map r9,List<Map> prms){
+	return minmax(r9,prms,'min',true)
+}
+
+/** max calculates the maximum of a series of numeric values			**/
+/** Usage: max(values)								**/
+private Map func_max(Map r9,List<Map> prms){
+	return minmax(r9,prms,'max',false)
 }
 
 /** abs calculates the absolute value of a number				**/
@@ -12795,8 +12786,8 @@ private Map cvtLoc(){ cvtDev(location) }
 private static TimeZone mTZ(){ return TimeZone.getDefault() } // (TimeZone)location.timeZone
 private String gtLMode(){ return (String)location.getMode() }
 private Map fndMode(Map r9,String m){
-	def mode= ((List<Map>)location.getModes())?.find{ hashId(r9,(Long)it.id) == m || (String)it.name==m }
-	return mode ? [(sID): (Long)mode.id, (sNM): mode.name] :null
+	def mode= ((List)location.getModes())?.find{ it-> hashId(r9,(Long)it.getId()) == m || (String)it.getName()==m }
+	return mode ? [(sID): (Long)mode.getId(), (sNM): (String)mode.getName()] :null
 }
 private Map gtCurrentMode(){
 	def a=location.getCurrentMode()
