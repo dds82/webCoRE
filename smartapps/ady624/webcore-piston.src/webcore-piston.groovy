@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update November 15, 2022 for Hubitat
+ * Last update November 16, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -56,11 +56,11 @@ definition(
 	author:'Adrian Caramaliu',
 	description:'Do not install this directly, use webCoRE instead',
 	category:'Convenience',
-	parent:'ady624:'+handle(),
 	iconUrl:gimg('app-CoRE.png'),
 	iconX2Url:gimg('app-CoRE@2x.png'),
 	iconX3Url:gimg('app-CoRE@3x.png'),
-	importUrl:'https://raw.githubusercontent.com/imnotbob/webCoRE/hubitat-patches/smartapps/ady624/webcore-piston.src/webcore-piston.groovy'
+	importUrl:'https://raw.githubusercontent.com/imnotbob/webCoRE/hubitat-patches/smartapps/ady624/webcore-piston.src/webcore-piston.groovy',
+	parent: "ady624:${handle()}"
 )
 
 @CompileStatic
@@ -8237,7 +8237,7 @@ private List<String> expandDeviceList(Map r9,List<String> devs,Boolean localVars
 						Map var=mMs(mMs(r9,sLOCALV),deviceId)
 						if(var && sMt(var)==sDEV && oMv(var) instanceof Map){
 							Map m=mMv(var)
-							if(sMt(m)==sD && m.d instanceof List)res+=liMd(m)
+							if(sMt(m)==sD && m[sD] instanceof List)res+=liMd(m)
 						}
 					}else{
 						Map var=getVariable(r9,deviceId)
@@ -12355,7 +12355,7 @@ private static String inputTitleStr(String title)	{ return '<u>'+title+'</u>' }
 //private static String pageTitleStr(String title)	{ return '<h1>'+title+'</h1>' }
 //private static String paraTitleStr(String title)	{ return '<b>'+title+'</b>' }
 
-@Field static final String sGITP='https://raw.githubusercontent.com/ady624/webCoRE/master/resources/icons/'
+@Field static final String sGITP='https://cdn.jsdelivr.net/gh/imnotbob/webCoRE@hubitat-patches/resources/icons/'
 private static String gimg(String imgSrc){ return sGITP+imgSrc }
 
 @CompileStatic
