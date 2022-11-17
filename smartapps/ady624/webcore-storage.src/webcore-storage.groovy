@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update October 13, 2022 for Hubitat
+ * Last update Noveber 16, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -40,13 +40,13 @@ definition(
 	namespace: "ady624",
 	author: "Adrian Caramaliu",
 	description: "Do not install this directly, use webCoRE instead",
-	parent: "ady624:${handle()}",
 	category: "Convenience",
 	/* icons courtesy of @chauger - thank you */
-	iconUrl: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/app-CoRE.png",
-	iconX2Url: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/app-CoRE@2x.png",
-	iconX3Url: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/app-CoRE@3x.png",
-	importUrl: "https://raw.githubusercontent.com/imnotbob/webCoRE/hubitat-patches/smartapps/ady624/webcore-storage.src/webcore-storage.groovy"
+	iconUrl:gimg('app-CoRE.png'),
+	iconX2Url:gimg('app-CoRE@2x.png'),
+	iconX3Url:gimg('app-CoRE@3x.png'),
+	importUrl: "https://raw.githubusercontent.com/imnotbob/webCoRE/hubitat-patches/smartapps/ady624/webcore-storage.src/webcore-storage.groovy",
+	parent: "ady624:${handle()}"
 )
 
 preferences {
@@ -138,7 +138,7 @@ private static String inputTitleStr(String title)	{ return '<u>'+title+'</u>' }
 //private static String pageTitleStr(String title)	{ return '<h1>'+title+'</h1>' }
 //private static String paraTitleStr(String title)	{ return '<b>'+title+'</b>' }
 
-@Field static final String sGITP='https://raw.githubusercontent.com/ady624/webCoRE/master/resources/icons/'
+@Field static final String sGITP='https://cdn.jsdelivr.net/gh/imnotbob/webCoRE@hubitat-patches/resources/icons/'
 private static String gimg(String imgSrc){ return sGITP+imgSrc }
 
 @CompileStatic

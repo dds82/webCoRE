@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update November 12, 2022 for Hubitat
+ *  Last update November 16, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -60,10 +60,11 @@ definition(
 	description: "Local container for fuel streams",
 	author:"jp0550",
 	category:"My Apps",
-	iconUrl: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/app-CoRE.png",
-	iconX2Url: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/app-CoRE@2x.png",
-	iconX3Url: "https://cdn.rawgit.com/ady624/${handle()}/master/resources/icons/app-CoRE@3x.png",
-	parent: "ady624:webCoRE"
+	iconUrl:gimg('app-CoRE.png'),
+	iconX2Url:gimg('app-CoRE@2x.png'),
+	iconX3Url:gimg('app-CoRE@3x.png'),
+	importUrl:'https://raw.githubusercontent.com/imnotbob/webCoRE/hubitat-patches/smartapps/ady624/webcore-fuel-stream.src/webcore-fuel-stream.groovy',
+	parent: "ady624:${handle()}"
 )
 
 @Field static final String sBOOL='bool'
@@ -13891,7 +13892,7 @@ private static String inputTitleStr(String title)	{ return '<u>'+title+'</u>' }
 //private static String pageTitleStr(String title)	{ return '<h1>'+title+'</h1>' }
 //private static String paraTitleStr(String title)	{ return '<b>'+title+'</b>' }
 
-@Field static final String sGITP='https://raw.githubusercontent.com/ady624/webCoRE/master/resources/icons/'
+@Field static final String sGITP='https://cdn.jsdelivr.net/gh/imnotbob/webCoRE@hubitat-patches/resources/icons/'
 private static String gimg(String imgSrc){ return sGITP+imgSrc }
 
 @CompileStatic
