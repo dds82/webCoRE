@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update November 16, 2022 for Hubitat
+ * Last update November 28, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -149,6 +149,8 @@ private static Boolean graphsOn(){ return true }
 @Field static final String sALLDISARM='allDisarmed'
 @Field static final String sCANRULEA='cancelRuleAlerts'
 @Field static final String sRGB='rgb'
+@Field static final String sUTF8='UTF-8'
+@Field static final String sID='id'
 @Field static final String sT='t'
 @Field static final String sH='h'
 @Field static final String sI='i'
@@ -973,8 +975,7 @@ private void clearParentPistonCache(String meth=sNL, Boolean frcResub=false, Boo
 	clearHashMap(wName)
 	acctlocFLD[wName]=null
 	locFLD[wName]=sNL
-	pStateFLD[wName]=(Map)[:]
-	pStateFLD=pStateFLD
+	clearMeta(wName)
 	mb()
 	String n=handlePistn()
 	List t0; t0=wgetChildApps().findAll{ (String)it.name==n }
@@ -999,8 +1000,7 @@ void clearChldCaches(Boolean all=false, Boolean clrLogs=false, Boolean uber=fals
 	String wName=sAppId()
 	String n=handlePistn()
 	if(all||clrLogs||uber){
-		pStateFLD[wName]=(Map)[:]
-		mb()
+		clearMeta(wName)
 	}
 	Long t1=wnow()
 	List t0; t0=wgetChildApps().findAll{ (String)it.name==n }
@@ -1020,13 +1020,7 @@ void clearChldCaches(Boolean all=false, Boolean clrLogs=false, Boolean uber=fals
 			Long threshold=t1 - recTime
 			t0.sort().each{ chld ->
 				String myId=hashPID(chld.id)
-				if(pStateFLD[wName]==null){ pStateFLD[wName]= (Map)[:]; pStateFLD=pStateFLD }
-				Map meta; meta=(Map)pStateFLD[wName][myId]
-				if(meta==null){
-					meta=(Map)chld.curPState()
-					pStateFLD[wName][myId]=meta
-					pStateFLD=pStateFLD
-				}
+				Map meta; meta=gtMeta(chld,wName,myId)
 				String schld=chld.id.toString()
 				Long t2; t2=cldClearFLD[wName][schld]
 				Long t3=(Long)meta?.t
@@ -1035,7 +1029,7 @@ void clearChldCaches(Boolean all=false, Boolean clrLogs=false, Boolean uber=fals
 					t2=threshold-3600000L
 					cldClearFLD[wName][schld]=t2
 				}
-				else if( all || ( meta!=null && t4 && (Boolean)meta.a && t3!=null && t3>t2 && t3<threshold)){
+				else if( all || ( meta!=null && t4 && (Boolean)meta[sA] && t3!=null && t3>t2 && t3<threshold)){
 					cldClearFLD[wName][schld]=t1
 					Map a=chld.clearCache()
 				}
@@ -1325,6 +1319,9 @@ static void releaseTheLock(String meth=sNL){
 }
 
 @Field static final String sCB='clearB'
+/**
+ * clear cache for IDE
+ */
 @CompileStatic
 private void clearBaseResult(String meth=sNL,String wNi=sNL){
 	String wName= wNi ?: sAppId()
@@ -1343,11 +1340,14 @@ private void clearBaseResult(String meth=sNL,String wNi=sNL){
 @Field volatile static Map<String,Integer> cntbase_resultFLD= [:]
 
 
+/**
+ * get Piston details
+ * @returns [ (sID): myId, (sNM): normalizeLabel(it), meta: [:]+meta ]
+ */
 private List<Map> presult(String wName){
 	String n=handlePistn()
 	return wgetChildApps().findAll{ (String)it.name==n }.sort{ (String)it.label }.collect{
 		String myId=hashPID(it.id)
-		if(pStateFLD[wName]==null){ pStateFLD[wName]= (Map)[:]; pStateFLD=pStateFLD }
 		/*Map meta=[
 				(sA):isAct(t0),
 				(sC):t0[sCTGRY],
@@ -1357,14 +1357,8 @@ private List<Map> presult(String wName){
 				(sS):st,
 				heCached:(Boolean)t0.Cached ?: false
 		] */
-		Map meta; meta=(Map)pStateFLD[wName][myId]
-		if(meta==null){
-			meta=(Map)it.curPState()
-			meta= meta?:[:]
-			pStateFLD[wName][myId]=meta
-			pStateFLD=pStateFLD
-		}
-		[ id: myId, (sNM): normalizeLabel(it), meta: [:]+meta ]
+		Map meta; meta=gtMeta(it,wName,myId)
+		[ (sID): myId, (sNM): normalizeLabel(it), meta: [:]+meta ]
 	}
 }
 
@@ -1406,9 +1400,9 @@ private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 	Map<String,Object> result=[
 		(sNM): (String)location.name+ ' \\ ' +myN,
 		instance: [
-			account: [id: accountSid()],
+			account: [(sID): accountSid()],
 			pistons:  presult(wName),
-			id: instanceId,
+			(sID): instanceId,
 			locationId: locationId,
 			(sNM): myN,
 			uri: (String)gtSt('endpoint'),
@@ -1424,17 +1418,17 @@ private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 		],
 		location: [
 			//hubs: location.getHubs().findAll{ !((String)it.name).contains(':') }.collect{ [id: it.id /*hashId(it.id)*/, (sNM): (String)it.name, firmware: isHubitat() ? getHubitatVersion()[it.id] : it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
-			hubs: ((List)location.getHubs()).collect{ [id: it.id /*hashId(it.id)*/, (sNM): (String)location.name, firmware: isHubitat() ? (String)((Map)getHubitatVersion())[(String)it.id.toString()] : (String)it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
+			hubs: ((List)location.getHubs()).collect{ [(sID): it.id /*hashId(it.id)*/, (sNM): (String)location.name, firmware: isHubitat() ? (String)((Map)getHubitatVersion())[(String)it.id.toString()] : (String)it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
 			incidents: alerts.collect{it}.findAll{ (Long)it.date >= incidentThreshold },
 			//incidents: isHubitat() ? [] : location.activeIncidents.collect{[date: it.date.time, (sTIT): it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
-			id: locationId,
+			(sID): locationId,
 			mode: hashId(location.getCurrentMode().id),
-			modes: location.getModes().collect{ [id: hashId(it.id), (sNM): (String)it.name ]},
+			modes: location.getModes().collect{ [(sID): hashId(it.id), (sNM): (String)it.name ]},
 			shm: transformHsmStatus((String)location.hsmStatus),
 			(sNM): (String)location.name,
 			temperatureScale: (String)location.temperatureScale,
 			timeZone: tz ? [
-				id: tz.ID,
+				(sID): tz.ID,
 				(sNM): tz.displayName,
 				offset: tz.rawOffset
 			] : null,
@@ -1624,7 +1618,7 @@ private api_intf_dashboard_piston_create(){
 					piston.config([bin: (String)params.bin, author: (String)params.author, initialVersion: sVER])
 				}
 				debug "Created Piston "+pname
-				result=[(sSTS): sSUCC, id: hashPID(piston.id)]
+				result=[(sSTS): sSUCC, (sID): hashPID(piston.id)]
 			}catch(ignored){
 				error "Please install the webCoRE Piston app"
 				result=[(sSTS): sERROR, (sERR): sERRUNK]
@@ -1696,7 +1690,7 @@ private api_intf_dashboard_piston_get(){
 			String clientDbVersion=(String)params.db
 			requireDb=serverDbVersion!=clientDbVersion
 			Map t0=(Map)piston.get()
-			result.data=t0!=null ? t0 : [:]
+			result[sDATA]=t0!=null ? t0 : [:]
 			if(requireDb){
 				debug "Dashboard: get piston ${params?.id} needs new db current: ${serverDbVersion} in server ${clientDbVersion}"
 				/*Map theDb=[
@@ -1730,7 +1724,7 @@ private api_intf_dashboard_piston_get(){
 	result.now=wnow()
 
 	//def jsonData=JsonOutput.toJson(result)
-	//log.debug "Trimmed resonse length: ${jsonData.getBytes("UTF-8").length}"
+	//log.debug "Trimmed resonse length: ${jsonData.getBytes(sUTF8).length}"
 	//render contentType: sAPPJAVA, data: "${params.callback}(${jsonData})"
 	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
@@ -1740,36 +1734,37 @@ private void checkResultSize(Map result, Boolean requireDb=false, String caller=
 		String jsonData; jsonData= JsonOutput.toJson(result)
 		//data saver for Hubitat ~100K limit
 		Integer responseLength,resl,svLength
-		responseLength=jsonData.getBytes("UTF-8").length
+		responseLength=jsonData.getBytes(sUTF8).length
 		resl= (Integer)(responseLength / 1024)
 		//debug "Check size found ${resl}KB response requireDb: (${requireDb}) caller: ${caller}"
 		if(resl > 95){ //these are loaded anyway right after loading the piston
 			warn "Trimming ${resl}KB response to smaller size (${requireDb}) caller: ${caller}"
 
-			if((Map)result.data){
-				result.data.logs=[]
-				result.data.trace=[:]
-				result.data.localVars=[:]
-				result.data.state=[:]
-				result.data.schedules=[]
+			Map rd= (Map)result[sDATA]
+			if(rd){
+				rd.logs=[]
+				rd.trace=[:]
+				rd.localVars=[:]
+				rd.state=[:]
+				rd.schedules=[]
 			}
 
 			svLength=responseLength
 			jsonData= JsonOutput.toJson(result)
-			responseLength=jsonData.getBytes("UTF-8").length
+			responseLength=jsonData.getBytes(sUTF8).length
 			resl= (Integer)(responseLength / 1024)
 			debug "First Trimmed response length: ${resl}KB"
 			if(responseLength==svLength || resl > 105){
 				warn "First TRIMMING may be un-successful, trying further trimming ${resl}KB"
 
-				if((Map)result.data){
-					result.data.systemVars=[:]
-					result.data.stats.timing=[]
+				if(rd){
+					rd.systemVars=[:]
+					rd.stats.timing=[]
 				}
 
 				svLength=responseLength
 				jsonData= JsonOutput.toJson(result)
-				responseLength=jsonData.getBytes("UTF-8").length
+				responseLength=jsonData.getBytes(sUTF8).length
 				resl= (Integer)(responseLength / 1024)
 				debug "Second Trimmed response length: ${resl}KB"
 				if(responseLength==svLength || resl > 105){
@@ -1777,7 +1772,7 @@ private void checkResultSize(Map result, Boolean requireDb=false, String caller=
 				}else warn "Final TRIMMING successful, you should load a small piston again to complete IDE update ${resl}KB"
 			}else warn "First TRIMMING successful ${resl}KB"
 		}
-		//log.debug "Trimmed response length: ${jsonData.getBytes("UTF-8").length}"
+		//log.debug "Trimmed response length: ${jsonData.getBytes(sUTF8).length}"
 	}
 }
 
@@ -1796,11 +1791,11 @@ private api_intf_dashboard_piston_backup(){
 			if(piston){
 				Map pd=(Map)piston.get(true)
 				if(pd){
-					pd.instance=[id: getInstanceSid(), (sNM): myN]
+					pd.instance=[(sID): getInstanceSid(), (sNM): myN]
 					Boolean a=result.pistons.push(pd)
 					if(!isCustomEndpoint() || !(Boolean)localHubUrl){
 						String jsonData= JsonOutput.toJson(result)
-						Integer responseLength=jsonData.getBytes("UTF-8").length
+						Integer responseLength=jsonData.getBytes(sUTF8).length
 						if(responseLength > 110 * 1024){
 							warn "Backup too big ${ (Integer)(responseLength/1024) }KB response"
 						}
@@ -1816,7 +1811,9 @@ private api_intf_dashboard_piston_backup(){
 
 private String decodeEmoji(String value){
 	if(!value) return sBLK
-	return value.replaceAll(/(\:%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}\:)/, { m -> URLDecoder.decode(m[0].substring(1, 13), 'UTF-8') })
+	return value.replaceAll(/(\:%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}\:)/){
+		m -> URLDecoder.decode( ((String)m[0]).substring(1, 13), sUTF8)
+	}
 }
 
 private Map api_intf_dashboard_piston_set_save(String id, String data, Map<String,String>chunks){
@@ -1825,7 +1822,7 @@ private Map api_intf_dashboard_piston_set_save(String id, String data, Map<Strin
 	if(piston){
 		debug myS
 	/*
-		def s=decodeEmoji(new String(data.decodeBase64(), "UTF-8"))
+		def s=decodeEmoji(new String(data.decodeBase64(), sUTF8))
 		int cs=512
 		for (int a=0; a <= Math.floor(s.size() / cs); a++){
 			int x=a * cs + cs - 1
@@ -1833,7 +1830,7 @@ private Map api_intf_dashboard_piston_set_save(String id, String data, Map<Strin
 			log.trace s.substring(a * cs, x)
 		}
 	*/
-		LinkedHashMap p=(LinkedHashMap) new JsonSlurper().parseText(decodeEmoji(new String(data.decodeBase64(), "UTF-8")))
+		LinkedHashMap p=(LinkedHashMap) new JsonSlurper().parseText(decodeEmoji(new String(data.decodeBase64(), sUTF8)))
 		Map result=(Map)piston.setup(p, chunks)
 		broadcastPistonList(true)
 		return result
@@ -1873,7 +1870,7 @@ private api_intf_dashboard_piston_set_start(){
 		if((chunks > 0) && (chunks < 100)){
 			clearHashMap(wName)
 			//atomicState.chunks=[id: params?.id, count: chunks]
-			pPistonChunksFLD[wName]=[id: params?.id, count: chunks]
+			pPistonChunksFLD[wName]=[(sID): params?.id, count: chunks]
 			pPistonChunksFLD=pPistonChunksFLD
 			mb()
 			result=[(sSTS): "ST_READY"]
@@ -2051,14 +2048,10 @@ private api_intf_dashboard_piston_set_category(){
 		if(piston){
 			result=(Map)piston.setCategory(params.category)
 			String myId=(String)params.id
-			if(pStateFLD[wName]==null){ pStateFLD[wName]= (Map)[:]; pStateFLD=pStateFLD }
-			Map st; st=(Map)pStateFLD[wName][myId]
-			if(st==null) st=(Map)piston.curPState() //st=atomicState[myId]
+			Map st; st=gtMeta(piston,wName,myId)
 			if(st){
-				st.c=params.category
-				pStateFLD[wName][myId]=st
-				pStateFLD=pStateFLD
-				//atomicState[myId]=st
+				st[sC]=params.category
+				ptMeta(wName,myId,st)
 			}
 			result.status=sSUCC
 		}else{ result=api_get_error_result(sERRID) }
@@ -2103,9 +2096,7 @@ private api_intf_dashboard_piston_delete(){
 		String id=(String)params.id
 		def piston=findPiston(id)
 		if(piston){
-			if(pStateFLD[wName]==null){ pStateFLD[wName]= (Map)[:]; pStateFLD=pStateFLD }
-			pStateFLD[wName][id]=null
-			pStateFLD=pStateFLD
+			ptMeta(wName,id,null)
 			String schld=piston.id.toString()
 			if(!cldClearFLD[wName]){ cldClearFLD[wName]=(Map)[:]; cldClearFLD=cldClearFLD }
 			cldClearFLD[wName].remove(schld)
@@ -2155,13 +2146,13 @@ private api_intf_variable_set(){
 	if(verifySecurityToken((String)params.token)){
 		String pid=(String)params.id
 		String name; name=(String)params.name
-		def value=params.value ? (LinkedHashMap) new JsonSlurper().parseText(new String(((String)params.value).decodeBase64(), "UTF-8")) : null
+		LinkedHashMap value=params.value ? (LinkedHashMap) new JsonSlurper().parseText(new String(((String)params.value).decodeBase64(), sUTF8)) : null
 		trace meth+"pid: $pid name: $name value: $value"
 		Map<String,Map> globalVars
 		Map<String,Object> localVars
 		if(!pid){
 			Boolean chgd; chgd=false
-			String vln; vln=value ? (String)value.n : sNL
+			String vln; vln=value ? (String)value[sN] : sNL
 			if( (name && (Boolean)name.startsWith('@@')) || (vln && vln.startsWith('@@')) ){
 				String vn; vn=sNL
 				if(name && !value){
@@ -2175,10 +2166,10 @@ private api_intf_variable_set(){
 					else trace meth1
 					chgd=true
 					//result=[(sNM): name, (sVAL): null, type: null]
-				}else if(value && value.n){
-					vln=((String)value.n).substring(2)
+				}else if(value && value[sN]){
+					vln=((String)value[sN]).substring(2)
 					if(name=='null') name=sNL
-					if(!name || name!=(String)value.n ){
+					if(!name || name!=(String)value[sN] ){
 						if(name){
 							vn= name.substring(2)
 							meth1=meth+"DELETE before update of HE global $vn "
@@ -2255,7 +2246,7 @@ private api_intf_variable_set(){
 					globalVars.remove(name)
 					chgd=true
 					result=[(sNM): name, (sVAL): null, type: null]
-				}else if(value && value.n){
+				}else if(value && value[sN]){
 					if(!name || name!=vln ){
 						//add a new variable
 						if(name) globalVars.remove(name)
@@ -2289,7 +2280,7 @@ private api_intf_variable_set(){
 			if(piston){
 				localVars=(Map)piston.setLocalVariable(name, value.v)
 				//clearBaseResult('api_intf_variable_set')
-				result=[(sSTS): sSUCC] + [id: pid, localVars: localVars]
+				result=[(sSTS): sSUCC] + [(sID): pid, localVars: localVars]
 			}else{ result=api_get_error_result(sERRID) }
 		}
 	}else{ result=api_get_error_result(sERRTOK) }
@@ -2332,9 +2323,9 @@ def findCreateFuel(Map req){
 	result=null
 
 	// LTS can return multple streams
-	if(req.c == 'LTS'){
+	if(req[sC] == 'LTS'){
 		def lts = getChildAppByLabel("webCoRE Long Term Storage")
-		String[] s= ((String)req.n).split('_')
+		String[] s= ((String)req[sN]).split('_')
 		String sensorId= s[0]
 		String attribute= s[1]
 		if (lts!=null && (Boolean)lts.isStorage(sensorId, attribute)){
@@ -2342,7 +2333,7 @@ def findCreateFuel(Map req){
 		}
 
 	} else {
-		String streamName="${(req.c ?: sBLK)}||${req.n}"
+		String streamName="${(req[sC] ?: sBLK)}||${req[sN]}"
 		List l
 		l=wgetChildApps().findAll{ (String)it.name== n && ((String)it.label)?.contains(streamName)}
 		for (sa in l){
@@ -2364,7 +2355,7 @@ def findCreateFuel(Map req){
 			def id=(t0 ?: 0) + 1
 			try{
 				result=addChildApp('ady624', n, "$id - $streamName")
-				result.createStream([id: id, (sNM): req.n, canister: req.c ?: sBLK])
+				result.createStream([(sID): id, (sNM): req[sN], canister: req[sC] ?: sBLK])
 			}
 			catch(ignored){
 				error "Please install the webCoRE Fuel Streams app for local Fuel Streams"
@@ -2521,7 +2512,7 @@ private api_intf_settings_set(){
 	debug "Dashboard: Request received to set settings"
 	if(verifySecurityToken((String)params.token)){
 		String pset=(String)params.settings
-		LinkedHashMap msettings=pset ? (LinkedHashMap) new JsonSlurper().parseText(new String(pset.decodeBase64(), "UTF-8")) : null
+		LinkedHashMap msettings=pset ? (LinkedHashMap) new JsonSlurper().parseText(new String(pset.decodeBase64(), sUTF8)) : null
 		atomicState.settings=msettings
 
 		clearParentPistonCache("dashboard changed settings")
@@ -2539,7 +2530,7 @@ private api_intf_dashboard_piston_evaluate(){
 	if(verifySecurityToken((String)params.token)){
 		def piston=findPiston((String)params.id)
 		if(piston){
-			LinkedHashMap expression=(LinkedHashMap) new JsonSlurper().parseText(new String(((String)params.expression).decodeBase64(), "UTF-8"))
+			LinkedHashMap expression=(LinkedHashMap) new JsonSlurper().parseText(new String(((String)params.expression).decodeBase64(), sUTF8))
 			Map msg=timer "Evaluating expression"
 			result=[(sSTS): sSUCC, (sVAL): piston.proxyEvaluateExpression(null /* getRunTimeData()*/, expression, (String)params.dataType)]
 			trace msg
@@ -2669,7 +2660,7 @@ private api_global(){
 			if(hg){ // could return these as webcore types....this uses what is in HE
 				result.val=hg.value
 				result.type=hg.type
-				result.name=vn
+				result[sNM]=vn
 				result.desc='HE Hub variable'
 				err=false
 			}
@@ -2679,7 +2670,7 @@ private api_global(){
 			if(vars[varName]){
 				result.val=vars[varName].v
 				result.type=vars[varName].t
-				result.name=varName
+				result[sNM]=varName
 				result.desc='webCoRE global variable'
 				err=false
 			}
@@ -2744,30 +2735,34 @@ void recoveryHandler(){
 void finishRecovery(){
 	registerInstance(false)
 	Long recTime=300000L  // 5 min in ms
-	String n=handlePistn()
+	//String n=handlePistn()
 	Long lnow=wnow()
 	Long threshold= lnow-recTime
 	String wName=sAppId()
 
-	List fPs
-	fPs=presult(wName).findAll{
+	List<Map> fPs
+	String a=sA
+	String n=sN
+	fPs=presult(wName).findAll{ Map it ->
 		//[ id: myId, (sNM): normalizeLabel(it), meta: [:]+meta ]
 		Map meta=(Map)it.meta
-		meta!=null && (Boolean)meta.a && meta.n && (Long)meta.n < threshold
+		meta!=null && (Boolean)meta[a] && meta[n] && (Long)meta[n] < threshold
 	}
 	Integer i
 	i= fPs.size()
 	if(i){
 		i=0
 		Long delay=Math.round(2000.0D * Math.random()) // 2 sec
-		for (piston in fPs){
-			String myId=(String)piston.id
-			Map meta=(Map)pStateFLD[wName][myId]
-			if((Long)meta.n < threshold){
+		for (Map piston in fPs){
+			String myId=(String)piston[sID]
+			Map meta= (Map)piston.meta // gtMeta(null, wName,myId)
+			Long t=(Long)meta[n]
+			if(t < threshold){
 				if(i!=0) wpauseExecution(delay)
 				i++
-				sendExecuteEvt((String)piston.id,'recovery',"Recovery event","Recovery event for piston $piston.name",null)
-				warn "Piston $piston.name was sent a recovery signal because it was ${lnow - (Long)meta.n}ms late"
+				String nm= (String)piston[sNM]
+				sendExecuteEvt(myId,'recovery',"Recovery event","Recovery event for piston ${nm}",null)
+				warn "Piston ${nm} was sent a recovery signal because it was ${lnow - t}ms late"
 			}
 		}
 	}
@@ -2996,7 +2991,7 @@ Map listAvailableDevices(Boolean raw=false, Boolean updateCache=false, Integer o
 
 					Boolean stop; stop=false
 					String jsonData=JsonOutput.toJson(result)
-					Integer responseLength=jsonData.getBytes("UTF-8").length
+					Integer responseLength=jsonData.getBytes(sUTF8).length
 					if(responseLength > 50000 || wnow()-time > 4000) stop=true
 					if(stop && idx < dsz-i1 ){
 						result.nextOffset= offset+idx+i1
@@ -3202,7 +3197,7 @@ private String createSecurityToken(){
 }
 
 private void ping(){
-	sendLocationEvent( [(sNM): handle(), (sVAL): 'ping', isStateChange: true, displayed: false, linkText: "${handle()} ping reply", descriptionText: "${handle()} has received a ping reply and is replying with a pong", (sDATA): [id: getInstanceSid(), (sNM): appName()]] )
+	sendLocationEvent( [(sNM): handle(), (sVAL): 'ping', isStateChange: true, displayed: false, linkText: "${handle()} ping reply", descriptionText: "${handle()} has received a ping reply and is replying with a pong", (sDATA): [(sID): getInstanceSid(), (sNM): appName()]] )
 }
 
 private void startDashboard(){
@@ -3325,18 +3320,11 @@ private void registerInstance(Boolean force=true){
 		String endpoint=(String)state.endpointCloud
 		String region=endpoint.contains('graph-eu') ? 'eu' : 'us'
 		String name=handlePistn()
-		if(pStateFLD[wName]==null){ pStateFLD[wName]= (Map)[:]; pStateFLD=pStateFLD }
-		List pistons
+		List<Map> pistons
 		pistons=wgetChildApps().findAll{ (String)it.name==name }.collect{
 			String myId=hashPID(it.id)
-			Map meta; meta=(Map)pStateFLD[wName][myId]
-			if(meta==null){
-				//meta=atomicState[myId]
-				meta=(Map)it.curPState()
-				pStateFLD[wName][myId]=meta
-				pStateFLD=pStateFLD
-			}
-			[ id: myId, (sA): meta?.a ]
+			Map meta; meta=gtMeta(it,wName,myId)
+			[ (sID): myId, (sA): meta?.a ]
 		}
 		List lpa,lpd
 		lpa=pistons.findAll{ it.a }.collect{ it.id }
@@ -3435,8 +3423,8 @@ private String mem(Boolean showBytes=true){
 
 @CompileStatic
 void pCallupdateRunTimeData(Map data){
-	if(!data || !data.id) return
-	String id=(String)data.id
+	if(!data || !data[sID]) return
+	String id=(String)data[sID]
 	String wName=sAppId()
 	if(p_executionFLD[wName]==null){ p_executionFLD[wName]=(Map)[:]; p_executionFLD=p_executionFLD }
 	Long cnt; cnt=p_executionFLD[wName][id]!=null ? (Long)p_executionFLD[wName][id] : 0L
@@ -3445,8 +3433,6 @@ void pCallupdateRunTimeData(Map data){
 	p_executionFLD=p_executionFLD
 	updateRunTimeData(data,wName,id)
 }
-
-@Field volatile static Map<String,Map<String,Map>> pStateFLD=[:]
 
 private gtSetting(String nm){ return settings."${nm}" }
 private gtSt(String nm){ return state."${nm}" }
@@ -3459,7 +3445,7 @@ List wgetChildApps() { return (List)getChildApps() }
 @Field static final String sURT='updateRunTimeData'
 @CompileStatic
 void updateRunTimeData(Map data, String wNi=sNL, String idi=sNL){
-	if(!data || !data.id) return
+	if(!data || !data[sID]) return
 	List<Map> variableEvents=[]
 	if(data.gvCache!=null){
 		Boolean didw=getTheLock(sURT)
@@ -3494,28 +3480,23 @@ void updateRunTimeData(Map data, String wNi=sNL, String idi=sNL){
 		releaseTheLock(sURT)
 	}
 
+	// update piston metadata cache; cache what IDE wants and in IDE format
+	Map st=[:]+(Map)data.state
+	st.remove('old') //remove the old state as we don't need it
+	Map piston=[
+		(sA): (Boolean)data.active,
+		(sC): data.category,
+		(sT): data.timestamp ?:wnow(), //last run
+		(sN): (Long)((Map)data.stats).nextSchedule,
+		z: (String)((Map)data.piston).z, //description
+		(sS): st,
+		heCached:(Boolean)data.Cached
+	]
+	//log.warn "data: $data piston: $piston old: ${pStateFLD[wName][id]}"
 	String wName= wNi ?: sAppId()
-	String id= idi ?: (String)data.id
-	if(wName){
-		if(pStateFLD[wName]==null){ pStateFLD[wName]= (Map)[:]; pStateFLD=pStateFLD}
-		Map st=[:]+(Map)data.state
-		st.remove('old') //remove the old state as we don't need it
-		Map piston=[
-			(sA): (Boolean)data.active,
-			(sC): data.category,
-			(sT): data.timestamp ?:wnow(), //last run
-			(sN): (Long)((Map)data.stats).nextSchedule,
-			z: (String)((Map)data.piston).z, //description
-			(sS): st,
-			heCached:(Boolean)data.Cached
-		]
-		//log.warn "data: $data piston: $piston old: ${pStateFLD[wName][id]}"
-		if(id){
-			pStateFLD[wName][id]=piston
-			pStateFLD=pStateFLD
-		} else error "no id"
-		clearBaseResult(sURT,wName)
-	} else error "no wName"
+	String id= idi ?: (String)data[sID]
+	ptMeta(wName,id,piston)
+	clearBaseResult(sURT,wName)
 
 	//broadcast variable change events
 	for (Map variable in variableEvents){ // this notifies the other webCoRE master instances and children
@@ -3527,6 +3508,43 @@ void updateRunTimeData(Map data, String wNi=sNL, String idi=sNL){
 		if(dashboardApp) dashboardApp.updatePiston(id, piston)
 	} */
 	verCheck(wName)
+}
+
+@Field volatile static Map<String,Map<String,Map>> pStateFLD=[:]
+
+/**
+ * store cached piston metadata
+ */
+@CompileStatic
+void ptMeta(String wName, String id, Map piston){
+	if(wName && id){
+		if(pStateFLD[wName]==null){ clearMeta(wName) }
+		pStateFLD[wName][id]=piston
+		pStateFLD=pStateFLD
+	}else error "ptMeta no id"
+}
+
+@CompileStatic
+static void clearMeta(String wName){
+	pStateFLD[wName]=(Map)[:]
+	pStateFLD=pStateFLD
+	mb()
+}
+
+/**
+ * get piston meta data (from cached, or from piston if missing)
+ */
+Map gtMeta(chld, String wName, String myId){
+	Map meta; meta= null
+	if(wName && myId){
+		if(pStateFLD[wName]==null){ clearMeta(wName) }
+		meta= pStateFLD[wName][myId]
+		if(meta==null){
+			meta=(Map)chld.curPState()
+			ptMeta(wName,myId,meta)
+		}
+	}else error "gtMeta no id"
+	return meta
 }
 
 Boolean pausePiston(String pistonId,String src){
@@ -3567,7 +3585,7 @@ private void sendVariableEvent(Map variable, Boolean onlyChildren=false){
 	if(varN.startsWith('@@')) return // TODO ERS
 	Map theEvent=[
 		(sVAL): varN, isStateChange: true, displayed: false,
-		(sDATA): [id: myId, (sNM): myLabel, event: sVARIABLE, (sVARIABLE): variable]
+		(sDATA): [(sID): myId, (sNM): myLabel, event: sVARIABLE, (sVARIABLE): variable]
 	]
 // This notifies other webCoRE master instances of super change
 /*	if( !onlyChildren && varN.startsWith('@@') ){
@@ -3602,10 +3620,10 @@ void broadcastPistonList(Boolean frc=false){
 			isStateChange: true,
 			displayed: false,
 			(sDATA): [
-				id: getInstanceSid(),
+				(sID): getInstanceSid(),
 				(sNM): appName(),
 				pistons: wgetChildApps().findAll{ (String)it.name==handlePistn() }.collect{
-					[ id: hashPID(it.id), (sNM): normalizeLabel(it), aname: (it?.label) ]
+					[ (sID): hashPID(it.id), (sNM): normalizeLabel(it), aname: (it?.label) ]
 				}
 			]
 		])

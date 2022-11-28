@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update November 16, 2022 for Hubitat
+ * Last update November 27, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -198,6 +198,7 @@ static Boolean eric1(){ return false }
 @Field static final String sSTCLR='setColor'
 @Field static final String sCLRTEMP='colorTemperature'
 @Field static final String sSTCLRTEMP='setColorTemperature'
+@Field static final String sUTF8='UTF-8'
 
 @Field static final String sPEP='pep'
 @Field static final String sLOGNG='logging'
@@ -1061,8 +1062,11 @@ Map clearLogs(){
 	return [:]
 }
 
-static String decodeEmoji(String value){
-	return value.replaceAll(/(\:%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}\:)/,{ m -> URLDecoder.decode(m[0].substring(1,13),'UTF-8')})
+private String decodeEmoji(String value){
+	if(!value) return sBLK
+	return value.replaceAll(/(\:%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}\:)/){
+		m -> URLDecoder.decode( ((String)m[0]).substring(1, 13), sUTF8)
+	}
 }
 
 @Field static Map<String,Map> thePistonCacheFLD=[:]
@@ -1109,7 +1113,7 @@ private LinkedHashMap recreatePiston(Boolean shorten=false,Boolean inMem=false,B
 		i++
 	}
 	if(sdata!=sBLK){
-		LinkedHashMap data=(LinkedHashMap)new JsonSlurper().parseText(decodeEmoji(new String(sdata.decodeBase64(),'UTF-8')))
+		LinkedHashMap data=(LinkedHashMap)new JsonSlurper().parseText(decodeEmoji(new String(sdata.decodeBase64(),sUTF8)))
 		LinkedHashMap piston=[
 			(sO): data[sO] ?: [:],
 			(sR): data[sR] ?: [],
@@ -5518,7 +5522,7 @@ private Long vcmd_iftttMaker(Map r9,device,List prms){
 		p3:v3
 	]
 	Map requestParams=[
-		uri: "https://maker.ifttt.com/trigger/${java.net.URLEncoder.encode(event,"UTF-8")}/with/key/".toString()+key,
+		uri: "https://maker.ifttt.com/trigger/${URLEncoder.encode(event,sUTF8)}/with/key/".toString()+key,
 		requestContentType: sAPPJSON,
 		body: body,
 		timeout:i20
@@ -5675,17 +5679,36 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 	String protocol,userPart,func
 	protocol="https"
 	userPart=sBLK
-	String[] uriParts=uri.split("://")
+	String[] uriParts
+	String mat='://'
+	uriParts=uri.split(mat)
 	if(uriParts.size()>i2){
-		warn "Invalid URI for web request:$uri",r9
-		return lZ
+		String s= uri.substring(0,uri.size()>15 ? 15: uri.size())
+		if(!s.contains(mat)){
+			uriParts=[]
+			uriParts[iZ]=uri
+		}else{
+			String[] s1,n1
+			s1=[];n1=[]
+			Integer i
+			for(i=i1;i<uriParts.size();i++){
+				s1[i-1]=uriParts[i]
+			}
+			n1[iZ]=uriParts[iZ]
+			n1[i1]=s1.join(mat)
+			uriParts=n1
+		}
+		if(isEric(r9))debug "found complex s: $s uri: $uri parts: $uriParts",r9
+
+		//warn "Invalid URI for web request:$uri",r9
+		//return lZ
 	}
 	if(uriParts.size()==i2){
 		//remove the httpX:// from the uri
 		protocol=uriParts[iZ].toLowerCase()
 		uri=uriParts[i1]
 	}
-	//support for user:pass@IP
+	//support for user:pass@IP (remove from URI for logging purposes, and other uri checks later)
 	if(uri.contains(sAT)){
 		String[] uriSubParts= uri.split(sAT as String)
 		userPart=uriSubParts[iZ]+sAT
@@ -5718,7 +5741,7 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 
 	try{
 		Map requestParams=[
-			uri: protocol+'://'+userPart+uri,
+			uri: protocol+mat+userPart+uri,
 			query: useQryS ? data:null,
 			headers: headers,
 			(sCONTENTT): '*/*',
@@ -8583,14 +8606,15 @@ private Map getNFLDataFeature(String dataFeature){
 
 private Map getNFL(Map r9,String name){
 	List parts=name.tokenize(sDOT)
-	r9.nfl=r9.nfl!=null?r9.nfl: [:]
+	String s='nfl'
+	r9[s]=r9[s]!=null?r9[s]: [:]
 	if(parts.size()>iZ){
 		String dataFeature= sLi(parts,iZ).tokenize(sLB)[iZ]
-		if(r9.nfl[dataFeature]==null){
-			r9.nfl[dataFeature]=getNFLDataFeature(dataFeature)
+		if(r9[s][dataFeature]==null){
+			r9[s][dataFeature]=getNFLDataFeature(dataFeature)
 		}
 	}
-	return getJsonData(r9,r9.nfl,name,'NFL')
+	return getJsonData(r9,r9[s],name,'NFL')
 }
 
 private Map getIncidents(Map r9,String name){
@@ -11090,7 +11114,7 @@ private static String encodeURIComponent(value){
 	String holder='__wc_plus__'
 	return URLEncoder.encode(
 		"${value}".toString().replaceAll('\\+',holder),
-		'UTF-8'
+		sUTF8
 	).replaceAll('\\+','%20').replaceAll(holder,'+')
 }
 
