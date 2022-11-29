@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update November 27, 2022 for Hubitat
+ * Last update November 29, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -5679,7 +5679,7 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 	String protocol,userPart,func
 	protocol="https"
 	userPart=sBLK
-	String[] uriParts
+	List<String> uriParts
 	String mat='://'
 	uriParts=uri.split(mat)
 	if(uriParts.size()>i2){
@@ -5688,7 +5688,7 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 			uriParts=[]
 			uriParts[iZ]=uri
 		}else{
-			String[] s1,n1
+			List<String> s1,n1
 			s1=[];n1=[]
 			Integer i
 			for(i=i1;i<uriParts.size();i++){
