@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update November 28, 2022 for Hubitat
+ * Last update December 1, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -1646,6 +1646,13 @@ private findPiston(String id, String nm=sNL){
 	return piston
 }
 
+private Map gtAllCommands(){
+	Map allCmds
+	allCmds= commands().sort{ (String)it.value.d!=sNL ? (String)it.value.d : (String)it.value.n }
+	return allCmds
+}
+
+
 private api_intf_dashboard_piston_getDb() {
 	Map result; result=[:]
 	if(verifySecurityToken((String)params.token)){
@@ -1654,7 +1661,7 @@ private api_intf_dashboard_piston_getDb() {
 		Map theDb=[
 				capabilities: capabilities().sort{ (String)it.value.d },
 				commands: [
-						physical: commands().sort{ (String)it.value.d!=sNL ? (String)it.value.d : (String)it.value.n },
+						physical: gtAllCommands(),
 						virtual: virtualCommands().sort{ (String)it.value.d!=sNL ? (String)it.value.d : (String)it.value.n }
 				],
 				attributes: attributesFLD.sort{ (String)it.key },
@@ -2744,7 +2751,6 @@ void finishRecovery(){
 	String a=sA
 	String n=sN
 	fPs=presult(wName).findAll{ Map it ->
-		//[ id: myId, (sNM): normalizeLabel(it), meta: [:]+meta ]
 		Map meta=(Map)it.meta
 		meta!=null && (Boolean)meta[a] && meta[n] && (Long)meta[n] < threshold
 	}
@@ -3026,9 +3032,11 @@ Map listAvailableDevices(Boolean raw=false, Boolean updateCache=false, Integer o
 Map getDevDetails(dev, Boolean addtransform=false){
 	Map<String,Map> overrides=commandOverrides()
 	String nm=dev.getDisplayName()
+	List<Map> newCL; newCL=[]
 	List cmdL; cmdL=dev.getSupportedCommands()
+	if(eric()) error("DEVICE $nm")
+	if(eric()) warn("COMMANDS $cmdL")
 	cmdL=cmdL.unique{ (String)it.getName() }
-	List<Map> newCL=[]
 	for(cmd in cmdL){
 		Map mycmd=[:]
 		mycmd.n=cmd.getName()
@@ -3042,6 +3050,33 @@ Map getDevDetails(dev, Boolean addtransform=false){
 			}
 		}
 	}
+	if(eric()) warn("COMMANDS $newCL")
+
+	newCL= newCL.unique{ (String)it.n }
+
+	Map allCmds= gtAllCommands()
+
+	for (Map cmd in newCL){
+		String cmdName=cmd[sN]
+		if(allCmds.containsKey(cmdName)){
+			if (eric()){
+				info("allCmds has device command $cmdName")
+				trace("found in allCmds ${allCmds[cmdName]}")
+				trace("found in device $cmd")
+			}
+		}else{
+			cmd.cm=true
+			if(cmd[sP]){
+				List<String> typs
+				typs=[]
+				for(typ in (List<String>)cmd[sP])
+					typs.push(typ.toUpperCase())
+				cmd[sP]=typs
+			}
+			if(eric()) warn("adding custom marker to $cmdName $cmd")
+		}
+	}
+
 	Map res=[
 		(sN): nm,
 		cn: dev.getCapabilities()*.name,
