@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update November 29, 2022 for Hubitat
+ * Last update December 8, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -551,7 +551,7 @@ private static Boolean badParams(Map r9,List prms,Integer minParams){ return (pr
 
 @CompileStatic
 private static Map rtnMap(String t,v){ return [(sT):t,(sV):v] }
-/** Returns duration,v,vt  */
+/** Returns t:duration,v:m.v,vt:m.vt  */
 @CompileStatic
 private static Map rtnMap1(Map m){ return [(sT):sDURATION,(sV):oMv(m),(sVT):sMvt(m)] }
 @CompileStatic
@@ -3091,11 +3091,11 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 	}
 }
 
-/** Returns active schedules  */
+/** Returns newly created schedules  */
 @CompileStatic
 private static List<Map> sgtSch(Map r9){ return liMs(r9,sSCHS) }
 
-/** Add to active schedules */
+/** Add to newly created schedules */
 @CompileStatic
 private static Boolean spshSch(Map r9,Map sch){ return liMs(r9,sSCHS).push(sch) }
 
@@ -3478,12 +3478,9 @@ private Boolean executeStatement(Map r9,Map statement,Boolean asynch=false){
 					Boolean ownEvent=evntName==sTIME && es!=null && iMsS(es)==stmtNm && iMs(es,sI)==iN1
 					if(ownEvent)chgRun(r9,iZ)
 
-					List<Map> schedules=sgetSchedules(sEXST,myPep)
-					String i=sI; Integer in1=iN1 // compiler bug
-					if(ownEvent || !schedules.find{ Map it -> iMsS(it)==stmtNm && iMs(it,i)==in1 }){
-						//ensure every timer is scheduled
-						scheduleTimer(r9,statement,ownEvent ? lMt(es):lZ)
-					}
+					//ensure every timer is scheduled
+					scheduleTimer(r9,statement,ownEvent ? lMt(es):lZ,myPep)
+
 					if(ffwd(r9) || ownEvent){
 						Boolean canR=ownEvent && allowed && !bIs(r9,'restricted') // honor restrictions
 						if(ffwd(r9) || canR){
@@ -4137,18 +4134,35 @@ private static void pcmd(device,String cmd,List nprms=[]){
 	else device."$cmd"()
 }
 
-private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ){
-	//if already scheduled once during run, don't do it again
-	Integer iTD=stmtNum(timer)
-	if(sgtSch(r9).find{ Map it -> iMsS(it)==iTD })return
-	String mySt; mySt=sNL
+@Field static final String sOM='om'
+@Field static final String sOH='oh'
+@Field static final String sODW='odw'
+@Field static final String sODM='odm'
+@Field static final String sOMY='omy'
+@Field static final String sOWM='owm'
+
+private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 	Boolean lg=isEric(r9)
-	if(lg){
-		mySt="scheduleTimer ${iTD} ${timer[sLO]} ${timer[sLO2]} ${timer[sLO3]} $lastRun"
-		myDetail r9,mySt,i1
+	String mySt; mySt=sNL
+	Integer iTD=stmtNum(timer)
+	Map tlo=mMs(timer,sLO)
+	Map tlo2=mMs(timer,sLO2)
+	Map tlo3=mMs(timer,sLO3)
+	if(lg) mySt="scheduleTimer stmt: ${iTD} lo:${tlo} lo2: ${tlo2} lo3: ${tlo3} lastRun: $lastRun"
+
+	//if already scheduled once during run, don't do it again
+	Boolean fnd; fnd=false
+	List<Map> schedules=sgetSchedules(sEXST,myPep)
+	//String i=sI; Integer in1=iN1 // compiler bug
+	if(schedules.find{ Map it -> iMsS(it)==iTD /* && iMs(it,i)==in1*/ }){ fnd=true }
+	if(sgtSch(r9).find{ Map it -> iMsS(it)==iTD }){ fnd=true }
+	if(fnd){
+		if(lg) myDetail r9,"FOUND EXISTING TIMER "+mySt,iN2
+		return
 	}
+	if(lg) myDetail r9,mySt,i1
 	//complicated stuff follows
-	String tinterval="${oMv(mevaluateOperand(r9,mMs(timer,sLO)))}".toString()
+	String tinterval="${oMv(mevaluateOperand(r9,tlo))}".toString()
 	Boolean exitOut,priorActivity
 	exitOut=false
 	Integer interval,level,cycles
@@ -4158,16 +4172,14 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ){
 		if(interval<=iZ)exitOut=true
 	}else exitOut=true
 	if(exitOut){
-		if(lg)myDetail r9,mySt
+		if(lg)myDetail r9,mySt + "Interval: $tinterval"
 		return
 	}
-	Map tlo=mMs(timer,sLO)
-	Map tlo2=mMs(timer,sLO2)
-	String intervalUnit=sMvt(tlo)
+	String intervlUnit=sMvt(tlo)
 	level=iZ
 	Long delta,time,rightNow,nxtSchd
 	delta=lZ
-	switch(intervalUnit){
+	switch(intervlUnit){
 		case sMS: level=i1; delta=l1; break
 		case sS: level=i2; delta=lTHOUS; break
 		case sM: level=i3; delta=dMSMINT.toLong(); break
@@ -4177,39 +4189,44 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ){
 		case sN: level=i7; break
 		case sY: level=i8; break
 	}
-	if(lg)
-		myDetail r9,"interval: $interval delta: $delta level: $level intervalUnit: $intervalUnit",iN2
+	if(lg) myDetail r9,"interval: $interval delta: $delta level: $level intervlUnit: $intervlUnit",iN2
 	time=lZ
 	if(delta==lZ){
 		//let's get the offset
-		time=longEvalExpr(r9,mevaluateOperand(r9,mMs(timer,sLO2)),sDTIME)
+		time=longEvalExpr(r9,mevaluateOperand(r9,tlo2),sDTIME)
 		if(sMt(tlo2)!=sC){
-			Map offset=mevaluateOperand(r9,mMs(timer,sLO3))
+			Map offset=mevaluateOperand(r9,tlo3)
 			time+=longEvalExpr(r9,rtnMap1(offset))
 		}
 		//result is sDTIME
 		if(lastRun==lZ) //first run, just adjust the time so in the future
 			time=pushTimeAhead(time,wnow())
+	}else{
+		delta=Math.round(delta*interval*d1)
+		if(lg) myDetail r9,"interval: $interval delta: $delta level: $level intervlUnit: $intervlUnit",iN2
 	}
-	delta=Math.round(delta*interval*d1)
+
 	priorActivity=lastRun!=lZ
 
 	rightNow=wnow()
-	Long lastR=lastRun!=lZ ? lastRun:rightNow
+	Long lastR=priorActivity ? lastRun:rightNow
 	nxtSchd=lastR
 
 	if(lastR>rightNow) //sometimes timers run early, so make sure at least in the near future
 		rightNow=Math.round(lastR+d1)
 
-	if(intervalUnit==sH){
-		Long min=lcast(r9,tlo.om)
+	if(intervlUnit==sH){
+		Long min=lcast(r9,oMs(tlo,sOM))
 		nxtSchd=Math.round(dMSECHR*Math.floor(nxtSchd/dMSECHR)+(min*dMSMINT))
 	}
 
 	//next date
 	cycles=i100
+	Integer tcy=cycles+i1
+	if(lg)
+		myDetail r9,"cycle: ${tcy-cycles} delta: $delta nxtSchd: $nxtSchd priorActivity: $priorActivity lastRun: $lastRun lastR: $lastR rightNow: $rightNow",iN2
 	while(cycles!=iZ){
-		if(delta!=lZ){
+		if(delta!=lZ){ // anything of [sMS, sS, sM, sH]
 			if(nxtSchd<(rightNow-delta)){
 				//behind, catch up to where the next future occurrence
 				Long cnt=Math.floor((rightNow-nxtSchd)/delta*d1).toLong()
@@ -4217,19 +4234,22 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ){
 				nxtSchd+=Math.round(delta*cnt*d1)
 			}
 			nxtSchd+=delta
-		}else{
+		}else{ // [sD, sW, sN, sY]
+			if(lg) myDetail r9,"time: $time rightNow: $rightNow",iN2
 			//advance ahead of rightNow if in the past
 			time=pushTimeAhead(time,rightNow)
 			Long lastDay=Math.floor(nxtSchd/dMSDAY).toLong()
 			Long thisDay=Math.floor(time/dMSDAY).toLong()
+			if(lg) myDetail r9,"time: $time rightNow: $rightNow lastDay: $lastDay thisDay: $thisDay",iN2
 
 			Date adate=new Date(time)
 			Integer dyYear=adate.year
 			Integer dyMon=adate.month
 			Integer dyDay=adate.day
+			if(lg) myDetail r9,"dyYear: $dyYear dyMon: $dyMon dyDay: $dyDay date: $adate",iN2
 
 			//the repeating interval is not necessarily constant
-			switch(intervalUnit){
+			switch(intervlUnit){
 				case sD:
 					if(priorActivity){
 						//add the required number of days
@@ -4239,26 +4259,28 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ){
 				case sW:
 					//figure out the first day of the week matching the requirement
 					Long currentDay=dyDay //(new Date(time)).day
-					Long requiredDay; requiredDay=lcast(r9,tlo.odw)
+					Long requiredDay; requiredDay=lcast(r9,oMs(tlo,sODW))
+					if(lg) myDetail r9,"currentDay: $currentDay requiredDay: $requiredDay ",iN2
 					if(currentDay>requiredDay)requiredDay+=i7
-					//move to first matching day
-					nxtSchd=time+Math.round(dMSDAY*(requiredDay-currentDay))
-					if(nxtSchd<rightNow)nxtSchd+=Math.round(604800000.0D*interval)
+					//move to first matching day in future
+					nxtSchd=time+Math.round(dMSDAY*(requiredDay-currentDay)) // this ahead of now
+					if(priorActivity)nxtSchd+=Math.round(604800000.0D*(interval-i1)) // this is n weeks from now
 					break
-				case sN:
+				case sN: // months
 				case sY:
 					//figure out the first day of the week matching the requirement
-					Integer odm=icast(r9,tlo.odm)
-					def odw=tlo.odw
-					Integer omy=intervalUnit==sY ? icast(r9,tlo.omy):iZ
+					Integer odm=icast(r9,oMs(tlo,sODM))
+					def odw=oMs(tlo,sODW)
+					Integer omy=intervlUnit==sY ? icast(r9,oMs(tlo,sOMY)):iZ
 					Integer day,year,month
 					Date date=adate // new Date(time)
 					year=dyYear //date.year
-					month=Math.round((intervalUnit==sN ? dyMon /*date.month*/:omy)+(priorActivity ? interval:((nxtSchd<rightNow)? d1:dZ))*(intervalUnit==sN ? d1:i12)).toInteger()
+					month=Math.round((intervlUnit==sN ? dyMon /*date.month*/:omy)+(priorActivity ? interval:((nxtSchd<rightNow)? d1:dZ))*(intervlUnit==sN ? d1:i12)).toInteger()
 					if(month>=i12){
 						year+=Math.floor(month/i12).toInteger()
 						month=month%i12
 					}
+					if(lg) myDetail r9,"month: $month year: $year ",iN2
 					date.setDate(i1)
 					date.setMonth(month)
 					date.setYear(year)
@@ -4290,6 +4312,8 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ){
 							day=(day>=i1)? day:iZ
 						}
 					}
+					if(lg)
+						myDetail r9,"odm: $odm odw: $odw omy: $omy day: $day month: $month year: $year",iN2
 					if(day){
 						date.setDate(day)
 						nxtSchd=date.getTime()
@@ -4299,30 +4323,43 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ){
 		}
 		//check to see if it fits the restrictions
 		if(nxtSchd>=rightNow){
-			Long offset=checkTimeRestrictions(r9,mMs(timer,sLO),nxtSchd,level,interval)
-			if(offset==lZ)break
+			Long offset=checkTimeRestrictions(r9,tlo,nxtSchd,level,interval)
+			if(offset==lZ){
+				if(lg)
+					myDetail r9,"TIME RESTRICTION PASSED cycle: ${tcy-cycles} nxtSchd: $nxtSchd priorActivity: $priorActivity lastRun: $lastRun lastR: $lastR rightNow: $rightNow",iN2
+				break
+			}
 			if(offset>lZ)nxtSchd+=offset
+			if(lg)
+				myDetail r9,"offset: $offset",iN2
 		}
 		time=nxtSchd
 		priorActivity=true
 		cycles-=i1
+		if(lg)
+			myDetail r9,"cycle: ${tcy-cycles} nxtSchd: $nxtSchd priorActivity: $priorActivity lastRun: $lastRun lastR: $lastR rightNow: $rightNow",iN2
 	}
 
 	if(nxtSchd>lastR){
-		Boolean a=liMs(r9,sSCHS).removeAll{ Map it -> iMsS(it)==iTD }
-		requestWakeUp(r9,timer,[(sDLR):iN1],nxtSchd,sNL,false)
+		//Boolean a=liMs(r9,sSCHS).removeAll{ Map it -> iMsS(it)==iTD }
+		String msg; msg=sBLK
+		if(isDbg(r9))msg= "Requesting every schedule"
+		requestWakeUp(r9,timer,[(sDLR):iN1],nxtSchd,sNL,false,sNL,msg)
 	}
 	if(lg)myDetail r9,mySt
 }
 
+/**
+ * Push pastTime head by 24 hours (mod DST) until >=curTime
+ */
 @CompileStatic
 private static Long pushTimeAhead(Long pastTime,Long curTime){
-	Long retTime
+	Long retTime,t0,t1
 	retTime=pastTime
 	TimeZone mtz=mTZ()
 	while(retTime<curTime){
-		Long t0=Math.round(retTime+dMSDAY)
-		Long t1=Math.round(t0+(mtz.getOffset(retTime)-mtz.getOffset(t0))*d1)
+		t0=Math.round(retTime+dMSDAY)
+		t1=Math.round(t0+(mtz.getOffset(retTime)-mtz.getOffset(t0))*d1)
 		retTime=t1
 	}
 	return retTime
@@ -4397,24 +4434,29 @@ private void scheduleTimeCondition(Map r9,Map cndtn){
 private static Boolean listWithSz(obj){ return obj instanceof List && ((List)obj).size()>iZ }
 
 @CompileStatic
+private static List<Integer>listInt(Boolean a,Map operand,String k){
+	return a && listWithSz(operand[k]) ? (List<Integer>)operand[k]:null
+}
+
+@CompileStatic
 private static Long checkTimeRestrictions(Map r9,Map operand,Long time,Integer level,Integer interval){
 	//returns 0 if restrictions are passed
 	//returns a positive number as millisecond offset to apply to nextSchedule for fast forwarding
 	//returns a negative number as a failed restriction with no fast forwarding offset suggestion
 
 	// on minute of hour
-	List<Integer> om=level<=i2 && listWithSz(operand.om)? (List<Integer>)operand.om:null
+	List<Integer> om= listInt((level<=i2),operand,sOM)
 	// on hours
-	List<Integer> oh=level<=i3 && listWithSz(operand.oh) ? (List<Integer>)operand.oh:null
+	List<Integer> oh= listInt((level<=i3),operand,sOH)
 	// on day(s) of week
-	List<Integer> odw=level<=i5 && listWithSz(operand.odw) ? (List<Integer>)operand.odw:null
+	List<Integer> odw= listInt((level<=i5),operand,sODW)
 	// on day(s) of month
 	List<Integer> odm
-	odm=level<=i6 && listWithSz(operand.odm) ? (List<Integer>)operand.odm:null
+	odm= listInt((level<=i6),operand,sODM)
 	// on weeks of month
-	List<Integer> owm=level<=i6 && odm==null && listWithSz(operand.owm) ? (List<Integer>)operand.owm:null
+	List<Integer> owm= listInt((level<=i6 && odm==null),operand,sOWM)
 	// on month of year
-	List<Integer> omy=level<=i7 && listWithSz(operand.omy) ? (List<Integer>)operand.omy:null
+	List<Integer> omy= listInt((level<=i7), operand,sOMY)
 
 	if(om==null && oh==null && odw==null && odm==null && owm==null && omy==null)return lZ
 	Date date=new Date(time)
@@ -4939,17 +4981,23 @@ private Long vcmd_toggleRandom(Map r9,device,List prms){
 	return lZ
 }
 
-@Field static final List<List<String>> cls1=[
-	// attr          value      cmd1    cmd2
-	['switch',       'off',     'on',   'off'],
-	['door',       'closed',   'open', 'close'],
-	['windowShade','closed',   'open', 'close'],
-	['windowBlind','closed',   'open', 'close'],
-	['valve',      'closed',   'open', 'close'],
-	['alarm',       'off',     'siren', 'off'],
-	['lock',       'unlocked', 'lock', 'unlock'],
-	['mute',       'unmuted',  'mute', 'unmute']
-]
+@Field static final String sOPEN='open'
+@Field static final String sCLOSE='close'
+@Field static final String sCLOSED='closed'
+@Field static List<List<String>> cls1
+private static List<List<String>> fill_cls(){
+	return [
+		// attr          value      cmd1    cmd2
+		[sSWITCH,       sOFF,     sON,   sOFF],
+		['door',       sCLOSED,   sOPEN, sCLOSE],
+		['windowShade',sCLOSED,   sOPEN, sCLOSE],
+		['windowBlind',sCLOSED,   sOPEN, sCLOSE],
+		['valve',      sCLOSED,   sOPEN, sCLOSE],
+		['alarm',       sOFF,     'siren', sOFF],
+		['lock',       'unlocked', 'lock', 'unlock'],
+		['mute',       'unmuted',  'mute', 'unmute']
+	]
+}
 
 private void smart_toggle(Map r9,device,Boolean prob=null){
 	Boolean fnd; fnd=false
@@ -4959,6 +5007,7 @@ private void smart_toggle(Map r9,device,Boolean prob=null){
 	}else{
 		List da= (List)device?.getSupportedAttributes()
 		def b
+		if(!cls1)cls1=fill_cls()
 		for(List<String> a in cls1){
 			a0=a[iZ]
 			b= da.find{ (String)it.getName()==a0 }
@@ -5112,15 +5161,16 @@ private Long vcmd_flash(Map r9,device,List prms){
 	if(mat!=sNL && currentState!=mat)return lZ
 
 	Integer cycles=matchCastI(r9,prms[i2])
-	String firstCommand=currentState==sON ? sOFF:sON
-	Long firstDuration=firstCommand==sON ? onDuration:offDuration
-	String secondCommand=firstCommand==sON ? sOFF:sON
-	Long secondDuration=firstCommand==sON ? offDuration:onDuration
+	Boolean firstOn=currentState!=sON
+	String firstCmd=firstOn ? sON:sOFF
+	Long firstDuration=firstOn ? onDuration:offDuration
+	String secondCommand=firstOn ? sOFF:sON
+	Long secondDuration=firstOn ? offDuration:onDuration
 	String scheduleDevice=hashD(r9,device)
 	Map jq=[
 		s:i1,
 		cy:cycles,
-		f1C:firstCommand,
+		f1C:firstCmd,
 		f1P: null,
 		f1ID:lZ,
 		f1D:firstDuration,
@@ -5341,6 +5391,7 @@ private Long vcmd_sendPushNotification(Map r9,device,List prms){
 		t0*.deviceNotification(message)
 	}catch(ignored){
 		message="Default push device not set properly in webCoRE "+message
+		r9.initPush=null
 		error message,r9
 	}
 	return lZ
