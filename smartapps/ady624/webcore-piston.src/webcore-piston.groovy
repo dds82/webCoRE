@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update December 8, 2022 for Hubitat
+ * Last update December 9, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -4141,14 +4141,18 @@ private static void pcmd(device,String cmd,List nprms=[]){
 @Field static final String sOMY='omy'
 @Field static final String sOWM='owm'
 
+@CompileStatic
 private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 	Boolean lg=isEric(r9)
-	String mySt; mySt=sNL
+	String mySt,mySt1; mySt=sNL; mySt1=sNL
 	Integer iTD=stmtNum(timer)
 	Map tlo=mMs(timer,sLO)
 	Map tlo2=mMs(timer,sLO2)
 	Map tlo3=mMs(timer,sLO3)
-	if(lg) mySt="scheduleTimer stmt: ${iTD} lo:${tlo} lo2: ${tlo2} lo3: ${tlo3} lastRun: $lastRun"
+	if(lg){
+		mySt1="scheduleTimer "
+		mySt="stmt: ${iTD} lo:${tlo} lo2: ${tlo2} lo3: ${tlo3} lastRun: $lastRun "
+	}
 
 	//if already scheduled once during run, don't do it again
 	Boolean fnd; fnd=false
@@ -4157,24 +4161,25 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 	if(schedules.find{ Map it -> iMsS(it)==iTD /* && iMs(it,i)==in1*/ }){ fnd=true }
 	if(sgtSch(r9).find{ Map it -> iMsS(it)==iTD }){ fnd=true }
 	if(fnd){
-		if(lg) myDetail r9,"FOUND EXISTING TIMER "+mySt,iN2
+		if(lg) myDetail r9,mySt1+'FOUND EXISTING TIMER '+mySt,iN2
 		return
 	}
-	if(lg) myDetail r9,mySt,i1
+	if(lg) myDetail r9,mySt1+mySt,i1
 	//complicated stuff follows
 	String tinterval="${oMv(mevaluateOperand(r9,tlo))}".toString()
 	Boolean exitOut,priorActivity
 	exitOut=false
-	Integer interval,level,cycles
-	interval=iZ
+	Integer tintvl,level,cycles
+	tintvl=iZ
 	if(tinterval.isInteger()){
-		interval=tinterval.toInteger()
-		if(interval<=iZ)exitOut=true
+		tintvl=tinterval.toInteger()
+		if(tintvl<=iZ)exitOut=true
 	}else exitOut=true
 	if(exitOut){
-		if(lg)myDetail r9,mySt + "Interval: $tinterval"
+		if(lg)myDetail r9,mySt1+mySt+"Interval: $tinterval"
 		return
 	}
+	Integer interval=tintvl
 	String intervlUnit=sMvt(tlo)
 	level=iZ
 	Long delta,time,rightNow,nxtSchd
@@ -4189,7 +4194,7 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 		case sN: level=i7; break
 		case sY: level=i8; break
 	}
-	if(lg) myDetail r9,"interval: $interval delta: $delta level: $level intervlUnit: $intervlUnit",iN2
+	if(lg) myDetail r9,mySt1+"interval: $interval delta: $delta level: $level intervlUnit: $intervlUnit",iN2
 	time=lZ
 	if(delta==lZ){
 		//let's get the offset
@@ -4203,7 +4208,7 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 			time=pushTimeAhead(time,wnow())
 	}else{
 		delta=Math.round(delta*interval*d1)
-		if(lg) myDetail r9,"interval: $interval delta: $delta level: $level intervlUnit: $intervlUnit",iN2
+		if(lg) myDetail r9,mySt1+"interval: $interval delta: $delta level: $level intervlUnit: $intervlUnit",iN2
 	}
 
 	priorActivity=lastRun!=lZ
@@ -4217,36 +4222,36 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 
 	if(intervlUnit==sH){
 		Long min=lcast(r9,oMs(tlo,sOM))
-		nxtSchd=Math.round(dMSECHR*Math.floor(nxtSchd/dMSECHR)+(min*dMSMINT))
+		nxtSchd=Math.round(dMSECHR*Math.floor((nxtSchd/dMSECHR).toDouble())+(min*dMSMINT))
 	}
 
 	//next date
 	cycles=i100
 	Integer tcy=cycles+i1
 	if(lg)
-		myDetail r9,"cycle: ${tcy-cycles} delta: $delta nxtSchd: $nxtSchd priorActivity: $priorActivity lastRun: $lastRun lastR: $lastR rightNow: $rightNow",iN2
+		myDetail r9,mySt1+"cycle: ${tcy-cycles} delta: $delta nxtSchd: $nxtSchd priorActivity: $priorActivity lastRun: $lastRun lastR: $lastR rightNow: $rightNow",iN2
 	while(cycles!=iZ){
 		if(delta!=lZ){ // anything of [sMS, sS, sM, sH]
 			if(nxtSchd<(rightNow-delta)){
 				//behind, catch up to where the next future occurrence
-				Long cnt=Math.floor((rightNow-nxtSchd)/delta*d1).toLong()
+				Long cnt=Math.floor(((rightNow-nxtSchd)/delta*d1).toDouble()).toLong()
 				//if(isDbg(r9))debug "Timer fell behind by $cnt interval${cnt>i1 ? sS:sBLK}, catching up",r9
 				nxtSchd+=Math.round(delta*cnt*d1)
 			}
 			nxtSchd+=delta
 		}else{ // [sD, sW, sN, sY]
-			if(lg) myDetail r9,"time: $time rightNow: $rightNow",iN2
+			if(lg) myDetail r9,mySt1+"time: $time rightNow: $rightNow",iN2
 			//advance ahead of rightNow if in the past
 			time=pushTimeAhead(time,rightNow)
-			Long lastDay=Math.floor(nxtSchd/dMSDAY).toLong()
-			Long thisDay=Math.floor(time/dMSDAY).toLong()
-			if(lg) myDetail r9,"time: $time rightNow: $rightNow lastDay: $lastDay thisDay: $thisDay",iN2
+			Long lastDay=Math.floor((nxtSchd/dMSDAY).toDouble()).toLong()
+			Long thisDay=Math.floor((time/dMSDAY).toDouble()).toLong()
+			if(lg) myDetail r9,mySt1+"time: $time rightNow: $rightNow lastDay: $lastDay thisDay: $thisDay",iN2
 
 			Date adate=new Date(time)
 			Integer dyYear=adate.year
 			Integer dyMon=adate.month
 			Integer dyDay=adate.day
-			if(lg) myDetail r9,"dyYear: $dyYear dyMon: $dyMon dyDay: $dyDay date: $adate",iN2
+			if(lg) myDetail r9,mySt1+"dyYear: $dyYear dyMon: $dyMon dyDay: $dyDay date: $adate",iN2
 
 			//the repeating interval is not necessarily constant
 			switch(intervlUnit){
@@ -4260,15 +4265,17 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 					//figure out the first day of the week matching the requirement
 					Long currentDay=dyDay //(new Date(time)).day
 					Long requiredDay; requiredDay=lcast(r9,oMs(tlo,sODW))
-					if(lg) myDetail r9,"currentDay: $currentDay requiredDay: $requiredDay ",iN2
+					if(lg) myDetail r9,mySt1+"currentDay: $currentDay requiredDay: $requiredDay ",iN2
 					if(currentDay>requiredDay)requiredDay+=i7
 					//move to first matching day in future
-					nxtSchd=time+Math.round(dMSDAY*(requiredDay-currentDay)) // this ahead of now
-					if(priorActivity)nxtSchd+=Math.round(604800000.0D*(interval-i1)) // this is n weeks from now
+					nxtSchd=time+Math.round(dMSDAY*(requiredDay-currentDay)) // this is ahead of now on proper day
+					Integer myInterval; myInterval=interval
+					if(requiredDay!=currentDay) myInterval-=i1 //if we changed the day adjust interval calculation
+					if(priorActivity)nxtSchd+=Math.round(604800000.0D*myInterval) // this is n weeks from now
 					break
 				case sN: // months
 				case sY:
-					//figure out the first day of the week matching the requirement
+					//figure out the month matching the requirement
 					Integer odm=icast(r9,oMs(tlo,sODM))
 					def odw=oMs(tlo,sODW)
 					Integer omy=intervlUnit==sY ? icast(r9,oMs(tlo,sOMY)):iZ
@@ -4277,10 +4284,10 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 					year=dyYear //date.year
 					month=Math.round((intervlUnit==sN ? dyMon /*date.month*/:omy)+(priorActivity ? interval:((nxtSchd<rightNow)? d1:dZ))*(intervlUnit==sN ? d1:i12)).toInteger()
 					if(month>=i12){
-						year+=Math.floor(month/i12).toInteger()
+						year+=Math.floor((month/i12).toDouble()).toInteger()
 						month=month%i12
 					}
-					if(lg) myDetail r9,"month: $month year: $year ",iN2
+					if(lg) myDetail r9,mySt1+"month: $month year: $year ",iN2
 					date.setDate(i1)
 					date.setMonth(month)
 					date.setYear(year)
@@ -4313,7 +4320,7 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 						}
 					}
 					if(lg)
-						myDetail r9,"odm: $odm odw: $odw omy: $omy day: $day month: $month year: $year",iN2
+						myDetail r9,mySt1+"odm: $odm odw: $odw omy: $omy day: $day month: $month year: $year",iN2
 					if(day){
 						date.setDate(day)
 						nxtSchd=date.getTime()
@@ -4323,30 +4330,30 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 		}
 		//check to see if it fits the restrictions
 		if(nxtSchd>=rightNow){
+			if(lg)warn mySt1+"checking for schedule restrictions for $tlo",r9
 			Long offset=checkTimeRestrictions(r9,tlo,nxtSchd,level,interval)
 			if(offset==lZ){
 				if(lg)
-					myDetail r9,"TIME RESTRICTION PASSED cycle: ${tcy-cycles} nxtSchd: $nxtSchd priorActivity: $priorActivity lastRun: $lastRun lastR: $lastR rightNow: $rightNow",iN2
+					myDetail r9,mySt1+"TIME RESTRICTION PASSED cycle: ${tcy-cycles} nxtSchd: $nxtSchd priorActivity: $priorActivity lastRun: $lastRun lastR: $lastR rightNow: $rightNow",iN2
 				break
 			}
 			if(offset>lZ)nxtSchd+=offset
-			if(lg)
-				myDetail r9,"offset: $offset",iN2
+			if(lg) myDetail r9,mySt1+"offset: $offset",iN2
 		}
 		time=nxtSchd
 		priorActivity=true
 		cycles-=i1
 		if(lg)
-			myDetail r9,"cycle: ${tcy-cycles} nxtSchd: $nxtSchd priorActivity: $priorActivity lastRun: $lastRun lastR: $lastR rightNow: $rightNow",iN2
+			myDetail r9,mySt1+"cycle: ${tcy-cycles} nxtSchd: $nxtSchd priorActivity: $priorActivity lastRun: $lastRun lastR: $lastR rightNow: $rightNow",iN2
 	}
 
 	if(nxtSchd>lastR){
-		//Boolean a=liMs(r9,sSCHS).removeAll{ Map it -> iMsS(it)==iTD }
+		Boolean a=liMs(r9,sSCHS).removeAll{ Map it -> iMsS(it)==iTD }
 		String msg; msg=sBLK
-		if(isDbg(r9))msg= "Requesting every schedule"
+		if(isDbg(r9))msg= mySt1+"Requesting every schedule"
 		requestWakeUp(r9,timer,[(sDLR):iN1],nxtSchd,sNL,false,sNL,msg)
 	}
-	if(lg)myDetail r9,mySt
+	if(lg)myDetail r9,mySt1+mySt
 }
 
 /**
@@ -4412,7 +4419,7 @@ private void scheduleTimeCondition(Map r9,Map cndtn){
 		Integer cnt
 		cnt=iyr
 		if(lg)warn mySt+" checking for schedule restrictions for $cLO",r9
-		while(cnt){
+		while(cnt>iZ){
 			//repeat until we find a day that's matching the restrictions
 			if(checkTimeRestrictions(r9,cLO,n1,i5,i1)==lZ) break
 			cnt-=i1
