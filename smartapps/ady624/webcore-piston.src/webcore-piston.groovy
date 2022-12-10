@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update December 9, 2022 for Hubitat
+ * Last update December 10, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20220928_HE'
+@Field static final String sHVER='v0.3.114.20221210_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -4268,7 +4268,7 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 					if(lg) myDetail r9,mySt1+"currentDay: $currentDay requiredDay: $requiredDay ",iN2
 					if(currentDay>requiredDay)requiredDay+=i7
 					//move to first matching day in future
-					nxtSchd=time+Math.round(dMSDAY*(requiredDay-currentDay)) // this is ahead of now on proper day
+					nxtSchd=time+Math.round(dMSDAY*(requiredDay-currentDay)) // this is ahead of now on proper day (could be today)
 					Integer myInterval; myInterval=interval
 					if(requiredDay!=currentDay) myInterval-=i1 //if we changed the day adjust interval calculation
 					if(priorActivity)nxtSchd+=Math.round(604800000.0D*myInterval) // this is n weeks from now
@@ -9909,6 +9909,14 @@ private Map func_sqr(Map r9,List<Map> prms){
 private Map func_sqrt(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnErr('sqrt(integer or decimal or string)')
 	rtnMapD(Math.sqrt(dblEvalExpr(r9,prms[iZ])))
+}
+
+/** ispistonpaused returns true if piston is paused			**/
+/** Usage: pistonPaused(pistonName)			**/
+private Map func_ispistonpaused(Map r9,List<Map> prms){
+	if(badParams(r9,prms,i1))return rtnErr('ispistonpaused(pistonName)')
+	String string=strEvalExpr(r9,prms[iZ])
+	rtnMapB((Boolean)parent.isPisPaused(string))
 }
 
 /** power converts a decimal to power decimal value			**/

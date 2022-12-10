@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update December 1, 2022 for Hubitat
+ * Last update December 10, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -30,7 +30,7 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20220928_HE'
+@Field static final String sHVER='v0.3.114.20221210_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -3566,6 +3566,15 @@ static void clearMeta(String wName){
 	mb()
 }
 
+/*Map meta=[
+	(sA):isAct(t0),
+	(sC):t0[sCTGRY],
+	(sT):(Long)t0[sLEXEC],
+	(sN):(Long)t0[sNSCH],
+	(sZ):(String)t0.pistonZ,
+	(sS):st,
+	heCached:(Boolean)t0.Cached ?: false
+] */
 /**
  * get piston meta data (from cached, or from piston if missing)
  */
@@ -3599,6 +3608,20 @@ Boolean resumePiston(String pistonId,String src){
 		updateRunTimeData(rtData)
 		return true
 	}
+	return false
+}
+
+Boolean isPisPaused(String pistonId){
+	def piston=findPiston(pistonId)
+	Map meta; meta=null
+	if(piston){
+		String wName=sAppId()
+		String myId=hashPID(piston.id)
+		meta=gtMeta(piston,wName,myId)
+		if(meta && !((Boolean)meta[sA])) return true
+	}
+	if(eric1() && (!piston || !meta))
+		debug "isPisPaused no piston $pistonId or metadata"
 	return false
 }
 
@@ -4027,7 +4050,7 @@ static String span(String str,String clr=sNL,String sz=sNL,Boolean bld=false,Boo
 @Field static final String sTHERFM='thermostatFanMode'
 @Field static final String sCLOCK='clock'
 @Field static final String sONLYIFSWIS='Only if switch is...'
-@Field static final String sIFALREADY=' if already {v}'
+@Field static final String sIFALREADY=' if switch is already {v}'
 @Field static final String sATVOL=' at volume {v}'
 @Field static final String sNUMFLASH='Number of flashes'
 @Field static final String sACT='active'
@@ -4811,6 +4834,7 @@ Map getChildComparisons(){
 	number			: [ (sT): sDEC,						],
 	(sBOOL)			: [ (sT): sBOOLN,					],
 	(sBOOLN)		: [ (sT): sBOOLN,					],
+	ispistonpaused	: [ (sT): sBOOLN,					],
 	power			: [ (sT): sDEC,						],
 	sqr				: [ (sT): sDEC,						],
 	sqrt			: [ (sT): sDEC,						],
