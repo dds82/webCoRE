@@ -8250,8 +8250,8 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 			def device
 			String d1=(String)d.key
 			device= isWcDev(d1) ? getDevice(r9,d1):null
-			String didS=dvStr(device)
 			if(device!=null){
+				String didS=dvStr(device)
 				if(lg>i1 && doit)trace "Piston utilizes ${gtLbl(device)} ${d.value.a}...",r9
 				ss.controls+=i1
 				if(!dds[didS]){
