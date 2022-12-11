@@ -1640,7 +1640,7 @@ private findPiston(String id, String nm=sNL){
 			piston=t0.find{ hashPID(it.id)==id }
 			if (!piston)piston=t0.find{ hashId(it.id)==id }
 		}
-		if(nm!=sNL && !piston) piston=t0.find{ (String)it.label==nm }
+		if(nm!=sNL && !piston) piston=t0.find{ (String)it.label==nm || normalizeLabel(it)==nm }
 		t0=null
 	}
 	return piston
@@ -3592,7 +3592,7 @@ Map gtMeta(chld, String wName, String myId){
 }
 
 Boolean pausePiston(String pistonId,String src){
-	def piston=findPiston(pistonId)
+	def piston=findPiston(pistonId,pistonId)
 	if(piston){
 		Map rtData=piston.pausePiston()
 		updateRunTimeData(rtData)
@@ -3602,7 +3602,7 @@ Boolean pausePiston(String pistonId,String src){
 }
 
 Boolean resumePiston(String pistonId,String src){
-	def piston=findPiston(pistonId)
+	def piston=findPiston(pistonId,pistonId)
 	if(piston){
 		Map rtData=piston.resume(null,true)
 		updateRunTimeData(rtData)
@@ -3612,7 +3612,7 @@ Boolean resumePiston(String pistonId,String src){
 }
 
 Boolean isPisPaused(String pistonId){
-	def piston=findPiston(pistonId)
+	def piston=findPiston(pistonId,pistonId)
 	Map meta; meta=null
 	if(piston){
 		String wName=sAppId()
@@ -3626,7 +3626,7 @@ Boolean isPisPaused(String pistonId){
 }
 
 Boolean executePiston(String pistonId, Map data, String src){
-	def piston=findPiston(pistonId)
+	def piston=findPiston(pistonId,pistonId)
 	if(piston){
 		Map a=piston.execute(data, src)
 		return true
