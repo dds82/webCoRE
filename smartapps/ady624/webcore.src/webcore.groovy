@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update December 10, 2022 for Hubitat
+ * Last update December 11, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -664,12 +664,10 @@ private pageSectionAcctId(Boolean ins=false){
 		if((Boolean)settings.setACCT){
 			paragraph "An email address is usually a good choice (is not used/shared)"
 			input "acctID", sTXT, (sTIT): 'Account identifier (email is usually good)', (sREQ): true
-			if(settings.acctID){
-				app.updateSetting("properSID", [type: sBOOL, (sVAL): true])
-				paragraph "All hubs in same location should have a common location identifier. This could be Boston, Vacation, or Home1, etc..."
-				input "locID", sTXT, (sTIT): 'Location identifier - no imbedded spaces', (sREQ): true
-			}
-		} else{
+			app.updateSetting("properSID", [type: sBOOL, (sVAL): true])
+			paragraph "All hubs in same location should have a common location identifier. This could be Boston, Vacation, or Home1, etc..."
+			input "locID", sTXT, (sTIT): 'Location identifier - no imbedded spaces', (sREQ): true
+		}else{
 			app.removeSetting("acctID")
 			app.removeSetting("locID")
 			input "properSID", sBOOL, (sTIT): "Use New SID for location?", (sDESC): "Tap to change", defaultValue: true, (sREQ): false
@@ -1040,46 +1038,37 @@ void clearChldCaches(Boolean all=false, Boolean clrLogs=false, Boolean uber=fals
 }
 
 private void initialize(){
-	Boolean chg,initT
+	Boolean chg//,initT
 	chg=false
-	initT=false
+//	initT=false
 	Boolean reSub=(Boolean)atomicState.forceResub1
-	if((Boolean)reSub==null){
+	if(reSub==null){
 		atomicState.forceResub1=true
 		atomicState.properSID=null
-		warn "resetting SID"
+		warn "SID reset requested"
 	}
+
+	String wName=sAppId()
+
 	Boolean prpSid=(Boolean)atomicState.properSID
 	if(prpSid==null || prpSid!=(Boolean)settings.properSID){
 		Boolean t0=settings.properSID!=null ? (Boolean)settings.properSID : true
 		atomicState.properSID=t0
 		state.properSID=t0
-		if(settings.properSID==null) app.updateSetting("properSID", [type: sBOOL, (sVAL): true])
-		initT=true
+		app.updateSetting("properSID", [type: sBOOL, (sVAL): t0])
+		initTokens()
+		//initT=true
 		chg=true
+		acctlocFLD[wName]=null
+		locFLD[wName]=sNL
+		clearHashMap(wName)
+		warn "SID reset done"
 	}
-	String wName=sAppId()
-	acctlocFLD[wName]=null
-	locFLD[wName]=sNL
-	String a=accountSid()
-	String l=locationSid()
-	String a1=(String)atomicState.aSID
-	String l1=(String)atomicState.lSID
-	if(a1!=a || l1!=l){
-		if(a1!=null || l1!=null){
-			debug "Detected account SID change ${a1} -> ${a} ${l1} -> ${l}"
-			initT=true
-		}
-		chg=true
-		if(!acctANDloc()){
-			app.removeSetting("acctID")
-			app.removeSetting("locID")
-		}
-		atomicState.aSID=a
-		atomicState.lSID=l
-	}
+
+	if(checkSIDs()) chg=true
+
 	if(chg) atomicState.doResub=true
-	if(initT)initTokens()
+	//if(initT)initTokens()
 
 	subscribeAll()
 	Map t0=(Map)atomicState.vars
@@ -1103,6 +1092,46 @@ private void initialize(){
 		}catch(ignored){}
 	}
 	schedule('22 4/15 * * * ?', 'clearChldCaches') // regular child cache cleanup
+}
+
+Boolean checkSIDs(){
+	String wName=sAppId()
+	Boolean chg; chg=false
+	String a, l, a1, l1
+	acctlocFLD[wName]=null
+	locFLD[wName]=sNL
+	a=accountSid()
+	l=locationSid()
+	if(!acctANDloc()){
+		app.removeSetting("acctID")
+		app.removeSetting("locID")
+		acctlocFLD[wName]=null
+		locFLD[wName]=sNL
+		a1=accountSid()
+		l1=locationSid()
+		if(a!=a1 || l!=l1){
+			chg=true
+			clearHashMap(wName)
+		}
+	}
+	acctlocFLD[wName]=null
+	locFLD[wName]=sNL
+	a=accountSid()
+	l=locationSid()
+	a1=(String)atomicState.aSID
+	l1=(String)atomicState.lSID
+	if(a1!=a || l1!=l){
+		if(a1!=null || l1!=null){
+			debug "Detected account SID change ${a1} -> ${a} ${l1} -> ${l}"
+		}
+		initTokens()
+		//initT=true
+		chg=true
+		atomicState.aSID=a
+		atomicState.lSID=l
+		clearHashMap(wName)
+	}
+	return chg
 }
 
 private void checkWeather(){
@@ -2786,7 +2815,7 @@ private void cleanUp(){
 			state.remove(item.key)
 		}
 
-		List data=['version','versionHE','chunks','hash','virtualDevices','updateDevices',
+		List data=['version','versionHE','chunks','hash','virtualDevices','updateDevices', 'hubitatQueryString', 'redirectContactBook',
 				   'semaphore','pong','modules','globalVars','devices','migratedStorage','lastRecovered','lastReg','lastRegTry']
 		for(String foo in data)state.remove(foo)
 

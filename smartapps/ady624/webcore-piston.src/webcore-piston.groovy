@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update December 10, 2022 for Hubitat
+ * Last update December 11, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -953,7 +953,8 @@ void initialize(){
 	else clearMyCache('initialize')
 }
 
-@Field static final List<String> clST=['hash','piston','cVersion','hVersion','disabled','logPExec','settings','svSunT','temp','debugLevel','lockTime']
+@Field static final List<String> clST=['hash','piston','cVersion','hVersion','disabled','logPExec',
+									   'settings','svSunT','temp','debugLevel','lockTime','hubitatQueryString']
 
 void cleanState(){
 //cleanups between releases
