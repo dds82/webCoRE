@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update December 11, 2022 for Hubitat
+ * Last update December 13, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -3098,8 +3098,10 @@ Map getDevDetails(dev, Boolean addtransform=false){
 			if(cmd[sP]){
 				List<String> typs
 				typs=[]
-				for(typ in (List<String>)cmd[sP])
-					typs.push(typ.toUpperCase())
+				for(String typ in (List<String>)cmd[sP]){
+					if(typ) typs.push(typ.toUpperCase())
+					else warn("Strange command $cmd has nulls")
+				}
 				cmd[sP]=typs
 			}
 			if(eric()) warn("adding custom marker to $cmdName $cmd")
