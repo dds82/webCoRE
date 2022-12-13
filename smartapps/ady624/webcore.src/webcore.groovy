@@ -3100,7 +3100,7 @@ Map getDevDetails(dev, Boolean addtransform=false){
 				typs=[]
 				for(String typ in (List<String>)cmd[sP]){
 					if(typ) typs.push(typ.toUpperCase())
-					else warn("Strange command $cmd has nulls")
+					else warn("Strange command $cmdName with commands $cmd has nulls")
 				}
 				cmd[sP]=typs
 			}
