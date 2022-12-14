@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update December 13, 2022 for Hubitat
+ * Last update December 14, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -3342,7 +3342,7 @@ private void testLifx(){
 	runIn(4, testLifx1)
 }
 
-private void testLifx1(Boolean first=false){
+void testLifx1(Boolean first=false){
 	String token=state.settings?.lifx_token
 	if(!token) return
 	Map requestParams= [
