@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update December 14, 2022 for Hubitat
+ * Last update December 16, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -1387,7 +1387,7 @@ private List<Map> presult(String wName){
 				heCached:(Boolean)t0.Cached ?: false
 		] */
 		Map meta; meta=gtMeta(it,wName,myId)
-		[ (sID): myId, (sNM): normalizeLabel(it), meta: [:]+meta ]
+		[ (sID): myId, (sNM): normalizeLabel(it), meta: (meta ? [:]+meta : [:])]
 	}
 }
 
@@ -3611,7 +3611,7 @@ static void clearMeta(String wName){
  */
 Map gtMeta(chld, String wName, String myId){
 	Map meta; meta= null
-	if(wName && myId){
+	if(chld && wName && myId){
 		if(pStateFLD[wName]==null){ clearMeta(wName) }
 		meta= pStateFLD[wName][myId]
 		if(meta==null){
