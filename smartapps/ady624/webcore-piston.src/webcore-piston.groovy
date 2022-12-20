@@ -10963,7 +10963,7 @@ private Map func_formatduration(Map r9,List<Map> prms){
 		if(parts>i1 && h)Boolean a=p.push("$h hour"+(h>i1 ? sS:sBLK))
 		if(parts>i2 && m)Boolean a=p.push("$m minute"+(m>i1 ? sS:sBLK))
 		if(parts>i3 && s)Boolean a=p.push("$s second"+(s>i1 ? sS:sBLK))
-		if(parts>4 && ms)Boolean a=p.push("$ms millisecond"+(ms>i1 ? sS:sBLK))
+		if(parts>i4 && ms)Boolean a=p.push("$ms millisecond"+(ms>i1 ? sS:sBLK))
 		sz=p.size()
 		switch(sz){
 			case iZ:
@@ -10982,7 +10982,7 @@ private Map func_formatduration(Map r9,List<Map> prms){
 				break
 		}
 	}else{
-		result=(sign<iZ ? sMINUS:sBLK)+(d>iZ ? sprintf("%dd ",d):sBLK)+sprintf("%02d:%02d",h,m)+(parts>i3 ? sprintf(":%02d",s):sBLK)+(parts>4 ? sprintf(".%03d",ms):sBLK)
+		result=(sign<iZ ? sMINUS:sBLK)+(d>iZ ? sprintf("%dd ",d):sBLK)+sprintf("%02d:%02d",h,m)+(parts>i3 ? sprintf(":%02d",s):sBLK)+(parts>i4 ? sprintf(".%03d",ms):sBLK)
 	}
 	rtnMapS(result)
 }

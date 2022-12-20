@@ -3100,7 +3100,7 @@ Map getDevDetails(dev, Boolean addtransform=false){
 				typs=[]
 				for(String typ in (List<String>)cmd[sP]){
 					if(typ) typs.push(typ.toUpperCase())
-					else warn("Strange command $cmdName with commands $cmd has nulls")
+					else warn("Device $nm has strange command $cmdName with commands $cmd has nulls")
 				}
 				cmd[sP]=typs
 			}
@@ -3611,12 +3611,13 @@ static void clearMeta(String wName){
  */
 Map gtMeta(chld, String wName, String myId){
 	Map meta; meta= null
-	if(chld && wName && myId){
+	if(wName && myId){
 		if(pStateFLD[wName]==null){ clearMeta(wName) }
 		meta= pStateFLD[wName][myId]
 		if(meta==null){
-			meta=(Map)chld.curPState()
-			ptMeta(wName,myId,meta)
+			if(chld) meta= (Map)chld.curPState()
+			else error "gtMeta no child"
+			if(meta) ptMeta(wName, myId, meta)
 		}
 	}else error "gtMeta no id"
 	return meta
