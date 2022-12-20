@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update December 16, 2022 for Hubitat
+ * Last update December 20, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -3100,7 +3100,7 @@ Map getDevDetails(dev, Boolean addtransform=false){
 				typs=[]
 				for(String typ in (List<String>)cmd[sP]){
 					if(typ) typs.push(typ.toUpperCase())
-					else warn("Device $nm has strange command $cmdName with commands $cmd has nulls")
+					else if(getLogging()[sDBG] || eric()) debug("Device $nm has strange command $cmdName with commands $cmd has nulls")
 				}
 				cmd[sP]=typs
 			}
