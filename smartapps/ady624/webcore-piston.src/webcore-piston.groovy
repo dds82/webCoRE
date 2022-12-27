@@ -6677,8 +6677,8 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 				case sMODE:
 				case sHSMSTS:
 					String LID=sMs(r9,sLOCID)
-					mv=getDeviceAttribute(r9,LID,oV,null,trigger)
 					nodeI=LID+sCLN+oV
+					mv=getDeviceAttribute(r9,LID,oV,null,trigger)
 					break
 				case sHSMALRT:
 				case sALRMSYSALRT:
@@ -8608,12 +8608,12 @@ private Map getDeviceAttribute(Map r9,String deviceId,String attr,subDeviceIndex
 			case sMODE:
 				Map mode; mode= useEvt ? fndMode(r9,v):null
 				mode= mode ?: gtCurrentMode()
-				if(mode) return rtnMapS(hashId(r9,lMs(mode,sID)))+[(sN):sMs(mode,sNM)]
+				if(mode) return rtnMap(sENUM,hashId(r9,lMs(mode,sID))) + ([(sN):sMs(mode,sNM),(sD):sMs(r9,sLOCID)] as Map<String,Object>)
 			case sHSMSTS:
 			case sALRMSSTATUS:
 				String inm= useEvt ? v : gtLhsmStatus()
 				String n=VirtualDevices()[sALRMSSTATUS]?.o[inm]
-				return rtnMapS(inm)+[(sN):n]
+				return rtnMap(sENUM,inm) + ([(sN):n,(sD):sMs(r9,sLOCID)] as Map<String,Object>)
 		}
 		return rtnMapS(gtLname())
 	}
