@@ -2023,7 +2023,7 @@ private LinkedHashMap getDSCache(String meth,Boolean Upd=true){
 		l0=(List)aS[sSCHS]; t1[sSCHS]=l0 ? []+l0:[]
 		t1[sNSCH]=lMs(aS,sNSCH)
 		t1[sLEXEC]=lMs(aS,sLEXEC)
-		l0=(List)aS.logs; t1[sLOGS]=l0 ? []+l0:[]
+		l0=(List)aS[sLOGS]; t1[sLOGS]=l0 ? []+l0:[]
 		m0=mMs(aS,sVARS); t1[sVARS]=m0 ? [:]+m0:[:]
 		t1['mem']=mem()
 		resetRandomValues(t1)
@@ -3134,7 +3134,7 @@ private void processSchedules(Map r9,Boolean scheduleJob=false){
 	List<Map> schedules,ts
 	schedules=sgetSchedules(sPROCS,myPep)
 	ts=[]+schedules
-	Boolean lg=isDbg(r9)
+	Boolean lg=isInf(r9)
 
 	Boolean a
 	if(ts){
@@ -7035,7 +7035,7 @@ void doStaysProcess(Map r9,List<Map>schedules,String co,Map cndtn,Integer cndNm,
 		s="timed trigger schedule${s}${d1}for condition ${cndNm}"
 	}
 	if(canc){
-		if(lg)debug "Canceling any $s",r9
+		if(lg)debug "Cancelling any $s",r9
 		cancelStatementSchedules(r9,cndNm,dev)
 	}
 	if(schd){
@@ -7190,7 +7190,7 @@ private void whatCnclsA(Map r9){
 		Integer i=iMs(sch,sI)
 		if(i>iZ || i in [iN3,iN5]) s+= cnlS(sch)
 	}
-	if(s)debug "Cancel ALL task schedules..."+s,r9
+	if(s)info "Cancel ALL task schedules..."+s,r9
 }
 
 /** log what timers will be canceled due to piston state change from saved schedules  */
@@ -7199,7 +7199,7 @@ private void whatCnclsP(Map r9){
 	String s; s=sBLK
 	for(Map sch in schedules)
 		if(iMs(sch,sPS)!=iZ) s+= cnlS(sch)
-	if(s)debug "Cancel piston state changed schedules..."+s,r9
+	if(s)info "Cancel piston state changed schedules..."+s,r9
 }
 
 /** log what statements timers will be canceled from saved schedules  */
@@ -7208,7 +7208,7 @@ private void whatStatementsCncl(Map r9,Integer stmtId, String data=sNL){
 	String s; s=sBLK
 	for(Map sch in schedules)
 		if(stmtId==iMsS(sch) && (!data || data==sMs(sch,sD))) s+= cnlS(sch)
-	if(s)debug "Canceling statement #${stmtId}'s schedules..."+s,r9
+	if(s)info "Cancelling statement #${stmtId}'s schedules..."+s,r9
 }
 
 @CompileStatic
@@ -7219,7 +7219,7 @@ private void cancelStatementSchedules(Map r9,Integer stmtId,String data=sNL){
 		fnd=(stmtId==iMs(item,sID) && (!data || data==sMs(item,sDATA)))
 		if(fnd)break
 	}
-	if(isDbg(r9))whatStatementsCncl(r9,stmtId,data)
+	if(isInf(r9))whatStatementsCncl(r9,stmtId,data)
 	// if not already in list, add to list
 	if(!fnd) Boolean a=liMs(mMs(r9,sCNCLATNS),sSTMTS).push([(sID): stmtId,(sDATA): data])
 }
@@ -7230,13 +7230,13 @@ private void whatConditionsCncl(Map r9,Integer cndtnId){
 	String s; s=sBLK
 	for(Map sch in schedules)
 		if(cndtnId in (List)sch[sCS]) s+= cnlS(sch)
-	if(s)debug "Canceling condition #${cndtnId}'s schedules..."+s,r9
+	if(s)info "Cancelling condition #${cndtnId}'s schedules..."+s,r9
 }
 
 @CompileStatic
 private void cancelConditionSchedules(Map r9,Integer cndtnId){
 	//cancel all schedules that are pending for condition cndtnId
-	if(isDbg(r9))whatConditionsCncl(r9,cndtnId)
+	if(isInf(r9))whatConditionsCncl(r9,cndtnId)
 	if(!(cndtnId in (List<Integer>)mMs(r9,sCNCLATNS)[sCONDITIONS]))
 		Boolean a=((List<Integer>)mMs(r9,sCNCLATNS)[sCONDITIONS]).push(cndtnId)
 }
@@ -7251,7 +7251,7 @@ private static Boolean matchDeviceSubIndex(list,deviceSubIndex){
 private static Boolean matchDeviceInteraction(Map lv,Map r9){
 	String option= sMs(mMv(lv),sP) // lv.v.p
 	Map ce=mMs(r9,sCUREVT) ?: [:]
-	Boolean isPhysical=(Boolean)ce[sPHYS]
+	Boolean isPhysical=bIs(ce,sPHYS)
 	// device support p- physical vs. s- digital, a-any
 	return !((option==sP && !isPhysical) || (option==sS && isPhysical))
 }
@@ -12256,7 +12256,7 @@ private Map<String,LinkedHashMap> getSystemVariablesAndValues(Map r9){
 		String k=(String)variable.key
 		// special handle $fuel $file
 		res=null
-		if(/*variable.value.d!=null &&*/ (Boolean)variable.value.d) res=gtSysVarVal(r9,k,true)
+		if(/*variable.value.d!=null &&*/ bIs(variable.value,sD)) res=gtSysVarVal(r9,k,true)
 		if(res==null && c[k]!=null)res=oMv(c[k])
 		variable.value.v=res
 	}
