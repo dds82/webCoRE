@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update December 27, 2022 for Hubitat
+ * Last update December 28, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -99,6 +99,7 @@ static Boolean eric1(){ return false }
 @Field static final String sINFO='info'
 @Field static final String sWARN='warn'
 @Field static final String sTRC='trace'
+@Field static final String sMEM='mem'
 @Field static final String sDBG='debug'
 @Field static final String sON='on'
 @Field static final String sOFF='off'
@@ -236,10 +237,16 @@ static Boolean eric1(){ return false }
 @Field static final String sCNCLATNS='cancelations'
 @Field static final String sCNDTNSTC='cndtnStChgd'
 @Field static final String sPSTNSTC='pstnStChgd'
+@Field static final String sWUP='wakingUp'
+@Field static final String sSTACCESS='stateAccess'
 @Field static final String sLSTPCQ='lastPCmdQ'
 @Field static final String sLSTPCSNT='lastPCmdSnt'
 @Field static final String sDBGLVL='debugLevel'
 @Field static final String sLOCID='locationId'
+@Field static final String sUSELFUELS='useLocalFuelStreams'
+@Field static final String sSETTINGS='settings'
+@Field static final String sINCIDENTS='incidents'
+@Field static final String sPREVEVT='previousEvent'
 @Field static final String sSUBS='subscriptions'
 @Field static final String sTCP='tcp'
 @Field static final String sOLD='old'
@@ -1028,7 +1035,7 @@ Map activity(lastLogTimestamp){
 		(sLOGS): lidx>iZ ? logs[iZ..lidx-i1]:[],
 		(sTRC): mMs(t0,sTRC),
 		(sLOCALV): mMs(t0,sVARS),// not reporting global or system variable changes
-		memory: sMs(t0,'mem'),
+		memory: sMs(t0,sMEM),
 		(sLEXEC): lMs(t0,sLEXEC),
 		(sNSCH): lMs(t0,sNSCH),
 		(sSCHS): liMs(t0,sSCHS),
@@ -1210,7 +1217,7 @@ private static List<String> fill_CMD(){ return [sIF,sACTION,sCONDITION,sWHILE,sR
 private Integer msetIds(Boolean shorten,Boolean inMem,Map node,Integer mId=iZ,Map<String,Integer> existingIds=[:],List<Map> requiringIds=[],Integer level=iZ){
 	String nodeT=node?.t
 	Integer maxId; maxId=mId
-	//Boolean lg= eric() && settings.logging?.toInteger()>i2
+	//Boolean lg= eric() && settings[sLOGNG]?.toInteger()>i2
 	if(!ListCmd)ListCmd=fill_CMD()
 	if(nodeT in ListCmd){
 		//noinspection GroovyAssignabilityCheck
@@ -1869,11 +1876,11 @@ private LinkedHashMap lockOrQueueSemaphore(Boolean synchr,Map event,Boolean queu
 		}
 	}
 	return [
-		semaphore:r_semaphore,
-		semaphoreName:semaphoreName,
-		semaphoreDelay:semaphoreDelay,
-		waited:waited,
-		exitOut:didQ
+		('semaphore'):r_semaphore,
+		('semaphoreName'):semaphoreName,
+		('semaphoreDelay'):semaphoreDelay,
+		('waited'):waited,
+		('exitOut'):didQ
 	]
 }
 
@@ -2020,12 +2027,12 @@ private LinkedHashMap getDSCache(String meth,Boolean Upd=true){
 		m0=mMs(aS,sST); t1[sST]=m0 ? m0:[:]
 		t1.pistonZ=sMs(aS,'pistonZ')
 		m0=mMs(aS,sTRC); t1[sTRC]=m0 ? m0:[:]
-		l0=(List)aS[sSCHS]; t1[sSCHS]=l0 ? []+l0:[]
+		l0=liMs(aS,sSCHS); t1[sSCHS]=l0 ? []+l0:[]
 		t1[sNSCH]=lMs(aS,sNSCH)
 		t1[sLEXEC]=lMs(aS,sLEXEC)
-		l0=(List)aS[sLOGS]; t1[sLOGS]=l0 ? []+l0:[]
+		l0=liMs(aS,sLOGS); t1[sLOGS]=l0 ? []+l0:[]
 		m0=mMs(aS,sVARS); t1[sVARS]=m0 ? [:]+m0:[:]
-		t1['mem']=mem()
+		t1[sMEM]=mem()
 		resetRandomValues(t1)
 		def devs=gtSetting(sDV)
 		t1[sDEVS]=devs && devs instanceof List ? ((List)devs).collectEntries{ Object it -> [(hashD(t1,it)):it]}:[:]
@@ -2070,7 +2077,7 @@ private LinkedHashMap getDSCache(String meth,Boolean Upd=true){
 		releaseTheLock(mSmaNm)
 	}
 	if(stateStart) //noinspection GroovyVariableNotAssigned
-		r9['stateAccess']=stateEnd-stateStart
+		r9[sSTACCESS]=stateEnd-stateStart
 	pC=null
 	res=null
 	if(sendM && iMs(r9,sBLD)!=iZ)checkLabel(r9)
@@ -2122,20 +2129,20 @@ private LinkedHashMap getParentCache(){
 			t1=[
 				coreVersion: sMs(t0,'sCv'),
 				hcoreVersion: sMs(t0,'sHv'),
-				powerSource: sMs(t0,'powerSource'),
+				('powerSource'): sMs(t0,'powerSource'),
 				region: sMs(t0,'region'),
 				(sINSTID): sMs(t0,sINSTID),
-				settings: mMs(t0,'stsettings'),
+				(sSETTINGS): mMs(t0,'stsettings'),
 				('enabled'): isEnbl(t0),
 				lifx: mMs(t0,'lifx'),
-				logPExec: bIs(t0,'logPExec'),
+				('logPExec'): bIs(t0,'logPExec'),
 				accountId: sMs(t0,'accountId'),
 				newAcctSid: bIs(t0,'newAcctSid'),
 				(sLOCID): sMs(t0,sLOCID),
-				oldLocations: (List)t0.oldLocations,
+				('oldLocations'): (List)t0['oldLocations'],
 				(sALLLOC): (List)t0[sALLLOC],
-				incidents: (List)t0.incidents,
-				useLocalFuelStreams: bIs(t0,'useLocalFuelStreams')
+				(sINCIDENTS): (List)t0[sINCIDENTS],
+				(sUSELFUELS): bIs(t0,sUSELFUELS)
 			]
 			res=t1
 			theParentCacheVFLD[wName]=t1
@@ -2396,7 +2403,7 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 	Boolean doSerialization=serializationOn && !callMySelf
 
 	tmpRtD.lstarted=wnow()
-	retSt=[semaphore:lZ,semaphoreName:sNL,semaphoreDelay:lZ] as LinkedHashMap
+	retSt=[('semaphore'):lZ,('semaphoreName'):sNL,('semaphoreDelay'):lZ] as LinkedHashMap
 	if(doSerialization){
 		retSt=lockOrQueueSemaphore(doSerialization,event,queue,tmpRtD)
 		if(bIs(retSt,'exitOut')){
@@ -2417,7 +2424,7 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 //measure how Long first state access takes
 	Long stAccess; stAccess=lZ
 	if(lg>iZ && !myPep){
-		if(tmpRtD['stateAccess']==null){
+		if(tmpRtD[sSTACCESS]==null){
 			Long stStart,b
 			stStart=wnow()
 			b=(Long)gtSt(sNSCH)
@@ -2425,7 +2432,7 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 			Map pEvt=(Map)gtSt(sLEVT)
 			Long stEnd=wnow()
 			stAccess=stEnd-stStart
-		}else stAccess=lMs(tmpRtD,'stateAccess')
+		}else stAccess=lMs(tmpRtD,sSTACCESS)
 	}
 
 	tmpRtD[sPCACHE]=[:]
@@ -2816,7 +2823,7 @@ private Boolean executeEvent(Map r9,Map event){
 		}
 		pEvt=(Map)gtSt(sLEVT)
 		if(pEvt==null)pEvt=[:]
-		r9.previousEvent=pEvt
+		r9[sPREVEVT]=pEvt
 
 		mEvt=cleanEvt(mEvt)
 		r9[sCUREVT]=mEvt
@@ -2941,10 +2948,10 @@ private Boolean executeEvent(Map r9,Map event){
 
 @Field static List<String> cleanData
 private static List<String> fill_cleanData(){
-	return ['allDevices', sPCACHE, 'mem', sBREAK, 'powerSource', 'oldLocations', 'incidents', 'semaphoreDelay', sVARS,
-			'stateAccess', sATHR, sBIN, sBLD, sNWCACHE, 'mediaData', 'weather', sLOGS, sTRC, sSYSVARS, sLOCALV, 'previousEvent', sJSON, sRESP,
-			sCACHE, sSTORE, 'settings', 'locationModeId', 'coreVersion', 'hcoreVersion', sCNCLATNS, sCNDTNSTC, sPSTNSTC, sFFT, sRUN,
-			sRESUMED, sTERM, sINSTID, 'wakingUp', sSTMTL, sARGS, 'nfl', 'temp']
+	return ['allDevices', sPCACHE, sMEM, sBREAK, 'powerSource', 'oldLocations', sINCIDENTS, 'semaphoreDelay', sVARS,
+			sSTACCESS, sATHR, sBIN, sBLD, sNWCACHE, 'mediaData', 'weather', sLOGS, sTRC, sSYSVARS, sLOCALV, sPREVEVT, sJSON, sRESP,
+			sCACHE, sSTORE, sSETTINGS, 'locationModeId', 'coreVersion', 'hcoreVersion', sCNCLATNS, sCNDTNSTC, sPSTNSTC, sFFT, sRUN,
+			sRESUMED, sTERM, sINSTID, sWUP, sSTMTL, sARGS, 'nfl', 'temp']
 }
 
 @Field static final String sFINLZ='finalize'
@@ -3092,7 +3099,7 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 			if(t2>t1)hisList=hisList[t2-t1..t2-i1]
 			updateCacheFld(r9,'runTimeHis',hisList,s,false)
 		}
-		updateCacheFld(r9,'mem',mem(),s,false)
+		updateCacheFld(r9,sMEM,mem(),s,false)
 		updateCacheFld(r9,'runStats',[:]+mMs(r9,'curStat'),s,false)
 	}
 }
@@ -3861,11 +3868,12 @@ private Boolean executeTask(Map r9,List devices,Map statement,Map task,Boolean a
 	}
 	List<String> mds=(List)task.m
 	if(mds?.size()>iZ){
-		String m; m=sMs(r9,'locationModeId')
+		String locModeId='locationModeId'
+		String m; m=sMs(r9,locModeId)
 		if(m==sNL){
 			Map mode=gtCurrentMode()
-			m=mode!=null ? hashId(r9,(Long)mode.id):sNL
-			r9.locationModeId=m
+			m=mode!=null ? hashId(r9,lMs(mode,sID)):sNL
+			r9[locModeId]=m
 		}
 		if(!(m in mds)){
 			if(isDbg(r9))debug "Skipping task ${tskNm} because of mode restrictions",r9
@@ -5561,10 +5569,10 @@ private Long vcmd_wolRequest(Map r9,device,List prms){
 
 private Long vcmd_iftttMaker(Map r9,device,List prms){
 	String key; key=sNL
-	if(r9.settings==null){
+	if(r9[sSETTINGS]==null){
 		error "no settings",r9
 	}else{
-		key=((String)((Map)r9.settings).ifttt_url ?: sBLK).trim().replace('https://',sBLK).replace('http://',sBLK).replace('maker.ifttt.com/use/',sBLK)
+		key=((String)((Map)r9[sSETTINGS]).ifttt_url ?: sBLK).trim().replace('https://',sBLK).replace('http://',sBLK).replace('maker.ifttt.com/use/',sBLK)
 	}
 	if(!key){
 		error "Failed to send IFTTT event, because the IFTTT integration is not properly set up. Please visit Settings in your webCoRE dashboard and configure the IFTTT integration.",r9
@@ -5602,7 +5610,7 @@ private Long vcmd_iftttMaker(Map r9,device,List prms){
 
 
 private Long do_lifx(Map r9,String cmd,String path,Map body,duration,String c){
-	String token=mMs(r9,'settings')?.lifx_token
+	String token=mMs(r9,sSETTINGS)?.lifx_token
 	if(!token){
 		error "Sorry, enable the LIFX integration in the dashboard's Settings section before trying to execute a LIFX operation.",r9
 		return lZ
@@ -6151,7 +6159,7 @@ private Long vcmd_readFuelStream(Map r9,device,List prms){
 	]
 	String pNm=sMs(r9,snId)
 	fuelDataFLD[pNm]=[]
-	if(bIs(r9,'useLocalFuelStreams') && name!=sNL) fuelDataFLD[pNm]=(List)parent.readFuelStream(req) // store in $fuel
+	if(bIs(r9,sUSELFUELS) && name!=sNL) fuelDataFLD[pNm]=(List)parent.readFuelStream(req) // store in $fuel
 	return lZ
 }
 
@@ -6169,7 +6177,7 @@ private Long vcmd_writeFuelStream(Map r9,device,List prms){
 			d: prms[i2],
 			i: sMs(r9,sINSTID)
 	]
-	if(bIs(r9,'useLocalFuelStreams') && name!=sNL) parent.writeFuelStream(req)
+	if(bIs(r9,sUSELFUELS) && name!=sNL) parent.writeFuelStream(req)
 	return lZ
 }
 
@@ -6185,7 +6193,7 @@ private Long vcmd_clearFuelStream(Map r9,device,List prms){
 			d: null,
 			i: sMs(r9,sINSTID)
 	]
-	if(bIs(r9,'useLocalFuelStreams') && name!=sNL) parent.clearFuelStream(req)
+	if(bIs(r9,sUSELFUELS) && name!=sNL) parent.clearFuelStream(req)
 	return lZ
 }
 /* wrappers */
@@ -6202,7 +6210,7 @@ private Long vcmd_writeToFuelStream(Map r9,device,List prms){
 		d: data,
 		i: sMs(r9,sINSTID)
 	]
-	if(bIs(r9,'useLocalFuelStreams') && name!=sNL) parent.writeToFuelStream(req)
+	if(bIs(r9,sUSELFUELS) && name!=sNL) parent.writeToFuelStream(req)
 	else{
 		Map requestParams=[
 			uri: "https://api-"+(String)r9.region+'-'+sMs(r9,sINSTID)[32]+".webcore.co:9247",
@@ -6693,7 +6701,7 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 					mv=rtnMapS((rEN=='hsmRules' ? evntVal:sNL))
 					break
 				case 'powerSource':
-					mv=rtnMap(sENUM,r9.powerSource)
+					mv=rtnMap(sENUM,r9['powerSource'])
 					break
 				case 'routine':
 					mv=rtnMapS((rEN=='routineExecuted' ? hashId(r9,evntVal):sNL))
@@ -6858,7 +6866,7 @@ private Boolean evaluateCondition(Map r9,Map cndtn,String collection,Boolean asy
 	Map es=mMs(e,sSCH)
 	String rEN=sMs(e,sNM)
 	Boolean w=rEN==sTIME && es!=null && iMsS(es)==cndNm
-	r9['wakingUp']=w
+	r9[sWUP]=w
 	if(w && lg)myDetail r9,sEVCN+"WAKING UP",iN2
 	if(ffwd(r9) || comparison!=null){
 		Boolean isStays=co.startsWith(sSTAYS)
@@ -6969,7 +6977,7 @@ private Boolean evaluateCondition(Map r9,Map cndtn,String collection,Boolean asy
 	}
 	if(prun(r9))tracePoint(r9,sIndx,elapseT(t),res)
 
-	r9['wakingUp']=false
+	r9[sWUP]=false
 	Boolean a= oldResult!=res
 	r9[sCNDTNSTC]= a
 	if(a) //cndtn change, perform Task Cancellation Policy TCP
@@ -7481,7 +7489,7 @@ private static Boolean comp_gets_any	(Map r9,Map lv,Map rv=null,Map rv2=null,Map
 private static Boolean comp_event_occurs		(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ return false }
 private Boolean comp_executes			(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ return comp_is(r9,lv,rv,rv2,tv,tv2)}
 private Boolean comp_arrives			(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ return (String)r9[sEVENT][sNM]=='email' && match(r9[sEVENT]?.jsonData?.from ?: sBLK,strEvalExpr(r9,mMv(rv))) && match(r9[sEVENT]?.jsonData?.message ?: sBLK,strEvalExpr(r9,mMv(rv2)))}
-private static Boolean comp_happens_daily_at		(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ bIs(r9,'wakingUp') }
+private static Boolean comp_happens_daily_at		(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ bIs(r9,sWUP) }
 private static Boolean comp_changes		(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ return valueCacheChanged(r9,lv)!=null && matchDeviceInteraction(lv,r9)}
 private static Boolean comp_changes_to	(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ return valueCacheChanged(r9,lv)!=null && comp_receives(r9,lv,rv,rv2,tv,tv2)}
 private static Boolean comp_changes_away_from		(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ Map oldValue=valueCacheChanged(r9,lv); return oldValue!=null && "${oMvv(oldValue)}"=="${oMvv(rv)}" && matchDeviceInteraction(lv,r9)}
@@ -8775,16 +8783,17 @@ private Map getArgument(Map r9,String name){
 
 private Map getJson(Map r9,String name){ return getJsonData(r9,r9[sJSON],name) }
 
-private Map getPlaces(Map r9,String name){ return getJsonData(r9,r9.settings?.places,name) }
+private Map getPlaces(Map r9,String name){ return getJsonData(r9,((Map)r9[sSETTINGS])?.places,name) }
 
 private Map getResponse(Map r9,String name){ return getJsonData(r9,r9[sRESP],name) }
 
 private Map getWeather(Map r9,String name){
-	if(r9.weather==null){
+	String s='weather'
+	if(r9[s]==null){
 		Map t0=wgetWData()
-		r9.weather=t0!=null ? t0:[:]
+		r9[s]=t0!=null ? t0:[:]
 	}
-	return getJsonData(r9,r9.weather,name)
+	return getJsonData(r9,r9[s],name)
 }
 
 private Map getNFLDataFeature(String dataFeature){
@@ -8818,7 +8827,7 @@ private Map getNFL(Map r9,String name){
 }
 
 private Map getIncidents(Map r9,String name){
-	return getJsonData(r9,r9.incidents,name)
+	return getJsonData(r9,r9[sINCIDENTS],name)
 }
 
 @Field volatile static Map<String,Boolean> initGlobalVFLD=[:]
@@ -11850,14 +11859,15 @@ private String formatLocalTime(time,String format='EEE, MMM d yyyy @ h:mm:ss a z
 private static Map hexToColor(String hex){
 	String mhex
 	mhex=hex!=sNL ? hex:sZ6
-	if(mhex.startsWith('#'))mhex=mhex.substring(i1)
+	String n='#'
+	if(mhex.startsWith(n))mhex=mhex.substring(i1)
 	if(mhex.size()!=i6)mhex=sZ6
 	List<Integer> myHsl=hexToHsl(mhex)
 	return [
 		(sH): myHsl[iZ],
 		(sS): myHsl[i1],
 		(sL): myHsl[i2],
-		('rgb'): '#'+mhex
+		('rgb'): n+mhex
 	]
 }
 
@@ -12392,7 +12402,7 @@ private gtSysVarVal(Map r9,String name, Boolean frcStr=false){
 	String shsm=sDLR+sHSMSTS
 	Map<String,Map> sv=(Map<String,Map>)r9[sSYSVARS]
 	Map ce=mMs(r9,sCUREVT) ?: [:]
-	Map pe=mMs(r9,'previousEvent') ?: [:]
+	Map pe=mMs(r9,sPREVEVT) ?: [:]
 	switch(name){
 		case '$locationMode':return gtLMode()
 		case '$localNow':
@@ -12420,12 +12430,12 @@ private gtSysVarVal(Map r9,String name, Boolean frcStr=false){
 		case sCURUNIT: return ce[sUNIT]
 		case sDJSON: return rtnStr(r9[sJSON],frcStr)
 		case '$lastexecuted': return lMs(r9,sLEXEC)
-		case '$places': return rtnStr(((Map)r9.settings)?.places)
+		case '$places': return rtnStr(((Map)r9[sSETTINGS])?.places)
 		case sDRESP: return rtnStr(r9[sRESP],frcStr)
-		case '$weather': return rtnStr(r9.weather,frcStr)
+		case '$weather': return rtnStr(r9['weather'],frcStr)
 		case '$nfl': return rtnStr(r9.nfl)
-		case '$incidents': return rtnStr(r9.incidents,frcStr)
-		case '$hsmTripped': return listWithSz(r9.incidents)
+		case '$incidents': return rtnStr(r9[sINCIDENTS],frcStr)
+		case '$hsmTripped': return listWithSz(r9[sINCIDENTS])
 		case (shsm): return gtLhsmStatus()
 		case '$mediaId': return r9.mediaId
 		case '$mediaUrl': return sMs(r9,'mediaUrl')
