@@ -32,7 +32,7 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20221210_HE'
+@Field static final String sHVER='v0.3.114.20221228_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -2829,8 +2829,9 @@ private Boolean executeEvent(Map r9,Map event){
 		r9[sCUREVT]=mEvt
 		assignSt(sLEVT,mEvt)
 
-		if(theFinalDevice && evntName)
-			updTrkVal(r9,theFinalDevice,evntName,lMt(mEvt) ?: wnow()) // always save tracking triggers value
+		if(theFinalDevice && evntName) {
+			updTrkVal(r9,theFinalDevice,evntName, lMt(mEvt) ?: wnow()) // always save tracking triggers value
+		}
 
 		r9[sCNDTNSTC]=false
 		r9[sPSTNSTC]=false
@@ -5433,24 +5434,6 @@ private Long vcmd_sendNotificationToContacts(Map r9,device,List prms){
 }
 
 @CompileStatic
-private static Map<String,String> parseVariableName(String name){
-	Map res; res=[
-		(sNM): name,
-		(sINDX): sNL
-	]
-	if(name!=sNL && !name.startsWith(sDLR) && name.endsWith(sRB)){
-		List<String> parts=name.replace(sRB,sBLK).tokenize(sLB)
-		if(parts.size()==i2){
-			res=[
-				(sNM): parts[iZ],
-				(sINDX): parts[i1]
-			]
-		}
-	}
-	return res
-}
-
-@CompileStatic
 private Long vcmd_setVariable(Map r9,device,List prms){
 	String name=sLi(prms,iZ)
 	def value=prms[i1]
@@ -6144,6 +6127,35 @@ private Long vcmd_writeFile(Map r9,device,List prms){
 	return lZ
 }
 
+private Boolean deleteFile(Map r9, List prms){
+	String fName= sLi(prms,iZ)
+	String bodyText = JsonOutput.toJson(name:"$fName",type:"file")
+	Map params= [
+		uri: "http://127.0.0.1:8080",
+		path: "/hub/fileManager/delete",
+		contentType:'text/plain',
+		requestContentType: sAPPJSON,
+		body: bodyText
+	]
+	try{
+		httpPost(params) { resp ->
+			if(resp.status!=i200){
+				error "Delete Response status $resp.status",r9
+			}
+		}
+		return true
+	}
+	catch(e){
+		error "Error deleting file $fName: ${e}",r9,iN2,e
+	}
+	return false
+}
+
+private Long vcmd_deleteFile(Map r9,device,List prms){
+	Boolean a=deleteFile(r9,prms)
+	return lZ
+}
+
 @Field static Map<String,List<Map>> fuelDataFLD=[:]
 
 private Long vcmd_readFuelStream(Map r9,device,List prms){
@@ -6633,6 +6645,7 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 	String nD="${node?.$}:".toString()
 	nodeI=nD+"$index:0".toString()
 	Long t=wnow()
+	String LID=sMs(r9,sLOCID)
 	mv=null
 	switch(sMt(operand)){
 		case sBLK: //optional, nothing selected
@@ -6684,7 +6697,6 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 					oV=sHSMSTS
 				case sMODE:
 				case sHSMSTS:
-					String LID=sMs(r9,sLOCID)
 					nodeI=LID+sCLN+oV
 					mv=getDeviceAttribute(r9,LID,oV,null,trigger)
 					break
@@ -6759,7 +6771,16 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 			}else{
 				Boolean hasI=sMs(operand,sXI)!=sNL
 				if(hasI)movt=ovt ? [(sVT):ovt.replace(sLRB,sBLK)]:[:]
-				mv=getVariable(r9,sMs(operand,sX)+(hasI ? sLB+sMs(operand,sXI)+sRB:sBLK))+movt
+				String operX= sMs(operand,sX)
+				mv=getVariable(r9,operX+(hasI ? sLB+sMs(operand,sXI)+sRB:sBLK))+movt
+				if(operX && operX.startsWith(sAT)){
+					if(operX.startsWith(sAT2)){
+						String vn = operX.substring(i2)
+						nodeI=sVARIABLE+sCLN+vn
+					}else{
+						nodeI= sMs(r9,sINSTID)+sDOT+operX
+					}
+				}
 			}
 			break
 		case sC: //constant
@@ -7702,18 +7723,24 @@ private static addWarning(Map node,String msg){
 @Field volatile static Map<String,List<String>> TRKINGFLD=[:]
 
 @CompileStatic
+/**
+ * these are caching tracking triggers like device:attribute or variables (@, @@)
+ * to automatcially update the tracking cache as events occur
+ */
 void addTrk(Map r9,String deviceId, String attr){
 	if(deviceId.startsWith(sCLN) && attr!=sNL){
 		String appStr= sAppId()
 		List<String> trk= TRKINGFLD[appStr] ?: []
-		String chk= deviceId+attr
-		Boolean skip= attr.contains(sCLN) || attr.contains(sVARIABLE) || attr.contains(sAT)
-		if(!skip && !fndTrk(deviceId,attr)){
+		Boolean isVar= attr.contains(sCLN) || attr.contains(sVARIABLE) || attr.contains(sAT)
+		String tdev; tdev=deviceId
+		if(isVar && deviceId==sMs(r9,sLOCID)) tdev=sBLK
+		String chk= tdev+attr
+		if(!fndTrk(tdev,attr)){
 			trk << chk
 			TRKINGFLD[appStr]= trk
 			TRKINGFLD=TRKINGFLD
 			if(isEric(r9))doLog(sDBG,"subscribeAll added track $chk to $trk")
-		}else if(isEric(r9))doLog(sDBG,"subscribeAll found or skiped $skip track $chk in $trk")
+		}else if(isEric(r9))doLog(sDBG,"subscribeAll found variable $isVar track $chk in $trk")
 	}
 }
 
@@ -7730,11 +7757,20 @@ Boolean fndTrk(String dev, String attr){
 
 @CompileStatic
 void updTrkVal(Map r9,String dev, String attr,Long t){
-	if(fndTrk(dev,attr)){ // always save tracking triggers value
-		Map val= [(sI): dev+sCLN+attr, (sV): getDeviceAttribute(r9,dev,attr)]
+	Boolean isVar= attr.contains(sVARIABLE+sCLN) || attr.contains(sAT)
+	String tdev; tdev=dev
+	if(isVar && dev==sMs(r9,sLOCID)) tdev=sBLK
+	if(fndTrk(tdev,attr)){ // always save tracking triggers value for dev:attr or @, @@ variables
+		String i= (!isVar ? dev+sCLN+attr : attr) // this is matching what evaluateOperand/evaluateComparison is doing
+		Map val
+		if(!isVar) val= [(sI):i, (sV): getDeviceAttribute(r9,dev,attr)]
+		else{
+			String vn= attr.contains(sVARIABLE+sCLN) ? sAT2+(attr.split(sCLN as String)[i1]) : sAT+(attr.split(sAT)[i1])
+			val= [(sI):i, (sV): getVariable(r9,vn)]
+		}
 		updateCache(r9,val,t)
 		if(isEric(r9))
-			myDetail r9,"found ${dev}${attr}, updating cache with value $val  ${t}",iN2
+			myDetail r9,"found ${tdev}${attr}, updating cache with value $val  ${t}",iN2
 	}
 }
 
@@ -7746,9 +7782,10 @@ void updTrkrs(Map r9){
 	String appStr= sAppId()
 	List<String> trk= TRKINGFLD[appStr] ?: []
 	for(String tmp in trk){
+ 		Boolean isVar= attr.contains(sVARIABLE+sCLN) || attr.contains(sAT)
 		String[] a= tmp.split(sCLN)
-		dev= sCLN+a[1]+sCLN
-		attr= a[2]
+		dev= !isVar ? sCLN+a[1]+sCLN : sMs(r9,sLOCID)
+		attr= !isVar ? a[2] : tmp
 		updTrkVal(r9,dev,attr,wnow())
 	}
 }
@@ -8453,12 +8490,6 @@ private List<String> expandDeviceList(Map r9,List<String> devs,Boolean localVars
 //}
 
 @CompileStatic
-private static String sanitizeVariableName(String name){
-	String rname=name!=sNL ? name.trim().replace(sSPC,sUNDS):sNL
-	return rname
-}
-
-@CompileStatic
 private getDevice(Map r9,String idOrName){
 	if(idOrName in (List<String>)r9[sALLLOC])return gtLocation()
 	if(!idOrName)return null
@@ -8854,6 +8885,30 @@ private void loadGlobalCache(){
 }
 
 @CompileStatic
+private static Map<String,String> parseVariableName(String name){
+	Map res; res=[
+			(sNM): name,
+			(sINDX): sNL
+	]
+	if(name!=sNL && !name.startsWith(sDLR) && name.endsWith(sRB)){
+		List<String> parts=name.replace(sRB,sBLK).tokenize(sLB)
+		if(parts.size()==i2){
+			res=[
+					(sNM): parts[iZ],
+					(sINDX): parts[i1]
+			]
+		}
+	}
+	return res
+}
+
+@CompileStatic
+private static String sanitizeVariableName(String name){
+	String rname=name!=sNL ? name.trim().replace(sSPC,sUNDS):sNL
+	return rname
+}
+
+@CompileStatic
 private Map getVariable(Map r9,String name){
 	Map<String,String> var=parseVariableName(name)
 	String tn,mySt,rt
@@ -8872,6 +8927,7 @@ private Map getVariable(Map r9,String name){
 		return res
 	}
 	Map err=rtnMapE("Variable '$tn' not found".toString())
+	Boolean rtnVarN; rtnVarN=false
 	if(tn.startsWith(sAT)){
 		if(tn.startsWith(sAT2)){
 			tn=var[sNM] // allow spaces
@@ -8887,6 +8943,7 @@ private Map getVariable(Map r9,String name){
 					typ=(String)t.key
 					vl=t.value
 				}
+				rtnVarN=true
 				res=rtnMap(typ,vl)
 			}else res=err
 			if(eric())debug "getVariable hub variable (${vn}) returning ${res} to webcore",r9
@@ -8901,6 +8958,7 @@ private Map getVariable(Map r9,String name){
 				String t=sMt(res)
 				def v=oMv(res)
 				res[sV]= matchCast(r9,v,t) ? v: cast(r9,v,t)
+				rtnVarN=true
 			}
 		}
 	}else{
@@ -8981,7 +9039,7 @@ private Map getVariable(Map r9,String name){
 	def v; v=oMv(res)
 	rt=sMt(res)
 	if(rt==sDEC && v instanceof BigDecimal)v=v.toDouble()
-	res=rtnMap(rt,v)
+	res=rtnMap(rt,v) + ((rtnVarN ? [vn: tn] : [:]) as Map<String, Object>)
 	if(lg)myDetail r9,mySt+"result:$res (${myObj(v)})"
 	res
 }

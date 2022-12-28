@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update December 20, 2022 for Hubitat
+ * Last update December 28, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -30,7 +30,7 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20221210_HE'
+@Field static final String sHVER='v0.3.114.20221228_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -3688,7 +3688,7 @@ private void sendVariableEvent(Map variable, Boolean onlyChildren=false){
 // this notifies my children
 	String str=handle()+" global variable ${varN} changed".toString()
 	sendLocationEvent(theEvent + [
-		(sNM): (getInstanceSid()) + ".${varN}",
+		(sNM): myId + ".${varN}",
 		linkText: str, descriptionText: str,
 		])
 }
@@ -4646,9 +4646,10 @@ private static Map<String,Map> virtualCommands(){
 		parseJson				: [ (sN): "Parse JSON data...",			(sA): true,				(sD): "Parse JSON data {0}",												(sP): [[(sN): "JSON string", (sT):sSTR]],																											],
 		cancelTasks				: [ (sN): "Cancel all pending tasks",	(sA): true,				(sD): "Cancel all pending tasks",											(sP): [],																											],
 
-		readFile				: [ (sN): "Read from file...",		(sA): true,					(sD): "Read from file {0} to \$file",					(sP): [[(sN): "File name", (sT):sSTR ], [(sN):"Username", (sT):'email', (sD):", username {v}"], [(sN): "Password", (sT):"uri", (sD):", password {v}"] ],					],
+		readFile				: [ (sN): "Read from file...",		(sA): true,					(sD): "Read from file {0} to \$file",		(sP): [[(sN): "File name", (sT):sSTR ], [(sN):"Username", (sT):'email', (sD):", username {v}"], [(sN): "Password", (sT):"uri", (sD):", password {v}"] ],					],
 		writeFile				: [ (sN): "Write to file...",		(sA): true,					(sD): "Write to file {0}",					(sP): [[(sN): "File name", (sT):sSTR ], [(sN):"Data", (sT):sSTR, ],[(sN):"Username", (sT):'email', (sD):", username {v}"], [(sN): "Password", (sT):"uri", (sD):", password {v}"] ],					],
 		appendFile				: [ (sN): "Append to file...",		(sA): true,					(sD): "Append to file {0}",					(sP): [[(sN): "File name", (sT):sSTR ], [(sN):"Data", (sT):sSTR, ],[(sN):"Username", (sT):'email', (sD):", username {v}"], [(sN): "Password", (sT):"uri", (sD):", password {v}"] ],					],
+		deleteFile				: [ (sN): "Delete file...",			(sA): true,					(sD): "Delete file {0}",					(sP): [[(sN): "File name", (sT):sSTR ]  ],				],
 
 		setAlarmSystemStatus	: [ (sN): "Set Hubitat Safety Monitor status...",	(sA): true, (sI): sBLK,				(sD): "Set Hubitat Safety Monitor status to {0}",							(sP): [[(sN):"Status", (sT):sENUM, (sO): getAlarmSystemStatusActions().collect {[(sN): it.value, (sV): it.key]}]],																										],
 		//keep emulated flash to not break old pistons
