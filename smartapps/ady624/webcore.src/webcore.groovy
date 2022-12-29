@@ -101,6 +101,7 @@ preferences{
 	page((sNM): "pageRemove")
 	page((sNM): "graphDuplicationPage")
 	page((sNM):sPDPC)
+	page((sNM):sPDPEXC)
 }
 
 @CompileStatic
@@ -357,9 +358,11 @@ private pageEngineBlock(){
 		section(){
 			paragraph "Under construction. This will help you upgrade your engine block to get access to extra features such as email triggers, fuel streams, and more."
 		}
-		if(eric()){
+
+		if(getLogging()[sDBG] || eric()){
 			section('Debug'){
 				href sPDPC,(sTIT):'Dump base result Cache',description:sBLK
+				href sPDPEXC,(sTIT):'Dump piston Execution Cache',description:sBLK
 			}
 		}
 	}
@@ -618,7 +621,7 @@ def graphDuplicationPage() {
 @Field volatile static Map<String, Map> childDupMapFLD        = [:]
 
 public Map getChildDupeData(String type, String childId) {
-	String myId=app.getId()
+	String myId=sAppId()
 	return (childDupMapFLD[myId] && childDupMapFLD[myId][type] && childDupMapFLD[myId][type][childId]) ? (Map)childDupMapFLD[myId][type][childId] : [:]
 }
 
@@ -631,7 +634,7 @@ public void clearDuplicationItems() {
 public void childAppDuplicationFinished(String type, String childId) {
 	doLog(sTRC,"childAppDuplicationFinished($type, $childId)")
 //    Map data = [:]
-	String myId=app.getId()
+	String myId=sAppId()
 	if(childDupMapFLD[myId] && childDupMapFLD[myId][type] && childDupMapFLD[myId][type][childId]) {
 		childDupMapFLD[myId][type].remove(childId)
 	}
@@ -5564,9 +5567,33 @@ def pageDumpPCache(){
 }
 
 def pageDumpPiston1(){
-	String message=getMapDescStr((Map)rtD.piston)
+	String wName=sAppId()
+	if(!cldClearFLD[wName]){ cldClearFLD[wName]=(Map)[:]; cldClearFLD=cldClearFLD }
+	String message=getMapDescStr(cldClearFLD[wName])
 	return dynamicPage((sNM):sPDPIS1,(sTIT):sBLK,uninstall:false){
 		section('Cached Piston dump'){
+			paragraph message
+		}
+	}
+}
+
+@Field static final String sPDPEXC='pageDumpExecution'
+def pageDumpExecution(){
+	String wName=sAppId()
+	if(p_executionFLD[wName]==null){ p_executionFLD[wName]=(Map)[:]; p_executionFLD=p_executionFLD }
+	String n=handlePistn()
+	String c='cnt'
+	List<Map> b= wgetChildApps().findAll{ (String)it.name==n }.sort{ (String)it.label }.collect{
+		String myId=hashPID(it.id)
+		[ (sID): myId, (sNM): normalizeLabel(it), (c): p_executionFLD[wName][myId] ]
+	}
+	LinkedHashMap<String,Map> a; a=[:]
+	b.sort{ Map bb -> (bb[c]!= null ? -(Long)bb[c] : bb[c]) }.each { Map it ->
+		if((Long)it[c]) a= a+ [((String)it[sID]): [(sNM):it[sNM], (c): it[c]]] as LinkedHashMap<String, Map>
+	}
+	String message=getMapDescStr(a)
+	return dynamicPage((sNM):sPDPEXC,(sTIT):sBLK,uninstall:false){
+		section('Piston Execution dump'){
 			paragraph message
 		}
 	}
