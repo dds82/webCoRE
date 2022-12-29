@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update November 16, 2022 for Hubitat
+ *  Last update December 29, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -53,8 +53,11 @@ static Boolean eric(){ return false }
 static Boolean eric1(){ return false }
 @CompileStatic
 private Boolean isEric(){ eric1() && isDbg() }
-@CompileStatic
-static private Boolean isSystemType(){ return false }
+
+private Boolean isSystemType(){
+	if (!eric()) return isSystemTypeOrHubDeveloper()
+	return false
+}
 
 definition(
 	namespace:"ady624",
