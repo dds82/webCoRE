@@ -362,7 +362,6 @@ private pageEngineBlock(){
 		if(getLogging()[sDBG] || eric()){
 			section('Debug'){
 				href sPDPC,(sTIT):'Dump base result Cache',description:sBLK
-				href sPDPEXC,(sTIT):'Dump piston Execution Cache',description:sBLK
 			}
 		}
 	}
@@ -559,8 +558,11 @@ def pageSettings(){
 			section("Dump dashload cache"){
 				href "pageDumpR",(sTIT):'Dump dashload Cache',description:sBLK
 			}
-			section("Dump global variables in use "){
+			section("Dump global variables in use"){
 				href "pageDumpPR",(sTIT):'Dump global variables in use',description:sBLK
+			}
+			section("Dump Piston Execution Count"){
+				href sPDPEXC,(sTIT):'Dump piston Execution Count',description:sBLK
 			}
 		}
 
