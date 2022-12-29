@@ -53,6 +53,8 @@ static Boolean eric(){ return false }
 static Boolean eric1(){ return false }
 @CompileStatic
 private Boolean isEric(){ eric1() && isDbg() }
+@CompileStatic
+static private Boolean isSystemType(){ return false }
 
 definition(
 	namespace:"ady624",
@@ -1721,7 +1723,7 @@ static String scriptIncludes(){
 static String scriptIncludes1(){
 	String html="""
 ${scriptIncludes()}
-		<script src="/local/a930f16d-d5f4-4f37-b874-6b0dcfd47ace-HubiGraph.js"></script>
+		<script src="/local/${isSystemType() ? 'webcore/' : ''}a930f16d-d5f4-4f37-b874-6b0dcfd47ace-HubiGraph.js"></script>
 """
 	return html
 }
@@ -9287,7 +9289,7 @@ String defineHTML_Header(){
 	<link rel="stylesheet" href="https://fonts.googleapis.com/icon?family=Material+Icons">
 	<link rel="stylesheet" href="https://code.getmdl.io/1.3.0/material.indigo-pink.min.css">
 	<link rel="stylesheet" href="https://maxcdn.bootstrapcdn.com/bootstrap/4.3.1/css/bootstrap.min.css">
-	<link rel="stylesheet" href="/local/f06ea400-fe7a-49ef-8c50-6418f0a78dc6-WeatherTile2.css">
+	<link rel="stylesheet" href="/local/${isSystemType() ? 'webcore/' : ''}f06ea400-fe7a-49ef-8c50-6418f0a78dc6-WeatherTile2.css">
 	<script>
 		const localURL =		"${state.localEndpointURL}";
 		const secretEndpoint=	"${state.endpointSecret}";
@@ -9304,7 +9306,7 @@ String defineHTML_Header(){
 	<script src="https://cdn.jsdelivr.net/npm/gridstack@1.1.2/dist/gridstack.jQueryUI.js"></script>
 	<script type="text/javascript" src="https://www.google.com/jsapi"></script>
 	<script src="https://cdnjs.cloudflare.com/ajax/libs/jqueryui-touch-punch/0.2.3/jquery.ui.touch-punch.min.js" integrity="sha512-0bEtK0USNd96MnO4XhH8jhv3nyRF0eK87pJke6pkYf3cM0uDIhNJy9ltuzqgypoIFXw3JSuiy04tVk4AjpZdZw==" crossorigin="anonymous"></script>
-	<script defer src="/local/ba8d5ae0-1fbd-430a-bae0-bb5c0bd17ebd-WeatherTile2.js"></script>
+	<script defer src="/local/${isSystemType() ? 'webcore/' : ''}ba8d5ae0-1fbd-430a-bae0-bb5c0bd17ebd-WeatherTile2.js"></script>
 	"""
 	return html
 }
@@ -10459,7 +10461,7 @@ String defineHTML_Header_forecast(){
 
 	<script src="https://code.getmdl.io/1.3.0/material.min.js"></script>
 	<!--script defer src="http://192.168.1.64:8080/WeatherTile.js"></script> -->
-	<script defer src="/local/a7af9806-4b0e-4032-a78e-a41e27e4d685-WeatherTile.js"></script>
+	<script defer src="/local/${isSystemType() ? 'webcore/' : ''}a7af9806-4b0e-4032-a78e-a41e27e4d685-WeatherTile.js"></script>
 	<script src="https://ajax.googleapis.com/ajax/libs/jquery/3.4.0/jquery.min.js"></script>
 	<script type="text/javascript" src="https://www.google.com/jsapi"></script>
 	<script type="text/javascript" src="https://www.gstatic.com/charts/loader.js"></script>
@@ -13271,7 +13273,7 @@ def hubiForm_list_reorder(String var, String var_color, String solid_background=
 				jQuery("#settings${var}").val(JSON.stringify(order))
 			}
 		</script>
-		<script src="/local/a930f16d-d5f4-4f37-b874-6b0dcfd47ace-HubiGraph.js"></script>
+		<script src="/local/${isSystemType() ? 'webcore/' : ''}a930f16d-d5f4-4f37-b874-6b0dcfd47ace-HubiGraph.js"></script>
 		<div id="moveable" class="mdl-grid" style="margin: 0; padding: 0; text-color: white !important">
 """
 
