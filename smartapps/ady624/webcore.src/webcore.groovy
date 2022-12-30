@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update December 28, 2022 for Hubitat
+ * Last update December 30, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -31,7 +31,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20221228_HE'
-@Field static final String sHVERSTR='v0.3.114.20221228_HE - December 28, 2022'
+@Field static final String sHVERSTR='v0.3.114.20221228_HE - December 30, 2022'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -490,8 +490,9 @@ def pageSettings(){
 		}
 
 		section(sectionTitleStr("Fuel Streams")){
-			input "localFuelStreams", sBOOL, (sTIT): "Use local fuel streams?", defaultValue: (settings.localFuelStreams!=null) ? (Boolean)settings.localFuelStreams : true , submitOnChange: true
-			if((Boolean)settings.localFuelStreams){
+			Boolean deft= (settings.localFuelStreams!=null) ? (Boolean)settings.localFuelStreams : true
+			input "localFuelStreams", sBOOL, (sTIT): "Use local fuel streams?", defaultValue: deft, submitOnChange: true
+			if(deft){
 				href "pageFuelStreams", (sTIT): "Fuel Streams", (sDESC): "Tap to manage fuel streams", state: "complete"
 			}
 		}
@@ -667,7 +668,8 @@ private pageSectionAcctId(Boolean ins=false){
 		paragraph "If you have multiple webCoRE instances (ie you have (or may have) multiple hubs running webCoRE), for proper IDE operations all of the hubs should be linked together with a common account identifier."
 		if(!ins)paragraph "NOTE changing these settings will require all piston references to be corrected (calling other webCoRE pistons, URL access, and access apps such as HomeBridge or Echo Speaks.)"
 		input "setACCT", sBOOL, (sTIT): "Set custom account identifier?", (sDESC): "Tap to change", defaultValue: ins, submitOnChange: true, (sREQ): false
-		if((Boolean)settings.setACCT){
+		Boolean setA= (Boolean)settings.setACCT
+		if(setA || (ins && setA==(Boolean)null)){
 			paragraph "An email address is usually a good choice (is not used/shared)"
 			input "acctID", sTXT, (sTIT): 'Account identifier (email is usually good)', (sREQ): true
 			app.updateSetting("properSID", [type: sBOOL, (sVAL): true])

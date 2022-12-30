@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update December 28, 2022 for Hubitat
+ * Last update December 30, 2022 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -275,7 +275,7 @@ static Boolean eric1(){ return false }
 @Field static final String sUNIT='unit'
 @Field static final String sINDX='index'
 @Field static final String sDELAY='delay'
-@Field static final String sFOLLOWC='followCleanup'
+//@Field static final String sFOLLOWC='followCleanup'
 @Field static final String sCS='cs'
 @Field static final String sSS='ss'
 @Field static final String sPS='ps'
@@ -2840,7 +2840,7 @@ private Boolean executeEvent(Map r9,Map event){
 		r9[sBREAK]=false
 		r9[sRESUMED]=false
 		r9[sTERM]=false
-		r9[sFOLLOWC]=[]
+//		r9[sFOLLOWC]=[]
 		if(evntName==sTIME)chgRun(r9,iMs(es,sI)) // iN1, iN3, iN5, iN9 or stmt #
 
 		if(lge){
@@ -2909,12 +2909,11 @@ private Boolean executeEvent(Map r9,Map event){
 					default:
 						if(executeStatements(r9,liMs(pis,sS)))
 							ended=true
-						List<List<Map>> fc=(List<List<Map>>)r9[sFOLLOWC]
+		/*				List<List<Map>> fc=(List<List<Map>>)r9[sFOLLOWC]
 						if(fc)
 							for(List<Map> ttcndtns in fc)
 								runFBupdates(r9,iZ,ttcndtns.size(),ttcndtns,false)
-						r9.remove(sFOLLOWC)
-						//updTrkrs(r9)
+						r9.remove(sFOLLOWC) */
 				}
 
 			}else{
@@ -6525,14 +6524,14 @@ private Boolean evaluateConditions(Map r9,Map cndtns,String collection,Boolean a
 			switch(value){
 				case null:
 					Integer st=ladderIndex +(didC?i1:iZ)
-					runFBupdates(r9,st,steps,cndtnsCOL,async) //run through future steps to update trigger cache
+					//runFBupdates(r9,st,steps,cndtnsCOL,async) //run through future steps to update trigger cache
 					//we need to exit time events set to work out the timeouts
 					if(currun(r9)==myC)r9[sTERM]=true
 					break
 				case false:
 				case true:
 					//ladder either collapsed or finished, reset data
-					if(ladderIndex!=iZ || !didC)Boolean a=((List)r9[sFOLLOWC]).push(cndtnsCOL) // do run thru to update trigger cache
+					//if(ladderIndex!=iZ || !didC)Boolean a=((List)r9[sFOLLOWC]).push(cndtnsCOL) // do run thru to update trigger cache
 					ladderIndex=iZ
 					ladderUpdated=lZ
 					cancelStatementSchedules(r9,myC)
@@ -6596,6 +6595,7 @@ private Boolean evaluateConditions(Map r9,Map cndtns,String collection,Boolean a
 }
 
 /**  run followed by updates */
+/*
 @CompileStatic
 private void runFBupdates(Map r9,Integer st,Integer sz,List<Map> cndtns,Boolean async){
 	if(st<sz){
@@ -6615,7 +6615,7 @@ private void runFBupdates(Map r9,Integer st,Integer sz,List<Map> cndtns,Boolean 
 		chgRun(r9,svrun)
 		if(isEric(r9))myDetail r9,mySS
 	}
-}
+} */
 
 @CompileStatic
 private List levaluateOperand(Map r9,Map node, Map oper,Integer index=null,Boolean trigger=false,Boolean nextMidnight=false){
@@ -7761,7 +7761,8 @@ void updTrkVal(Map r9,String dev, String attr,Long t){
 	String tdev; tdev=dev
 	if(isVar && dev==sMs(r9,sLOCID)) tdev=sBLK
 	if(fndTrk(tdev,attr)){ // always save tracking triggers value for dev:attr or @, @@ variables
-		String i= (!isVar ? dev+sCLN+attr : attr) // this is matching what evaluateOperand/evaluateComparison is doing
+		// this is matching what evaluateOperand/evaluateComparison is doing
+		String i= (!isVar ? dev+sCLN+attr : attr)
 		Map val
 		if(!isVar) val= [(sI):i, (sV): getDeviceAttribute(r9,dev,attr)]
 		else{
@@ -7770,7 +7771,7 @@ void updTrkVal(Map r9,String dev, String attr,Long t){
 		}
 		updateCache(r9,val,t)
 		if(isEric(r9))
-			myDetail r9,"found ${tdev}${attr}, updating cache with value $val  ${t}",iN2
+			myDetail r9,"found ${isVar ? sVARIABLE:sDEV} ${tdev}${attr}, updating cache with value $val  ${t}",iN2
 	}
 }
 
@@ -8098,9 +8099,10 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 						if(!inMem){
 							String m,tm
 							m=sNL
-							tm="trigger comparison type"
+							String tm1="trigger comparison type"
+							tm=tm1
 							String tn=" that relies on runtime "
-							Boolean isSub= co in ltsub
+							Boolean isSub= co in ltsub // ['happens_daily_at']
 							Boolean isStays= co.startsWith(sSTAYS)
 							Map lo=mMs(cndtn,sLO) ?: [:]
 							Integer dsz= lo[sD] ? liMd(lo).size():iZ
@@ -8114,11 +8116,18 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 									Map a=getVariable(r9,sMs(lo,sX))
 									if(!isErr(a)) isbadVar=sMt(a)!=sDEV
 								}*/
+								Boolean localTracking; localTracking=isTracking
 								if(isbadVar) tm += " using a non global or non device variable,"
-								if(isAll) tm += " using multiple devices with ALL (ANDed trigger),"
-								else if(isTracking) tm+=tn+"event tracking,"
-								else if(isSub) tm+=tn+"timer scheduling,"
-								if(isTracking || isSub || isbadVar){
+								if(isAll){
+									tm += " using multiple devices with ALL (ANDed trigger),"
+								}else{
+									if(isTracking){
+										if(tm==tm1){ tm=sBLK; localTracking=false }
+										else tm+=tn+"event tracking,"
+									}else
+										if(isSub) tm+=tn+"timer scheduling,"
+								}
+								if(localTracking || isSub || isbadVar){
 									if(isbadVar) m=tm
 									if(isAll) m=tm
 									else if(stmtLvl[sV]>i2) m="nested (level ${stmtLvl[sV]}) "+tm
@@ -13002,7 +13011,6 @@ private void waddInUseGlobalVar(Map r9,String vn, Boolean heglobal=true){
 		globalVarsUseFLD= globalVarsUseFLD
 		if(isEric(r9))myDetail r9,"added in use $nvn $wName $sa $pstns $vars",iN2
 	}
-
 	if(heglobal) Boolean a=addInUseGlobalVar(vn)
 }
 
