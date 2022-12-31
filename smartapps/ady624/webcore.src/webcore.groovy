@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update December 30, 2022 for Hubitat
+ * Last update December 31, 2022 for Hubitat
  */
 
 //file:noinspection unused
@@ -31,7 +31,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20221228_HE'
-@Field static final String sHVERSTR='v0.3.114.20221228_HE - December 30, 2022'
+@Field static final String sHVERSTR='v0.3.114.20221228_HE - December 31, 2022'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -709,14 +709,14 @@ private pageSectionAcctId(Boolean ins=false){
 				msg+= "\nUsing hub account hash: $acctHash"
 			}
 			if(msg){
-				paragaph msg
+				paragraph msg
 				msg=sNL
 			}
 		}else{
 			app.removeSetting("acctUpdate")
 		}
 		if(msg){
-			paragaph msg
+			paragraph msg
 			msg=sNL
 		}
 
