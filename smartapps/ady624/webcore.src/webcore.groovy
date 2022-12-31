@@ -60,7 +60,7 @@ definition(
 	name: handle(),
 	namespace: "ady624",
 	author: "Adrian Caramaliu",
-	description: "Tap to install ${handle()} ${sVER}",
+	description: "${handle()} Automations & Graphs ${sHVERSTR}",
 	category: "Convenience",
 	singleInstance: false,
 	documentationLink:'https://wiki.webcore.co',
@@ -218,29 +218,29 @@ def pageMain(){
 		if(!(Boolean)settings.agreement){
 			pageSectionDisclaimer()
 		}else{
-			section("Engine block"){
-				href "pageEngineBlock", (sTIT): imgTitle("app-CoRE.png", inputTitleStr("Cast iron")), (sDESC): sVER+" HE: "+ sHVER, (sREQ): false, state: "complete"
+			section(){
+				href "pageEngineBlock", (sTIT): imgTitle("app-CoRE.png", inputTitleStr("Engine block - Cast iron")), (sDESC): sVER+" HE: "+ sHVERSTR, (sREQ): false, state: "complete"
 			}
 
 		}
 
-		section("Dashboard"){
+		section(){
 			String mPng="dashboard.png"
 			if(!(String)state.endpoint){
 				href "pageInitializeDashboard", (sTIT): imgTitle(mPng, inputTitleStr("Dashboard")), (sDESC): "Tap to initialize", (sREQ): false, state: "complete"
 			}else{
 				//trace "*** DO NOT SHARE THIS LINK WITH ANYONE *** Dashboard URL: ${getDashboardInitUrl()}"
-				href sBLK, (sTIT): imgTitle(mPng, inputTitleStr("Dashboard")), style: "external", url: getDashboardInitUrl(), (sDESC): "Tap to open", (sREQ): false
+				href sBLK, (sTIT): imgTitle(mPng, inputTitleStr("Open Dashboard")), style: "external", url: getDashboardInitUrl(), (sDESC): "Tap to open", (sREQ): false
 				href sBLK, (sTIT): imgTitle("browser-reg.png", inputTitleStr("Register a browser")), style: "external", url: getDashboardInitUrl(true), (sDESC): "Tap to open", (sREQ): false
 			}
 		}
 
-		section((sTIT):"Settings"){
+		section(){
 			href "pageSettings", (sTIT): imgTitle("settings.png", inputTitleStr("Settings")), (sREQ): false, state: "complete"
 		}
 
 		if(graphsOn()){
-			section((sTIT):"Graphs"){
+			section(){
 				href "pageGraphs", (sTIT): imgTitle("settings.png", inputTitleStr("Graphs")), (sREQ): false, state: "complete"
 			}
 			clearDuplicationItems()
@@ -251,7 +251,7 @@ def pageMain(){
 private pageSectionDisclaimer(){
 	section('Disclaimer'){
 		paragraph "Please read the following information carefully", (sREQ): true
-		paragraph "webCoRE is a web-enabled product, which means data travels across the internet. webCoRE is using TLS for encryption of data and NEVER provides real object IDs to any system outside the WebCoRE server. The IDs are hashed into a string of letters and numbers that cannot be 'decoded' back to their original value. These hashed IDs are stored by your browser and can be cleaned up by using the Logout action in the dashboard."
+		paragraph "webCoRE is a web-enabled product, which means data travels across the internet. webCoRE is using TLS for encryption of data and NEVER provides real object IDs to any system. IDs are hashed into a string of letters and numbers that cannot be 'decoded' back to their original value. These hashed IDs are stored by your browser and can be cleaned up by using the Logout action in the dashboard."
 		paragraph "Access to a webCoRE App is done through the browser using a security password provided during the installation of webCoRE. The browser never stores this password and it is only used during the initial registration and authentication of your browser. A security token is generated for each browser and is used for any subsequent communication. This token expires at a preset life length, or when the password is changed, or when the tokens are manually revoked from the webCoRE App's Settings menu."
 	}
 	section('Server-side features'){
@@ -265,7 +265,7 @@ private pageSectionDisclaimer(){
 		paragraph "The webcore.co server(s) do NOT intentionally collect any real object IDs from HE, any names, phone numbers, email addresses, physical location information, addresses, or any other personally identifiable information."
 	}
 	section('Fuel Streams'){
-		paragraph "The information you provide while using the Fuel Stream feature is not encrypted and is not filtered in any way. Please avoid providing personally identifiable information in either the canister name, the fuel stream name, or the data point."
+		paragraph "The information you provide while using the non-local Fuel Stream feature is not encrypted and is not filtered in any way. Please avoid providing personally identifiable information in either the canister name, the fuel stream name, or the data point."
 	}
 	section('Local webCoRE servers'){
 		paragraph "Advanced users may enable a local webcore www server. Less data sharing with external webCoRE servers is done if this is configured/enabled. Some features may not be available if you choose to do this."
@@ -299,11 +299,10 @@ private pageSectionTimeZoneInstructions(){
 	section (){
 		paragraph "Please follow these steps to setup your location timezone:", (sREQ): true
 		paragraph "1. Using the HE console, abort this installation and go to 'Settings' section", (sREQ): true
-		paragraph "2. Click on 'Location and Modes'", (sREQ): true
-		paragraph "3. Edit your postal code, and time zone, then Click on the map to edit your location", (sREQ): true
-		paragraph "4. Find your location on the map and place the pin there, adjusting the desired radius", (sREQ): true
-		paragraph "5. Tap the Update button", (sREQ): true
-		paragraph "6. Try installing webCoRE again", (sREQ): true
+		paragraph "2. Click on 'Hub Details'", (sREQ): true
+		paragraph "3. Edit your postal code, and time zone, then enter Latitide and Longitude information", (sREQ): true
+		paragraph "4. Tap the Save settings button", (sREQ): true
+		paragraph "5. Try installing webCoRE again", (sREQ): true
 	}
 }
 
@@ -357,12 +356,16 @@ private pageInitializeDashboard(){
 private pageEngineBlock(){
 	dynamicPage((sNM): "pageEngineBlock", (sTIT): sBLK){
 		section(){
-			paragraph "Under construction. This will help you upgrade your engine block to get access to extra features such as email triggers, fuel streams, and more."
+			paragraph "Under construction..."
 		}
 
 		if(getLogging()[sDBG] || eric()){
+			String c='Tap to display'
+			String b='complete'
 			section('Debug'){
-				href sPDPC,(sTIT):'Dump base result Cache',description:sBLK
+				href sPDPC,(sTIT):'Dump base result Cache',description:sBLK, (sDESC): c, state: b
+				href "pageDumpR",(sTIT):'Dump dashload Cache',description:sBLK, (sDESC): c, state: b
+				href "pageRebuildCache", (sTIT): "Clean up and rebuild IDE data cache", (sDESC): "Tap to change your clean up and rebuild your data cache", state: b
 			}
 		}
 	}
@@ -429,8 +432,12 @@ private pageFinishInstall(){
 def pageSettings(){
 	//clear devices cache
 	dynamicPage((sNM): "pageSettings", install: false, uninstall: false){
-		section("General"){
-			label ((sNM): "name", (sTIT): "Name", state: (name ? "complete" : sNL), defaultValue: app.name, (sREQ): false)
+		section(){
+			paragraph pageTitleStr('Settings')
+		}
+		String b='complete'
+		section(){
+			label ((sNM): "name", (sTIT): "Name for this main $sWC application", state: (name ? b : sNL), defaultValue: app.name, (sREQ): false)
 		}
 
 /*
@@ -440,12 +447,12 @@ def pageSettings(){
 				app([(sTIT): isHubitat() ? 'Do not click - App Launchs automatically' : 'Available Devices', multiple: false, install: true, uninstall: false], 'storage', 'ady624', handleStor())
 			}
 		}else{*/
-			section("Available devices"){
-				href "pageSelectDevices", (sTIT): "Available devices", (sDESC): "Tap to select which devices are available to pistons", state: "complete"
+			section(){
+				href "pageSelectDevices", (sTIT): "Available devices", (sDESC): "Tap to select which devices are available to pistons", state: b
 			}
 		//}
 
-		section(sectionTitleStr("pushMessage Device")){
+		section(){
 			input "pushDevice", "capability.notification", (sTIT): "Notification device for pushMessage (HE mobile App or pushOver)", multiple: true, (sREQ): false, submitOnChange: true
 		}
 
@@ -483,17 +490,18 @@ def pageSettings(){
 				input "zipCode", sTXT, (sTIT): zipDesc, defaultValue: defaultLoc, (sREQ): false
 				if(mreq==OpnW){
 					input "zipCode1", sTXT, (sTIT): zipDesc1, defaultValue: defaultLoc1, (sREQ): false
-					input "apiVer", sBOOL, (sTIT): "Api key version (2.5 - Off, 3.0 - On)?", defaultValue: false, submitOnChange: true
 					paragraph "OpenWeatherMap Integration uses onecall api.  Ensure your key is compatible"
+					input "apiVer", sBOOL, (sTIT): "Api key version (2.5 - Off, 3.0 - On)?", defaultValue: false, submitOnChange: true
 				}
 			}
 		}
 
 		section(sectionTitleStr("Fuel Streams")){
-			Boolean deft= (settings.localFuelStreams!=null) ? (Boolean)settings.localFuelStreams : true
+			Boolean lfs = (Boolean)settings.localFuelStreams
+			Boolean deft= lfs!=(Boolean)null ? lfs : true
 			input "localFuelStreams", sBOOL, (sTIT): "Use local fuel streams?", defaultValue: deft, submitOnChange: true
 			if(deft){
-				href "pageFuelStreams", (sTIT): "Fuel Streams", (sDESC): "Tap to manage fuel streams", state: "complete"
+				href "pageFuelStreams", (sTIT): "Fuel Streams", (sDESC): "Tap to manage fuel streams", state: b
 			}
 		}
 
@@ -501,35 +509,17 @@ def pageSettings(){
 			href "pageIntegrations", (sTIT): "Integrations with other services", (sDESC): "Tap to configure your integrations"
 		}*/
 
-		section(sectionTitleStr("Security")){
-			href "pageChangePassword", (sTIT): "Security", (sDESC): "Tap to change your dashboard security settings", state: "complete"
+		section(){
+			href "pageChangePassword", (sTIT): "Security", (sDESC): "Tap to change your dashboard security settings", state: b
 		}
 
-		section(sectionTitleStr("Custom Endpoints - Advanced")){
-			paragraph "Custom Endpoints allows use of a local webserver for webCoRE IDE pages and local hub API endpoint address. webCoRE servers are still used for instance registration, non-local backup / restore / import, send email, NFL, store media, and optionally fuel streams"
-			input "customEndpoints", sBOOL, submitOnChange: true, (sTIT): "Use custom endpoints?", default: false, (sREQ): true
-			if((Boolean)customEndpoints){
-				Boolean req; req=false
-				if((Boolean)customEndPoints && (Boolean)localHubUrl) req=true
-				input "customWebcoreInstanceUrl", sSTR, (sTIT): "Custom webCoRE webserver (local webserver url different from dashboard.webcore.co)", default: null, (sREQ): req
-				if((Boolean)localHubUrl && !customWebcoreInstanceUrl) paragraph "If you use a local hub API url you MUST use a custom webCoRE server url, as dashboard.webcore.co site is restricted to Hubitat and Smartthing's cloud API access only"
-				input "localHubUrl", sBOOL, (sTIT): "Use local hub URL for API access?", submitOnChange: true, default: false, (sREQ): false
-			}else{
-				app.clearSetting('localHubUrl')
-				app.clearSetting('customWebcoreInstanceUrl')
-			}
-			state.endpointCloud=sNL
-			state.endpoint=sNL
-			state.endpointLocal=sNL
-			if((String)state.accessToken) updateEndpoint()
+		section(){
+			input "logging", sENUM, (sTIT): "Logging level for main $sWC application", options: ["None", "Minimal", "Medium", "Full"], defaultValue: "None", (sREQ): false
 		}
 
-		section(sectionTitleStr("Logging")){
-			input "logging", sENUM, (sTIT): "Logging level", options: ["None", "Minimal", "Medium", "Full"], (sDESC): "Enable Logs in platform logs", defaultValue: "None", (sREQ): false
-		}
-
-		section((sTIT):"Privacy"){
-			href "pageDisclaimer", (sTIT): imgTitle("settings.png", inputTitleStr("Data Collection Notice")), (sREQ): false, state: "complete"
+		section(){
+			paragraph "webCoRE can run a periodic recovery procedure. This deals with recovery of missed piston timers during hub downtine"
+			input "recovery", sENUM, (sTIT): "Run recovery", options: ["Never", "Every 5 minutes", "Every 10 minutes", "Every 15 minutes", "Every 30 minutes", "Every 1 hour", "Every 3 hours"], (sDESC): "Allows recovery procedures to run every so often", defaultValue: "Every 30 minutes", (sREQ): true
 		}
 
 		section((sTIT): "Maintenance"){
@@ -537,35 +527,43 @@ def pageSettings(){
 			input "disabled", sBOOL, (sTIT): "Disable all pistons", (sDESC): "Disable all pistons belonging to this instance", defaultValue: false, (sREQ): false
 			input "logPistonExecutions", sBOOL, (sTIT): "Log piston executions as Location events?", (sDESC): "Tap to change logging pistons as hub location events", defaultValue: false, (sREQ): false
 			input "enableDashNotifications", sBOOL, (sTIT): "Enable Dashboard Notifications for device state changes?", (sDESC): "Tap to change enable dashboard notifications of device state changes (more overhead)", defaultValue: false, (sREQ): false
-			href "pageRebuildCache", (sTIT): "Clean up and rebuild IDE data cache", (sDESC): "Tap to change your clean up and rebuild your data cache", state: "complete"
-		}
-
-		section((sTIT): "Recovery"){
-			paragraph "webCoRE can run a recovery procedure every so often. This augments the built-in automatic recovery procedures that allows webCoRE to rely on all healthy pistons to keep the failed ones running."
-			input "recovery", sENUM, (sTIT): "Run recovery", options: ["Never", "Every 5 minutes", "Every 10 minutes", "Every 15 minutes", "Every 30 minutes", "Every 1 hour", "Every 3 hours"], (sDESC): "Allows recovery procedures to run every so often", defaultValue: "Every 30 minutes", (sREQ): true
 		}
 
 		if(getLogging()[sDBG] || eric()){
 			String a='Tap to clear'
-			String b='complete'
-			section("Piston Log Cleanups"){
+			String c='Tap to display'
+			section("Display operational data"){
+				href "pageDumpPR",(sTIT):'Dump global variables in use',description:sBLK, (sDESC): c, state: b
+				href sPDPEXC,(sTIT):'Dump piston Execution Count',description:sBLK, (sDESC): c, state: b
+			}
+			section("Piston Cleanups"){
 				href "pageLogCleanups", (sTIT): "Clear all piston logs, trace, stats, optimization caches, reset all piston logs, stats settings to default", (sDESC): a, state: b
-			}
-			section("Piston Caches Cleanup"){
 				href "pageCleanups", (sTIT): "Clear all piston optimization caches", (sDESC): a, state: b
-			}
-			section("Piston Uber Cleanups"){
 				href "pageUberCleanups", (sTIT): "Danger: Clear all piston variables, piston caches, and logs", (sDESC): a, state: b
 			}
-			section("Dump dashload cache"){
-				href "pageDumpR",(sTIT):'Dump dashload Cache',description:sBLK
+		}
+
+		section(sectionTitleStr("Advanced - Custom Endpoints")){
+			paragraph "Custom Endpoints allows use of a local webserver for webCoRE IDE pages and local hub API endpoint address. webCoRE servers are still used for instance registration, non-local backup / restore / import, send email, NFL, store media, and optionally fuel streams"
+			input "customEndpoints", sBOOL, submitOnChange: true, (sTIT): "Use custom endpoints?", default: false, (sREQ): true
+			if((Boolean)settings.customEndpoints){
+				Boolean req; req=false
+				if((Boolean)settings.localHubUrl) req=true
+				input "customWebcoreInstanceUrl", sSTR, (sTIT): "Custom webCoRE webserver (local webserver url different from dashboard.webcore.co)", default: null, (sREQ): req
+				if((Boolean)settings.localHubUrl && !(String)settings.customWebcoreInstanceUrl) paragraph "If you use a local hub IDE url you MUST use a custom webCoRE server url, as dashboard.webcore.co site is restricted to Hubitat cloud API access only"
+				input "localHubUrl", sBOOL, (sTIT): "Use local hub URL for IDE access?", submitOnChange: true, default: false, (sREQ): false
+			}else{
+				app.removeSetting('localHubUrl')
+				app.removeSetting('customWebcoreInstanceUrl')
 			}
-			section("Dump global variables in use"){
-				href "pageDumpPR",(sTIT):'Dump global variables in use',description:sBLK
-			}
-			section("Dump Piston Execution Count"){
-				href sPDPEXC,(sTIT):'Dump piston Execution Count',description:sBLK
-			}
+			state.endpointCloud=sNL
+			state.endpoint=sNL
+			state.endpointLocal=sNL
+			if((String)state.accessToken) updateEndpoint()
+		}
+
+		section((sTIT):"Privacy"){
+			href "pageDisclaimer", (sTIT): imgTitle("settings.png", inputTitleStr("Data Collection Notice")), (sREQ): false, state: "complete"
 		}
 
 		section("Uninstall"){
@@ -646,14 +644,12 @@ public void childAppDuplicationFinished(String type, String childId) {
 }
 
 
-
 List getGraphApps() {
 	return ((List)getAllChildApps())?.findAll {
 		String t= it?.gtSetting('graphType')
 		t && it?.name == handleFuelS() && !(t in ['longtermstorage'])
 	}
 }
-
 
 private pageFuelStreams(){
 	dynamicPage((sNM): "pageFuelStreams", uninstall: false, install: false){
@@ -664,22 +660,97 @@ private pageFuelStreams(){
 }
 
 private pageSectionAcctId(Boolean ins=false){
-	section((sTIT): "Set Account/Location Identifier"){
-		paragraph "If you have multiple webCoRE instances (ie you have (or may have) multiple hubs running webCoRE), for proper IDE operations all of the hubs should be linked together with a common account identifier."
-		if(!ins)paragraph "NOTE changing these settings will require all piston references to be corrected (calling other webCoRE pistons, URL access, and access apps such as HomeBridge or Echo Speaks.)"
-		input "setACCT", sBOOL, (sTIT): "Set custom account identifier?", (sDESC): "Tap to change", defaultValue: ins, submitOnChange: true, (sREQ): false
-		Boolean setA= (Boolean)settings.setACCT
-		if(setA || (ins && setA==(Boolean)null)){
-			paragraph "An email address is usually a good choice (is not used/shared)"
-			input "acctID", sTXT, (sTIT): 'Account identifier (email is usually good)', (sREQ): true
-			app.updateSetting("properSID", [type: sBOOL, (sVAL): true])
-			paragraph "All hubs in same location should have a common location identifier. This could be Boston, Vacation, or Home1, etc..."
-			input "locID", sTXT, (sTIT): 'Location identifier - no imbedded spaces', (sREQ): true
-		}else{
-			app.removeSetting("acctID")
-			app.removeSetting("locID")
-			input "properSID", sBOOL, (sTIT): "Use New SID for location?", (sDESC): "Tap to change", defaultValue: true, (sREQ): false
+	section('<b>Account/Location Identifiers</b>'){
+
+		String acctHash = getHubAccountHash()
+		Boolean setA; setA = (Boolean)settings.setACCT
+		String acct; acct = setA ? (String)settings.acctID : sNL
+
+		if(!acctHash){
+			paragraph "Did not find hub account hash.  It is recommended to register all your hubs and use same account hash in webCoRE."
 		}
+
+		if(acctHash && ins && setA==(Boolean)null){
+			app.updateSetting("properSID", [type: sBOOL, (sVAL): true])
+			app.updateSetting("setACCT", [type: sBOOL, (sVAL): true])
+			app.updateSetting("acctID", [type: sTXT, (sVAL): acctHash])
+			setA=true
+			acct=acctHash
+		}
+
+		String msg
+		msg= "If you have (or may have) multiple webCoRE instances or multiple hubs running webCoRE), for proper IDE operations all of the hubs should be linked together with a common account identifier."
+		msg+= "<br>"
+		Boolean noteshown; noteshown=false
+		msg+= "\n - hub uuid: " + hubUID.toString()
+		if(setA && acct){
+			msg += "\n - Using Custom account identifier: $setA"
+			if(acct!=acctHash){
+				msg+="\n - webCoRE account id: ${acct}"
+				if(acctHash){
+					msg+="\n\n"+span("Found existing account identifier $acct which does not match hub account hash $acctHash",sCLRORG)
+					paragraph msg
+					msg=sNL
+					if(!ins){
+						noteshown=true
+						paragraph span("NOTE changing these settings will require all piston references to be corrected (calling other webCoRE pistons, URL access, and access apps such as HomeBridge or Echo Speaks.)",sCLRORG)
+					}
+					input "acctUpdate", sBOOL, (sTIT): "Update to hub account hash?", (sDESC): "Tap to change", defaultValue: false, submitOnChange: true, (sREQ): false
+					if((Boolean)settings.acctUpdate){
+						app.updateSetting("properSID", [type: sBOOL, (sVAL): true])
+						app.updateSetting("setACCT", [type: sBOOL, (sVAL): true])
+						app.updateSetting("acctID", [type: sTXT, (sVAL): acctHash])
+						setA=true
+						acct=acctHash
+					}
+				}
+			}else{
+				app.removeSetting("acctUpdate")
+				msg+= "\nUsing hub account hash: $acctHash"
+			}
+			if(msg){
+				paragaph msg
+				msg=sNL
+			}
+		}else{
+			app.removeSetting("acctUpdate")
+		}
+		if(msg){
+			paragaph msg
+			msg=sNL
+		}
+
+		if(!acctHash || !ins){
+			paragraph "<br>"
+			paragraph "Advanced - Custom account identifier"
+			if(!noteshown && !ins){
+				noteshown=true
+				paragraph span("NOTE changing these settings will require all piston references to be corrected (calling other webCoRE pistons, URL access, and access apps such as HomeBridge or Echo Speaks.)",sCLRORG)
+			}
+			input "setACCT", sBOOL, (sTIT): "Set custom account identifier?", (sDESC): "Tap to change", defaultValue: ins, submitOnChange: true, (sREQ): false
+			if(setA){
+				//paragraph "An email address is usually a good choice (is not used/shared)"
+				input "acctID", sTXT, (sTIT): 'Account identifier (hub account hash is best)', (sREQ): true
+			}else{
+				app.removeSetting("acctID")
+				app.removeSetting("locID")
+				input "properSID", sBOOL, (sTIT): "Use New SID for location?", (sDESC): "Tap to change", defaultValue: true, (sREQ): false
+			}
+		}
+
+		if(setA && acct){
+			app.updateSetting("properSID", [type: sBOOL, (sVAL): true])
+			paragraph "<br>"
+			paragraph "All hubs in same location may have a common location identifier. This could be Boston, Vacation, or Home1, etc..."
+			if(!noteshown && !ins){
+				noteshown=true
+				paragraph "<br>"
+				paragraph span("NOTE changing these settings will require all piston references to be corrected (calling other webCoRE pistons, URL access, and access apps such as HomeBridge or Echo Speaks.)",sCLRORG)
+			}
+			input "locID", sTXT, (sTIT): 'Location identifier - no imbedded spaces', (sREQ): true
+		}
+
+
 		String wName=sAppId()
 		acctlocFLD[wName]=null
 		locFLD[wName]=sNL
@@ -690,7 +761,7 @@ private pageSectionAcctId(Boolean ins=false){
 private pageChangePassword(){
 	dynamicPage((sNM): "pageChangePassword", uninstall: false, install: false){
 		section(){
-			paragraph "Choose a security password for your dashboard. You will need to enter this password when accessing your dashboard for the first time and possibly from time to time.", (sREQ): false
+			paragraph pageTitleStr('Security')
 		}
 		pageSectionPIN()
 		pageSectionAcctId(false)
@@ -700,7 +771,7 @@ private pageChangePassword(){
 		if(settings.PIN){
 			section(){
 				paragraph "webCoRE uses an access token to allow communication with webCoRE via REST calls. You may choose to reset this token.", (sREQ): false
-				paragraph "NOTE resetting the access token will invalidate any remote access to pistons (the URLs they are using), and this will have to be re-enabled / setup once the new access token has been created.", (sREQ): true
+				paragraph span( "NOTE resetting the access token will invalidate any remote access to pistons (the URLs they are using), and this will have to be re-enabled / setup once the new access token has been created.", sCLRORG)
 				paragraph "If your dashboard fails to load and no log messages appear in Hubitat console 'Logs' when you refresh the dashboard, resetting the access token may restore access to webCoRE.", (sREQ): false
 				href "pageResetEndpoint", (sTIT): "Reset access token", (sDESC): "WARNING: URLs for triggering pistons or accessing piston URLs will need to be updated", state: "complete"
 			}
@@ -710,7 +781,8 @@ private pageChangePassword(){
 
 private pageSectionPIN(){
 	section(){
-		input "PIN", "password", (sTIT): "Choose a security password for your dashboard", (sREQ): true
+		paragraph "Choose a security password for your dashboard. You will need to enter this password when accessing your dashboard for the first time and possibly from time to time.", (sREQ): false
+		input "PIN", "password", (sTIT): "Security password for your dashboard", (sREQ): true
 		input "expiry", sENUM, options: ["Every hour", "Every day", "Every week", "Every month (recommended)", "Every three months", "Never (not recommended)"], defaultValue: "Every month (recommended)", (sTIT): "Choose how often the dashboard login expires", (sREQ): true
 	}
 }
@@ -806,6 +878,18 @@ def pageDumpR(){
 	String message=getMapDescStr(t0)
 	return dynamicPage((sNM):"pageDumpR",(sTIT):sBLK,uninstall:false){
 		section('Dashboard Data Cache dump'){
+			paragraph message
+		}
+	}
+}
+
+@Field static final String sPDPC='pageDumpPCache'
+def pageDumpPCache(){
+	String wName=sAppId()
+	Map a=base_resultFLD[wName]
+	String message=getMapDescStr(a)
+	return dynamicPage((sNM):sPDPC,(sTIT):sBLK,uninstall:false){
+		section('base result dump'){
 			paragraph message
 		}
 	}
@@ -1774,7 +1858,7 @@ private api_intf_dashboard_piston_get(){
 }
 
 private void checkResultSize(Map result, Boolean requireDb=false, String caller=sNL){
-	if(!isCustomEndpoint() || !(Boolean)localHubUrl){
+	if(!isCustomEndpoint() || !(Boolean)settings.localHubUrl){
 		String jsonData; jsonData= JsonOutput.toJson(result)
 		//data saver for Hubitat ~100K limit
 		Integer responseLength,resl,svLength
@@ -1837,7 +1921,7 @@ private api_intf_dashboard_piston_backup(){
 				if(pd){
 					pd.instance=[(sID): getInstanceSid(), (sNM): myN]
 					Boolean a=result.pistons.push(pd)
-					if(!isCustomEndpoint() || !(Boolean)localHubUrl){
+					if(!isCustomEndpoint() || !(Boolean)settings.localHubUrl){
 						String jsonData= JsonOutput.toJson(result)
 						Integer responseLength=jsonData.getBytes(sUTF8).length
 						if(responseLength > 110 * 1024){
@@ -5179,7 +5263,7 @@ private Boolean isHubitat(){
 
 private static String sectionTitleStr(String title)	{ return '<h3>'+title+'</h3>' }
 private static String inputTitleStr(String title)	{ return '<u>'+title+'</u>' }
-//private static String pageTitleStr(String title)	{ return '<h1>'+title+'</h1>' }
+private static String pageTitleStr(String title)	{ return '<h2>'+title+'</h2>' }
 //private static String paraTitleStr(String title)	{ return '<b>'+title+'</b>' }
 
 @Field static final String sGITP='https://cdn.jsdelivr.net/gh/imnotbob/webCoRE@hubitat-patches/resources/icons/'
@@ -5557,18 +5641,6 @@ static String getMapDescStr(Map data,Boolean reorder=true){
 	List<Boolean> lastLevel=[true]
 	String str=dumpMapDesc(data,iZ,lastLevel,null,null,false,true,reorder)
 	return str!=sBLK ? str:'No Data was returned'
-}
-
-@Field static final String sPDPC='pageDumpPCache'
-def pageDumpPCache(){
-	String wName=sAppId()
-	Map a=base_resultFLD[wName]
-	String message=getMapDescStr(a)
-	return dynamicPage((sNM):sPDPC,(sTIT):sBLK,uninstall:false){
-		section('base result dump'){
-			paragraph message
-		}
-	}
 }
 
 def pageDumpPiston1(){
