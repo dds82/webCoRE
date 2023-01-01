@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update December 31, 2022 for Hubitat
+ * Last update January 1, 2023 for Hubitat
  */
 
 //file:noinspection unused
@@ -31,7 +31,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20221228_HE'
-@Field static final String sHVERSTR='v0.3.114.20221228_HE - December 31, 2022'
+@Field static final String sHVERSTR='v0.3.114.20221228_HE - January 1, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -132,6 +132,11 @@ private static Boolean graphsOn(){ return true }
 @Field static final String sWARN='warn'
 @Field static final String sTRC='trace'
 @Field static final String sDBG='debug'
+@Field static final String sTIMER='timer'
+@Field static final String sNONE='None'
+@Field static final String sMINML='Minimal'
+@Field static final String sMEDIUM='Medium'
+@Field static final String sFULL='Full'
 @Field static final String sSUCC="ST_SUCCESS"
 @Field static final String sERRID="ERR_INVALID_ID"
 @Field static final String sERRTOK="ERR_INVALID_TOKEN"
@@ -145,6 +150,7 @@ private static Boolean graphsOn(){ return true }
 @Field static final String sREQ='required'
 @Field static final String sNM='name'
 @Field static final String sVAL='value'
+@Field static final String sNOW='now'
 @Field static final String sVARIABLE='variable'
 @Field static final String sDISARMD='disarmed'
 @Field static final String sCANCEL='cancel'
@@ -153,21 +159,24 @@ private static Boolean graphsOn(){ return true }
 @Field static final String sRGB='rgb'
 @Field static final String sUTF8='UTF-8'
 @Field static final String sID='id'
-@Field static final String sT='t'
+@Field static final String sA='a'
+@Field static final String sB='b'
+@Field static final String sC='c'
+@Field static final String sD='d'
+@Field static final String sE='e'
+@Field static final String sG='g'
 @Field static final String sH='h'
 @Field static final String sI='i'
-@Field static final String sC='c'
 @Field static final String sS='s'
 @Field static final String sL='l'
 @Field static final String sM='m'
 @Field static final String sN='n'
-@Field static final String sA='a'
-@Field static final String sD='d'
-@Field static final String sP='p'
-@Field static final String sG='g'
-@Field static final String sR='r'
-@Field static final String sV='v'
 @Field static final String sO='o'
+@Field static final String sP='p'
+@Field static final String sR='r'
+@Field static final String sT='t'
+@Field static final String sV='v'
+@Field static final String sZ='z'
 
 
 /******************************************************************************/
@@ -514,7 +523,7 @@ def pageSettings(){
 		}
 
 		section(){
-			input "logging", sENUM, (sTIT): "Logging level for main $sWC application", options: ["None", "Minimal", "Medium", "Full"], defaultValue: "None", (sREQ): false
+			input "logging", sENUM, (sTIT): "Logging level for main $sWC application", options: [sNONE, sMINML, sMEDIUM, sFULL], defaultValue: sNONE, (sREQ): false
 		}
 
 		section(){
@@ -750,7 +759,6 @@ private pageSectionAcctId(Boolean ins=false){
 			input "locID", sTXT, (sTIT): 'Location identifier - no imbedded spaces', (sREQ): true
 		}
 
-
 		String wName=sAppId()
 		acctlocFLD[wName]=null
 		locFLD[wName]=sNL
@@ -826,18 +834,18 @@ def pageCleanups(){
 	String t= 'cleanup old super'
 	Boolean didw= getTheLock(t)
 
-	Map<String,Map> vars; vars=(Map<String,Map>)atomicState.vars
+	Map<String,Map> vars; vars=(Map<String,Map>)gtAS(sVARS)
 	vars=vars ?: [:]
 	Boolean fnd; fnd=false
 	if(vars){ // clear out obsolete superglobals
 		List<String> b; b=vars.collect{ (String)it.key }
 		for (String c in b){
-			if(c.startsWith('@@')){
+			if(c.startsWith(sAT2)){
 				def a=vars.remove(c) // @@
 				fnd=true
 			}
 		}
-		if(fnd)atomicState.vars=vars
+		if(fnd)assignAS(sVARS,vars)
 		b=null
 	}
 
@@ -1103,7 +1111,6 @@ void clearChldCaches(Boolean all=false, Boolean clrLogs=false, Boolean uber=fals
 				cldClearFLD[wName][schld]=t1
 			}
 		}else{
-			Boolean updateCache=true
 			//Long recTime=3660000L // 61 min in ms (regular piston cache cleanup)
 			Long recTime; recTime=86460000L // 24hrs + 1 min in ms (regular piston cache cleanup)
 			if(all) recTime=1000L // aggressive cache cleanup
@@ -1163,8 +1170,8 @@ private void initialize(){
 	//if(initT)initTokens()
 
 	subscribeAll()
-	Map t0=(Map)atomicState.vars
-	if(t0==null)atomicState.vars=[:]
+	Map t0=(Map)gtAS(sVARS)
+	if(t0==null)assignAS(sVARS,[:])
 
 	verFLD[wName]=sVER
 	HverFLD[wName]=sHVER
@@ -1326,7 +1333,7 @@ private getHub(){
 
 private void subscribeAll(){
 	subscribe(location, handle()+".poll", webCoREHandler)
-//	subscribe(location, '@@'+handle(), webCoREHandler)
+//	subscribe(location, sAT2+handle(), webCoREHandler)
 	subscribe(location, "systemStart", startHandler)
 	subscribe(location, "mode", modeHandler)
 //below unused
@@ -1389,7 +1396,7 @@ private Map api_get_error_result(String error,String m=sNL){
 	return [
 		(sNM): (String)location.name + ' \\ ' + appName(),
 		(sERR): error,
-		now: wnow()
+		(sNOW): wnow()
 	]
 }
 
@@ -1461,6 +1468,7 @@ private void clearBaseResult(String meth=sNL,String wNi=sNL){
 @Field volatile static Map<String,Integer> cntbase_resultFLD= [:]
 
 
+@Field static final String sMETA='meta'
 /**
  * get Piston details
  * @returns [ (sID): myId, (sNM): normalizeLabel(it), meta: [:]+meta ]
@@ -1470,18 +1478,23 @@ private List<Map> presult(String wName){
 	return wgetChildApps().findAll{ (String)it.name==n }.sort{ (String)it.label }.collect{
 		String myId=hashPID(it.id)
 		/*Map meta=[
-				(sA):isAct(t0),
-				(sC):t0[sCTGRY],
-				(sT):(Long)t0[sLEXEC],
-				(sN):(Long)t0[sNSCH],
-				(sZ):(String)t0.pistonZ,
-				(sS):st,
-				heCached:(Boolean)t0.Cached ?: false
+			(sA):isAct(t0),
+			(sC):t0[sCTGRY],
+			(sT):(Long)t0[sLEXEC],
+			(sM): (Long)t0[sMODFD],
+			(sB): (Long)t0[sBIN],
+			(sN):(Long)t0[sNSCH],
+			(sZ):(String)t0.pistonZ,
+			(sS):st,
+			heCached:(Boolean)t0.Cached ?: false
 		] */
 		Map meta; meta=gtMeta(it,wName,myId)
-		[ (sID): myId, (sNM): normalizeLabel(it), meta: (meta ? [:]+meta : [:])]
+		[ (sID): myId, (sNM): normalizeLabel(it), (sMETA): (meta ? [:]+meta : [:])]
 	}
 }
+
+@Field static final String sHSMALRTS='hsmAlerts'
+@Field static final String sDEVVER='deviceVersion'
 
 private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 	String t='baseR'
@@ -1500,7 +1513,7 @@ private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 			base_resultFLD[wName]=[:]+result
 			base_resultFLD=base_resultFLD
 			releaseTheLock(t)
-			result.now=lnow
+			result[sNOW]=lnow
 			return result
 		}
 	}
@@ -1509,9 +1522,9 @@ private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 	//log.warn "filling in"
 
 	TimeZone tz=mTZ()
-	String currentDeviceVersion=(String)gtSt('deviceVersion')
+	String currentDeviceVersion=(String)gtSt(sDEVVER)
 	Long incidentThreshold=Math.round(lnow - 604800000.0D)
-	def a=gtSt('hsmAlerts')
+	def a=gtSt(sHSMALRTS)
 	List<Map> alerts= a ? (List<Map>)a : []
 
 	String instanceId=getInstanceSid()
@@ -1527,7 +1540,7 @@ private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 			locationId: locationId,
 			(sNM): myN,
 			uri: (String)gtSt('endpoint'),
-			deviceVersion: currentDeviceVersion,
+			(sDEVVER): currentDeviceVersion,
 			coreVersion: sVER,
 			heVersion: sHVER,
 			enabled: !gtSetting('disabled'),
@@ -1559,7 +1572,7 @@ private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 	base_resultFLD[wName]=[:]+result
 	base_resultFLD=base_resultFLD
 	releaseTheLock(t)
-	result.now=lnow
+	result[sNOW]=lnow
 	return result
 }
 
@@ -1615,12 +1628,11 @@ private static String transformHsmStatus(String status){
 private TimeZone mTZ() { return (TimeZone)location.timeZone }
 
 private api_intf_dashboard_load(){
-	Map result
+	Map result; result=[:]
 //	debug "Dashboard: load ${params}"
 	recoveryHandler()
 	String s='dashLoad'
-	String tok=(String)params.token
-	if(verifySecurityToken(tok)){
+	if(verifySecurityToken((Map)params)){
 		result=api_get_base_result(true)
 
 		if((String)params.dashboard=="1"){
@@ -1640,6 +1652,7 @@ private api_intf_dashboard_load(){
 		if(result==null) result=api_get_error_result(sERRTOK,s)
 	}
 
+	String tok=(String)params.token
 	if(result)result.remove('now')
 	String jsonData= JsonOutput.toJson(result)
 	String rl=generateMD5_A(jsonData)
@@ -1654,36 +1667,36 @@ private api_intf_dashboard_load(){
 	if(getLogging()[sDBG]) checkResultSize(result, false, s)
 
 	//for accuracy, use the time as close as possible to the render
-	result.now=wnow()
+	result[sNOW]= wnow()
 	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_devices(){
-	Map result
+	Map result; result=[:]
 	String s='dashbaord_devices '
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		String soffset= "${params.offset}".toString()
 		Integer offset= soffset.isInteger() ? soffset.toInteger() : 0
 		if(eric())debug s+soffset
 		result=listAvailableDevices(false, false, offset) +
-				[ deviceVersion: (String)atomicState.deviceVersion ]
+				[ (sDEVVER): (String)gtAS(sDEVVER) ]
 	}else{ result=api_get_error_result(sERRTOK,s) }
 	//for accuracy, use the time as close as possible to the render
-	result.now=wnow()
+	result[sNOW]= wnow()
 	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_refresh(){
 	debug "Dashboard: Request received to refresh instance"
 	startDashboard()
-	Map result
-	if(verifySecurityToken((String)params.token)){
+	Map result; result=[:]
+	if(verifySecurityToken((Map)params)){
 		result=getDashboardData()
 	}else{
 		if(result==null) result=api_get_error_result(sERRTOK)
 	}
 	//for accuracy, use the time as close as possible to the render
-	result.now=wnow()
+	result[sNOW]= wnow()
 	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
@@ -1709,7 +1722,7 @@ private api_intf_dashboard_piston_new(){
 	Map result
 	debug "Dashboard: Request received to generate a new piston name"
 	String s='piston_new'
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		result=[(sSTS): sSUCC, (sNM): generatePistonName()]
 	}else{ result=api_get_error_result(sERRTOK,s) }
 	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
@@ -1718,7 +1731,7 @@ private api_intf_dashboard_piston_new(){
 private api_intf_dashboard_piston_create(){
 	Map result
 	debug "Dashboard: Request received to create a new piston"
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		String pname=(String)params.name!=sNL ? (String)params.name : generatePistonName()
 		String n=handlePistn()
 		List apps; apps=wgetChildApps().findAll{ (String)it.name==n }
@@ -1776,7 +1789,7 @@ private Map gtAllCommands(){
 
 private api_intf_dashboard_piston_getDb() {
 	Map result; result=[:]
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		String serverDbVersion=sHVER
 		debug "Dashboard: getDb sending new db current: ${serverDbVersion} in server"
 		Map theDb=[
@@ -1798,7 +1811,7 @@ private api_intf_dashboard_piston_getDb() {
 	}else{ result=api_get_error_result(sERRTOK,'getDb') }
 	String wName=sAppId()
 	clearBaseResult('get Db',wName)
-	result.now=wnow()
+	result[sNOW]=wnow()
 	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
@@ -1808,7 +1821,7 @@ private api_intf_dashboard_piston_get(){
 	String wName=sAppId()
 	clearBaseResult('get Piston',wName)
 	String s='piston_get'
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		String pistonId=(String)params.id
 		def piston=findPiston(pistonId)
 		if(piston!=null){
@@ -1849,7 +1862,7 @@ private api_intf_dashboard_piston_get(){
 	}
 
 	//for accuracy, use the time as close as possible to the render
-	result.now=wnow()
+	result[sNOW]=wnow()
 
 	//def jsonData=JsonOutput.toJson(result)
 	//log.debug "Trimmed resonse length: ${jsonData.getBytes(sUTF8).length}"
@@ -1908,10 +1921,10 @@ private api_intf_dashboard_piston_backup(){
 	Map result
 	result=[
 		pistons: [],
-		now:0L
+		(sNOW):0L
 	]
 	debug "Dashboard: Request received to backup pistons ${params?.ids}"
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		List pistonIds=((String)params.ids ?: sBLK).tokenize(',')
 		String myN= appName()
 		for(String pistonId in pistonIds){
@@ -1933,7 +1946,7 @@ private api_intf_dashboard_piston_backup(){
 		}
 	}else{ result=api_get_error_result(sERRTOK,'piston_backup') }
 	//for accuracy, use the time as close as possible to the render
-	result.now=wnow()
+	result[sNOW]=wnow()
 	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
@@ -1971,7 +1984,7 @@ private Map api_intf_dashboard_piston_set_save(String id, String data, Map<Strin
 private api_intf_dashboard_piston_set(){
 	Map result
 	debug "Dashboard: Request received to set a piston"
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		String data=(String)params?.data
 		//save the piston
 		Map saved=api_intf_dashboard_piston_set_save((String)params?.id, data, ['chunk:0' : data])
@@ -1991,7 +2004,7 @@ private api_intf_dashboard_piston_set(){
 private api_intf_dashboard_piston_set_start(){
 	Map result
 	debug "Dashboard: Request received to set a piston (chunked start)"
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		String chunkstr="${params?.chunks}".toString()
 		Integer chunks=chunkstr.isInteger() ? chunkstr.toInteger() : 0
 		String wName=sAppId()
@@ -2014,7 +2027,7 @@ private api_intf_dashboard_piston_set_chunk(){
 	Integer chunk=mchunk.isInteger() ? mchunk.toInteger() : -i1
 	//debug "Dashboard: Request received to set a piston chunk (#${1 + chunk}/${atomicState.chunks?.count})"
 	debug "Dashboard: Request received to set a piston chunk (#${1 + chunk}/${pPistonChunksFLD[wName]?.count})"
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		String data=(String)params?.data
 		//def chunks=atomicState.chunks
 		mb()
@@ -2034,7 +2047,7 @@ private api_intf_dashboard_piston_set_end(){
 	Map result
 	String wName=sAppId()
 	debug "Dashboard: Request received to set a piston (chunked end)"
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		//def chunks=atomicState.chunks
 		mb()
 		LinkedHashMap<String,Object> chunks=pPistonChunksFLD[wName]
@@ -2080,12 +2093,12 @@ private api_intf_dashboard_piston_set_end(){
 
 private api_intf_dashboard_piston_pause(){
 	Map result
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		def piston=findPiston((String)params.id)
 		if(piston){
 			Map rtData=(Map)piston.pausePiston()
 			updateRunTimeData(rtData)
-			result=[(sSTS): sSUCC, active: false]
+			result=[(sSTS): sSUCC, (sACT): false]
 		}else result=api_get_error_result(sERRID)
 	}else result=api_get_error_result(sERRTOK)
 	debug "Dashboard: Request received to pause a piston"
@@ -2095,13 +2108,13 @@ private api_intf_dashboard_piston_pause(){
 
 private api_intf_dashboard_piston_resume(){
 	Map result
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		def piston=findPiston((String)params.id)
 		if(piston){
 			Map rtData=(Map)piston.resume(null,true)
 			result=(Map)rtData.result
 			updateRunTimeData(rtData)
-			result.status=sSUCC
+			result[sSTS]=sSUCC
 		}else result=api_get_error_result(sERRID)
 	}else result=api_get_error_result(sERRTOK)
 	debug "Dashboard: Request received to resume a piston"
@@ -2111,11 +2124,11 @@ private api_intf_dashboard_piston_resume(){
 
 private api_intf_dashboard_piston_test(){
 	Map result
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		def piston=findPiston((String)params.id)
 		if(piston!=null){
 			result=(Map)piston.test()
-			result.status=sSUCC
+			result[sSTS]=sSUCC
 		}else result=api_get_error_result(sERRID)
 	}else result=api_get_error_result(sERRTOK)
 	debug "Dashboard: Request received to test a piston"
@@ -2125,7 +2138,7 @@ private api_intf_dashboard_piston_test(){
 
 private api_intf_dashboard_presence_create(){
 	Map result
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		String dni=(String)params.dni
 		def sensor=(dni ? getChildDevices().find{ (String)it.getDeviceNetworkId()==dni } : null) ?: addChildDevice("ady624", handlePres(), dni ?: hashId("${wnow()}"), null, [label: params.name])
 		if(sensor){
@@ -2143,11 +2156,11 @@ private api_intf_dashboard_presence_create(){
 private api_intf_dashboard_piston_tile(){
 	Map result
 	debug "Dashboard: Clicked a piston tile"
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		def piston=findPiston((String)params.id)
 		if(piston){
 			result=(Map)piston.clickTile(params.tile)
-			result.status=sSUCC
+			result[sSTS]=sSUCC
 		}else result=api_get_error_result(sERRID)
 	}else result=api_get_error_result(sERRTOK)
 	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
@@ -2156,11 +2169,11 @@ private api_intf_dashboard_piston_tile(){
 private api_intf_dashboard_piston_set_bin(){
 	Map result
 	debug "Dashboard: Request received to set piston bin"
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		def piston=findPiston((String)params.id)
 		if(piston){
 			result=(Map)piston.setBin((String)params.bin)
-			result.status=sSUCC
+			result[sSTS]=sSUCC
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
 	clearBaseResult('set bin')
@@ -2171,7 +2184,7 @@ private api_intf_dashboard_piston_set_category(){
 	Map result
 	String wName=sAppId()
 	debug "Dashboard: Request received to set piston category"
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		def piston=findPiston((String)params.id)
 		if(piston){
 			result=(Map)piston.setCategory(params.category)
@@ -2181,7 +2194,7 @@ private api_intf_dashboard_piston_set_category(){
 				st[sC]=params.category
 				ptMeta(wName,myId,st)
 			}
-			result.status=sSUCC
+			result[sSTS]=sSUCC
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
 	clearBaseResult('set category')
@@ -2191,11 +2204,11 @@ private api_intf_dashboard_piston_set_category(){
 private api_intf_dashboard_piston_logging(){
 	Map result
 	debug "Dashboard: Request received to set piston logging level"
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		def piston=findPiston((String)params.id)
 		if(piston){
 			result=(Map)piston.setLoggingLevel((String)params.level)
-			result.status=sSUCC
+			result[sSTS]=sSUCC
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
 	clearBaseResult('change logging')
@@ -2205,11 +2218,11 @@ private api_intf_dashboard_piston_logging(){
 private api_intf_dashboard_piston_clear_logs(){
 	Map result
 	debug "Dashboard: Request received to clear piston logs"
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		def piston=findPiston((String)params.id)
 		if(piston){
 			result=(Map)piston.clearLogs()
-			result.status=sSUCC
+			result[sSTS]=sSUCC
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
 	clearBaseResult('clear logs')
@@ -2220,7 +2233,7 @@ private api_intf_dashboard_piston_delete(){
 	Map result
 	String wName=sAppId()
 	debug "Dashboard: Request received to delete a piston"
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		String id=(String)params.id
 		def piston=findPiston(id)
 		if(piston){
@@ -2271,7 +2284,7 @@ private api_intf_variable_set(){
 	String meth="dashboard variable_set "
 	debug meth+"Request received to set a variable"
 	String meth1; meth1=sNL
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		String pid=(String)params.id
 		String name; name=(String)params.name
 		LinkedHashMap value=params.value ? (LinkedHashMap) new JsonSlurper().parseText(new String(((String)params.value).decodeBase64(), sUTF8)) : null
@@ -2281,7 +2294,7 @@ private api_intf_variable_set(){
 		if(!pid){
 			Boolean chgd; chgd=false
 			String vln; vln=value ? (String)value[sN] : sNL
-			if( (name && (Boolean)name.startsWith('@@')) || (vln && vln.startsWith('@@')) ){
+			if( (name && (Boolean)name.startsWith(sAT2)) || (vln && vln.startsWith(sAT2)) ){
 				String vn; vn=sNL
 				if(name && !value){
 					// delete a global
@@ -2367,7 +2380,7 @@ private api_intf_variable_set(){
 					}
 				}
 			}else{
-				def am=atomicState.vars
+				def am=gtAS(sVARS)
 				globalVars= am? (Map<String,Map>)am : [:]
 				if(name && !value){
 					//deleting a variable
@@ -2388,7 +2401,7 @@ private api_intf_variable_set(){
 					}
 				}
 				if(chgd){
-					atomicState.vars=globalVars
+					assignAS(sVARS,globalVars)
 					clearGlobalPistonCache("dashboard set")
 					clearBaseResult('api_intf_variable_set')
 					//noinspection GroovyVariableNotAssigned
@@ -2397,7 +2410,7 @@ private api_intf_variable_set(){
 			}
 			if(chgd){
 				// return all globals
-				globalVars=(Map)atomicState.vars
+				globalVars=(Map)gtAS(sVARS)
 				globalVars=globalVars ?: [:]
 				Map heV=AddHeGlobals(globalVars, meth)
 				globalVars=globalVars+heV
@@ -2534,7 +2547,7 @@ private api_intf_fuelstreams_list(){
 	result = listFuelStreams()
 	/*
 	result = []
-	//if(verifySecurityToken((String)params.token)){
+	//if(verifySecurityToken((Map)params)){
 	String n=handleFuelS()
 	List chlds = wgetChildApps().findAll{ (String)it.name==n }
 	//result=wgetChildApps().findAll{ (String)it.name==n }*.getFuelStreams()
@@ -2553,7 +2566,7 @@ private api_intf_fuelstreams_get(){
 	String id=(String)params.id
 	debug "Dashboard: Request received to get fuelstream data $id"
 
-	//if(verifySecurityToken((String)params.token)){
+	//if(verifySecurityToken((Map)params)){
 	String n=handleFuelS()
 	// TODO if LTS stream form, need to find proper LTS and pass stream id
 	def stream
@@ -2638,7 +2651,7 @@ String getOpenWeatherData(){
 private api_intf_settings_set(){
 	Map result
 	debug "Dashboard: Request received to set settings"
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		String pset=(String)params.settings
 		LinkedHashMap msettings=pset ? (LinkedHashMap) new JsonSlurper().parseText(new String(pset.decodeBase64(), sUTF8)) : null
 		atomicState.settings=msettings
@@ -2655,7 +2668,7 @@ private api_intf_settings_set(){
 private api_intf_dashboard_piston_evaluate(){
 	Map result
 	debug "Dashboard: Request received to evaluate an expression"
-	if(verifySecurityToken((String)params.token)){
+	if(verifySecurityToken((Map)params)){
 		def piston=findPiston((String)params.id)
 		if(piston){
 			LinkedHashMap expression=(LinkedHashMap) new JsonSlurper().parseText(new String(((String)params.expression).decodeBase64(), sUTF8))
@@ -2674,14 +2687,14 @@ private api_intf_dashboard_piston_evaluate(){
 private api_intf_dashboard_piston_activity(){
 	Map result
 	//debug "Dashboard: Activity request received $params"
-	String tok=(String)params.token
-	if(verifySecurityToken(tok)){
+	if(verifySecurityToken((Map)params)){
 		String pistonId=(String)params.id
 		def piston=findPiston(pistonId)
 		if(piston!=null){
 			Map t0=(Map)piston.activity(params.log)
 			String jsonData= JsonOutput.toJson(t0)
 			String rl=generateMD5_A(jsonData)
+			String tok=(String)params.token
 			if(rl!=lastActivityFLD || tok!=lastActivityTOKFLD){
 				lastActivityFLD=rl
 				lastActivityTOKFLD=tok
@@ -2762,7 +2775,7 @@ private api_execute(){
 		result.result='ERROR'
 		error "Piston not found for dashboard or web Request to execute a piston from IP $remoteAddr $pistonIdOrName"
 	}
-	result.timestamp=(new Date()).time
+	result[sTMSTMP]=(new Date()).time
 	render contentType: sAPPJSON, data: JsonOutput.toJson(result)
 }
 
@@ -2781,8 +2794,8 @@ private api_global(){
 	Map result=[:]
 	Boolean err; err=true
 	String varName=(String)params?.varName
-	if(varName && (Boolean)varName.startsWith('@') ){
-		if((Boolean)varName.startsWith('@@')){
+	if(varName && (Boolean)varName.startsWith(sAT) ){
+		if((Boolean)varName.startsWith(sAT2)){
 			String vn=varName.substring(2)
 			def hg=getGlobalVar(vn)
 			if(hg){ // could return these as webcore types....this uses what is in HE
@@ -2793,7 +2806,7 @@ private api_global(){
 				err=false
 			}
 		}else{
-			def am=atomicState.vars
+			def am=gtAS(sVARS)
 			Map<String,Map> vars= am? (Map<String,Map>)am : [:]
 			if(vars[varName]){
 				result.val=vars[varName].v
@@ -2810,7 +2823,7 @@ private api_global(){
 		error "variable not found for web Request to get variable from IP $remoteAddr $varName"
 	}
 	Integer st= err ? 400 : 200
-	result.timestamp=(new Date()).time
+	result[sTMSTMP]=(new Date()).time
 	render contentType: sAPPJAVA, data: JsonOutput.toJson(result), status: st
 }
 
@@ -2819,8 +2832,8 @@ private api_global(){
 @Field static Map<String,String> HverFLD= [:]
 
 void resetMemSt(String meth,String wName){
-	atomicState.hsmAlerts=[] // reload or restart
-	state.hsmAlerts=[]
+	assignAS(sHSMALRTS,[]) // reload or restart
+	state[sHSMALRTS]=[]
 	verFLD[wName]=sVER
 	HverFLD[wName]=sHVER
 	mb()
@@ -2871,8 +2884,9 @@ void finishRecovery(){
 	List<Map> fPs
 	String a=sA
 	String n=sN
+	String m=sMETA
 	fPs=presult(wName).findAll{ Map it ->
-		Map meta=(Map)it.meta
+		Map meta=(Map)it[m]
 		meta!=null && (Boolean)meta[a] && meta[n] && (Long)meta[n] < threshold
 	}
 	Integer i
@@ -2882,7 +2896,7 @@ void finishRecovery(){
 		Long delay=Math.round(2000.0D * Math.random()) // 2 sec
 		for (Map piston in fPs){
 			String myId=(String)piston[sID]
-			Map meta= (Map)piston.meta // gtMeta(null, wName,myId)
+			Map meta= (Map)piston[sMETA] // gtMeta(null, wName,myId)
 			Long t=(Long)meta[n]
 			if(t < threshold){
 				if(i!=0) wpauseExecution(delay)
@@ -3268,7 +3282,7 @@ private Map AddHeGlobals(Map<String,Map> globalVars, String meth){
 	Map ta
 	def vl
 	heV?.each{
-		nm='@@'+(String)it.key
+		nm=sAT2+(String)it.key
 		ta=fixHeGType(false, (String)it.value.type, it.value.value, sNL)
 		for(iit in ta){
 			typ=(String)iit.key
@@ -3280,12 +3294,12 @@ private Map AddHeGlobals(Map<String,Map> globalVars, String meth){
 }
 
 Map listAvailableVariables(){
-	Map myV=(Map)gtAS('vars')
+	Map myV=(Map)gtAS(sVARS)
 	return listAV(myV, 'list variables')
 }
 
 private Map listAvailableVariables1(){
-	Map myV=(Map)gtSt('vars')
+	Map myV=(Map)gtSt(sVARS)
 	return listAV(myV, 'list variables1')
 }
 
@@ -3299,7 +3313,7 @@ private Map listAV(Map my, String meth){
 }
 
 Map getGStore(){
-	Map myS=(Map)atomicState.store
+	Map myS=(Map)gtAS(sSTORE)
 	return (myS ?: [:]).sort{ (String)it.key }
 }
 
@@ -3307,14 +3321,18 @@ List getPushDev(){
 	return (settings.pushDevice ?: [])
 }
 
+@Field static final String sSECTOKENS='securityTokens'
+
 private void initTokens(){
 	debug "Dashboard: Initializing security tokens"
-	atomicState.securityTokens=[:]
+	assignAS(sSECTOKENS,[:])
 }
 
-private Boolean verifySecurityToken(String tokenId){
+@CompileStatic
+private Boolean verifySecurityToken(Map params){
+	String tokenId=(String)params.token
 	//trace "verifySecurityToken ${tokenId}"
-	LinkedHashMap<String,Long> tokens=state.securityTokens
+	LinkedHashMap<String,Long> tokens=(LinkedHashMap<String,Long>)gtSt(sSECTOKENS)
 	if(!tokens || !tokenId) return false
 	Long threshold=wnow()
 	Boolean modified; modified=false
@@ -3324,7 +3342,7 @@ private Boolean verifySecurityToken(String tokenId){
 		modified=true
 	}
 	if(modified){
-		atomicState.securityTokens=tokens
+		assignAS(sSECTOKENS,tokens)
 	}
 	Long token=(Long)tokens[tokenId]
 	Long lnow=wnow()
@@ -3337,7 +3355,7 @@ private Boolean verifySecurityToken(String tokenId){
 private String createSecurityToken(){
 	trace "Dashboard: Generating new security token after a successful PIN authentication"
 	String token=UUID.randomUUID().toString()
-	Map a= atomicState.securityTokens
+	Map a= (Map)gtAS(sSECTOKENS)
 	LinkedHashMap<String,Long> tokens= (a ?: [:]) as LinkedHashMap<String,Long>
 	Long mexpiry; mexpiry=0L
 	String eo=((String)settings.expiry).toLowerCase().replace("every ", sBLK).replace("(recommended)", sBLK).replace("(not recommended)", sBLK).trim()
@@ -3350,7 +3368,7 @@ private String createSecurityToken(){
 		case "never": mexpiry=3110400000L; break //never means 100 years, okay?
 	}
 	tokens[token]=(Long)Math.round(wnow() + (mexpiry * 1000.0D))
-	atomicState.securityTokens=tokens
+	assignAS(sSECTOKENS,tokens)
 	return token
 }
 
@@ -3561,8 +3579,8 @@ String generatePistonName(){
 }
 
 void refreshDevices(){
-	state.deviceVersion=wnow().toString()
-	atomicState.deviceVersion=(String)state.deviceVersion
+	assignSt(sDEVVER,wnow().toString())
+	assignAS(sDEVVER,(String)gtSt(sDEVVER))
 	clearParentPistonCache("refreshDevices") // force virtual device to update
 	clearBaseResult('refreshDevices')
 	testLifx()
@@ -3601,52 +3619,68 @@ Long wnow(){ return (Long)now() }
 List wgetChildApps() { return (List)getChildApps() }
 
 @Field static final String sURT='updateRunTimeData'
+@Field static final String sGVCACHE='gvCache'
+@Field static final String sGVSTOREC='gvStoreCache'
+@Field static final String sVARS='vars'
+@Field static final String sSTORE='store'
+@Field static final String sAT='@'
+@Field static final String sAT2='@@'
+@Field static final String sCTGRY='category'
+@Field static final String sSTATS='stats'
+@Field static final String sBIN='bin'
+@Field static final String sMODFD='modified'
+@Field static final String sTMSTMP='timestamp'
+@Field static final String sNSCH='nextSchedule'
+@Field static final String sPIS='piston'
+
 @CompileStatic
 void updateRunTimeData(Map data, String wNi=sNL, String idi=sNL){
 	if(!data || !data[sID]) return
 	List<Map> variableEvents=[]
-	if(data.gvCache!=null){
+	if(data[sGVCACHE]!=null){
 		Boolean didw=getTheLock(sURT)
 
-		def am=gtAS('vars')
+		def am=gtAS(sVARS)
 		Map<String,Map> vars= am? (Map<String,Map>)am : [:]
 		Boolean mdfd; mdfd=false
-		for(var in (Map<String,Map>)data.gvCache){
+		for(var in (Map<String,Map>)data[sGVCACHE]){
 			String k=(String)var.key
-			if(k!=sNL && k.startsWith('@') && vars[k] && var.value.v!=vars[k].v ){
+			if(k!=sNL && k.startsWith(sAT) && vars[k] && var.value.v!=vars[k].v ){
 				Boolean a=variableEvents.push([(sNM): k, oldValue: vars[k].v, (sVAL): var.value.v, type: var.value.t])
 				vars[k].v=var.value.v
 				mdfd=true
 			}
 		}
-		if(mdfd)assignAS('vars',vars)
+		if(mdfd)assignAS(sVARS,vars)
 		releaseTheLock(sURT)
 	}
-	if(data.gvStoreCache!=null){
+	if(data[sGVSTOREC]!=null){
 		Boolean didw=getTheLock(sURT)
 
-		def am=gtAS('store')
+		def am=gtAS(sSTORE)
 		Map<String,Object> store= am? (Map<String,Object>)am : [:]
 		Boolean mdfd; mdfd=false
-		for(var in (Map<String,Object>)data.gvStoreCache){
+		for(var in (Map<String,Object>)data[sGVSTOREC]){
 			String k=(String)var.key
 			if(var.value==null) store.remove(k)
 			else store[k]=var.value
 			mdfd=true
 		}
-		if(mdfd)assignAS('store',store)
+		if(mdfd)assignAS(sSTORE,store)
 		releaseTheLock(sURT)
 	}
 
 	// update piston metadata cache; cache what IDE wants and in IDE format
 	Map st=[:]+(Map)data.state
 	st.remove('old') //remove the old state as we don't need it
-	Map piston=[
-		(sA): (Boolean)data.active,
-		(sC): data.category,
-		(sT): data.timestamp ?:wnow(), //last run
-		(sN): (Long)((Map)data.stats).nextSchedule,
-		z: (String)((Map)data.piston).z, //description
+	Map piston=[ //gtMeta?
+		(sA): (Boolean)data[sACT],
+		(sC): data[sCTGRY],
+		(sT): data[sTMSTMP] ?:wnow(), //last run
+		(sM): data[sMODFD],
+		(sB): data[sBIN],
+		(sN): (Long)((Map)data[sSTATS])[sNSCH],
+		(sZ): (String)((Map)data[sPIS])[sZ], //description
 		(sS): st,
 		heCached:(Boolean)data.Cached
 	]
@@ -3693,6 +3727,8 @@ static void clearMeta(String wName){
 	(sA):isAct(t0),
 	(sC):t0[sCTGRY],
 	(sT):(Long)t0[sLEXEC],
+	(sM): (Long)t0[sMODFD],
+	(sB): (Long)t0[sBIN],
 	(sN):(Long)t0[sNSCH],
 	(sZ):(String)t0.pistonZ,
 	(sS):st,
@@ -3764,16 +3800,16 @@ private void sendVariableEvent(Map variable, Boolean onlyChildren=false){
 	String myId=getInstanceSid()
 	String myLabel=appName()
 	String varN=(String)variable.name
-	if(varN.startsWith('@@')) return // TODO ERS
+	if(varN.startsWith(sAT2)) return // TODO ERS
 	Map theEvent=[
 		(sVAL): varN, isStateChange: true, displayed: false,
 		(sDATA): [(sID): myId, (sNM): myLabel, event: sVARIABLE, (sVARIABLE): variable]
 	]
 // This notifies other webCoRE master instances of super change
-/*	if( !onlyChildren && varN.startsWith('@@') ){
+/*	if( !onlyChildren && varN.startsWith(sAT2) ){
 		String str=handle()+" Super global variable ${varN} changed".toString()
 		sendLocationEvent(theEvent + [
-			(sNM): ('@@' + handle()),
+			(sNM): (sAT2 + handle()),
 			linkText: str, descriptionText: str,
 		])
 	}*/
@@ -3822,8 +3858,8 @@ def webCoREHandler(event){
 	if(!event || (!eN.startsWith(handle()) && !eN.endsWith(handle()) )) return
 	def data=event.jsonData ?: null
 //log.error "GOT EVENT WITH DATA $data"
-/*	if(data && data.variable && ((String)data.event==sVARIABLE) && eV && eV.startsWith('@@')){
-		if(eV.startsWith('@@')) return // TODO ERS
+/*	if(data && data.variable && ((String)data.event==sVARIABLE) && eV && eV.startsWith(sAT2)){
+		if(eV.startsWith(sAT2)) return // TODO ERS
 		Map variable=data.variable
 		String vType=(String)variable.type ?: sDYN
 		String vN=(String)variable.name
@@ -3927,11 +3963,11 @@ List t1=getLocationEventsSince('hsmAlert', new Date() - 10)
 */
 	String locStat=(String)location.hsmStatus
 
-	def a; a=atomicState.hsmAlerts
+	def a; a=gtAS(sHSMALRTS)
 	List<Map> alerts; alerts= a? (List<Map>)a : []
 	Boolean aa=alerts.push(alert)
 	if(locStat==sALLDISARM || evV in [sCANCEL, sCANRULEA]) alerts=[]
-	atomicState.hsmAlerts=alerts
+	assignAS(sHSMALRTS,alerts)
 
 	if(alerts) a=getIncidents() // cause trimming
 	clearParentPistonCache("hsmAlerts changed")
@@ -3943,12 +3979,12 @@ List t1=getLocationEventsSince('hsmAlert', new Date() - 10)
 private List<Map> getIncidents(){
 	Long incidentThreshold=Math.round(wnow() - 604800000.0D) // 1 week
 	String locStat=(String)location.hsmStatus
-	def a; a=atomicState.hsmAlerts
+	def a; a=gtAS(sHSMALRTS)
 	List<Map> alerts,newAlerts,new2Alerts,new3Alerts
 	alerts= a? (List<Map>)a : []
 	Integer osz; osz=alerts.size()
 	if(osz==0) return []
-	if(locStat==sALLDISARM){ alerts=[]; state.remove("hsmAlerts") }
+	if(locStat==sALLDISARM){ alerts=[]; state.remove(sHSMALRTS) }
 	newAlerts=alerts.collect{it}.findAll{ (Long)it.date >= incidentThreshold }
 	String intrusion='intrusion'
 	new2Alerts=newAlerts.collect{it}.findAll{ !(locStat==sDISARMD && ((String)it.v).contains(intrusion)) }.sort { (Long)it.date }
@@ -3962,7 +3998,7 @@ private List<Map> getIncidents(){
 	newAlerts=null
 	new2Alerts=null
 	Integer nsz=new3Alerts.size()
-	if(osz!=nsz) atomicState.hsmAlerts=new3Alerts
+	if(osz!=nsz) assignAS(sHSMALRTS,new3Alerts)
 	return new3Alerts
 }
 
@@ -4023,27 +4059,27 @@ def lifxHandler(response, Map cbkData){
 /******************************************************************************/
 
 private Map<String,Boolean> getLogging(){
-	String logging=settings.logging ? (String)settings.logging : sNL
+	String lgging=settings.logging ? (String)settings.logging : sNL
 	return [
 		(sERR): true,
-		warn: true,
-		info: (logging!='None' && logging!=sNL),
-		trace: (logging=='Medium') || (logging=='Full'),
-		debug: (logging=='Full')
+		(sWARN): true,
+		(sINFO): (lgging!=sNONE && lgging!=sNL),
+		(sTRC): (lgging==sMEDIUM) || (lgging==sFULL),
+		(sDBG): (lgging==sFULL)
 	]
 }
 
 private Map log(message, Integer shift=-2, err=null, String cmd=sNL){
 	Long lnow=wnow()
-	if(cmd=='timer'){
-		return [(sM): message, (sT): lnow, (sS): shift, e: err]
+	if(cmd==sTIMER){
+		return [(sM): message, (sT): lnow, (sS): shift, (sE): err]
 	}
 	String myMsg; myMsg=sNL
 	def merr; merr=err
 	if(message instanceof Map){
 		//shift=(Integer)message.s
-		merr=message.e
-		myMsg=(String)message.m + " (${lnow - (Long)message.t}ms)"
+		merr=message[sE]
+		myMsg=(String)message[sM] + " (${lnow - (Long)message[sT]}ms)"
 	}else myMsg=message
 	String mcmd=cmd ? cmd : sDBG
 	Map<String,Boolean> myLog=getLogging()
@@ -4127,7 +4163,7 @@ private void debug(String message, Integer shift=-2, err=null)	{ Map a=log messa
 private void trace(message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, sTRC }
 private void warn(String message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, sWARN }
 private void error(String message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, sERR }
-private Map timer(String message, Integer shift=-2, err=null)	{ log message, shift, err, 'timer' }
+private Map timer(String message, Integer shift=-2, err=null)	{ log message, shift, err, sTIMER }
 
 @Field static final String sLTH='<'
 @Field static final String sGTH='>'

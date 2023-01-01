@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update December 30, 2022 for Hubitat
+ * Last update January 1, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -1057,6 +1057,8 @@ Map curPState(){
 		(sA):isAct(t0),
 		(sC):sMs(t0,sCTGRY),
 		(sT):lMs(t0,sLEXEC),
+		(sM):lMs(t0,sMODFD),
+		(sB):sMs(t0,sBIN),
 		(sN):lMs(t0,sNSCH),
 		(sZ):sMs(t0,'pistonZ'),
 		(sS):st,
@@ -1586,6 +1588,8 @@ static Map shortRtd(Map r9){
 		(sACT):isAct(r9),
 		(sTMSTMP):lMs(r9,sTMSTMP),
 		(sCTGRY):sMs(r9,sCTGRY),
+		(sMODFD): lMs(r9,sMODFD),
+		(sBIN): sMs(r9,sBIN),
 		(sSTATS):[
 			(sNSCH):lMs(r9,sNSCH)
 		],
@@ -2949,7 +2953,7 @@ private Boolean executeEvent(Map r9,Map event){
 @Field static List<String> cleanData
 private static List<String> fill_cleanData(){
 	return ['allDevices', sPCACHE, sMEM, sBREAK, 'powerSource', 'oldLocations', sINCIDENTS, 'semaphoreDelay', sVARS,
-			sSTACCESS, sATHR, sBIN, sBLD, sNWCACHE, 'mediaData', 'weather', sLOGS, sTRC, sSYSVARS, sLOCALV, sPREVEVT, sJSON, sRESP,
+			sSTACCESS, sATHR, sBLD, sNWCACHE, 'mediaData', 'weather', sLOGS, sTRC, sSYSVARS, sLOCALV, sPREVEVT, sJSON, sRESP,
 			sCACHE, sSTORE, sSETTINGS, 'locationModeId', 'coreVersion', 'hcoreVersion', sCNCLATNS, sCNDTNSTC, sPSTNSTC, sFFT, sRUN,
 			sRESUMED, sTERM, sINSTID, sWUP, sSTMTL, sARGS, 'nfl', 'temp']
 }
