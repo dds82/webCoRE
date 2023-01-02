@@ -1393,6 +1393,9 @@ mappings{
 
 private Map api_get_error_result(String error,String m=sNL){
 	debug "Dashboard: error: ${error} m:$m"
+	lastActivityTOKFLD=sNL
+	tlastActivityFLD=0L
+	lastActivityFLD=sNL
 	return [
 		(sNM): (String)location.name + ' \\ ' + appName(),
 		(sERR): error,
@@ -1629,10 +1632,12 @@ private TimeZone mTZ() { return (TimeZone)location.timeZone }
 
 private api_intf_dashboard_load(){
 	Map result; result=[:]
-//	debug "Dashboard: load ${params}"
 	recoveryHandler()
 	String s='dashLoad'
+	String msg; msg=s
+	Boolean err; err=false
 	if(verifySecurityToken((Map)params)){
+		msg+=' security ok'
 		result=api_get_base_result(true)
 
 		if((String)params.dashboard=="1"){
@@ -1641,6 +1646,8 @@ private api_intf_dashboard_load(){
 			if((String)state.dashboard!=sINACT) stopDashboard()
 		}
 	}else{
+		err=true
+		msg+=' security NOT ok'
 		if((String)params.pin!=sNL){
 			if(settings.PIN && md5('pin:'+(String)settings.PIN)==(String)params.pin){
 				result=api_get_base_result(true)
@@ -1649,20 +1656,37 @@ private api_intf_dashboard_load(){
 				error "Dashboard: Authentication failed due to an invalid PIN"
 			}
 		}
-		if(result==null) result=api_get_error_result(sERRTOK,s)
+		if(!result){
+			msg+=' returning token error'
+			result=api_get_error_result(sERRTOK,s)
+		}
 	}
 
-	String tok=(String)params.token
-	if(result)result.remove('now')
-	String jsonData= JsonOutput.toJson(result)
-	String rl=generateMD5_A(jsonData)
-	Long t=wnow()
-	if(tlastActivityFLD < (t-11000L) || rl!=lastActivityFLD || tok!=lastActivityTOKFLD){
-		//log.warn "rl: $rl lastAct: $lastActivityFLD"
-		lastActivityFLD=rl
-		lastActivityTOKFLD=tok
-	}else result=[:]
-	tlastActivityFLD=t
+	if(!err && result){
+		msg+=' no error & result'
+		String tok=(String)params.token
+		if(result)result.remove('now')
+		String jsonData= JsonOutput.toJson(result)
+		String rl=generateMD5_A(jsonData)
+		Long t=wnow()
+		if(tlastActivityFLD < (t-11000L) || !lastActivityFLD || rl!=lastActivityFLD || !lastActivityTOKFLD || tok!=lastActivityTOKFLD){
+			//log.warn "rl: $rl lastAct: $lastActivityFLD"
+			lastActivityFLD=rl
+			lastActivityTOKFLD=tok
+			msg+=' updating cache'
+		}else{
+			msg+=' using cache'
+			result=[:]
+		}
+		tlastActivityFLD=t
+	}else{
+		msg+=' error OR no result'
+		lastActivityTOKFLD=sNL
+		tlastActivityFLD=0L
+		lastActivityFLD=sNL
+	}
+
+	//debug "Dashboard: load ${params} " +msg
 
 	if(getLogging()[sDBG]) checkResultSize(result, false, s)
 
@@ -1693,7 +1717,7 @@ private api_intf_dashboard_refresh(){
 	if(verifySecurityToken((Map)params)){
 		result=getDashboardData()
 	}else{
-		if(result==null) result=api_get_error_result(sERRTOK)
+		result=api_get_error_result(sERRTOK)
 	}
 	//for accuracy, use the time as close as possible to the render
 	result[sNOW]= wnow()
@@ -2460,8 +2484,7 @@ private void resetFuelStreamList(){
 
 def findCreateFuel(Map req){
 	String n=handleFuelS()
-	def result
-	result=null
+	def result; result=null
 
 	// LTS can return multple streams
 	if(req[sC] == 'LTS'){
@@ -2695,14 +2718,20 @@ private api_intf_dashboard_piston_activity(){
 			String jsonData= JsonOutput.toJson(t0)
 			String rl=generateMD5_A(jsonData)
 			String tok=(String)params.token
-			if(rl!=lastActivityFLD || tok!=lastActivityTOKFLD){
+			//Long t=wnow()
+			//if(tlastActivityFLD < (t-11000L) || !lastActivityFLD || rl!=lastActivityFLD || !lastActivityTOKFLD || tok!=lastActivityTOKFLD){
+			if(!lastActivityFLD || rl!=lastActivityFLD || !lastActivityTOKFLD || tok!=lastActivityTOKFLD){
 				lastActivityFLD=rl
 				lastActivityTOKFLD=tok
 				result=[(sSTS):sSUCC, activity: (t0 ?: [:]) + [globalVars: listAvailableVariables1()/*, mode: hashId(location.getCurrentMode().id), shm: location.currentState("alarmSystemStatus")?.value, hubs: location.getHubs().collect{ [id: hashId(it.id), (sNM): it.name, firmware: it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]}*/]]
 			} else result=[(sSTS):sSUCC, activity: [:]]
 			tlastActivityFLD=wnow()
-		}else{ result=api_get_error_result(sERRID) }
-	}else{ result=api_get_error_result(sERRTOK) }
+		}else{
+			result=api_get_error_result(sERRID)
+		}
+	}else{
+		result=api_get_error_result(sERRTOK)
+	}
 	if(getLogging()[sDBG]) checkResultSize(result, false, "piston activity")
 	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
