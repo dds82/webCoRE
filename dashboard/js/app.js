@@ -540,6 +540,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 	var instance = null;
 	var instances = {};
 	var store = {};
+	var sessionId = null;
 	var _dk = 'N7zqL6a8Texs4wY5y&y2YPLzus+_dZ%s';
 	var _ek = _dk;
 	var cbkStatus = null;
@@ -959,11 +960,13 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		if (!si) {
 			$location.path('/register');
 		} else {
+			$rootScope.isSmartThings = si.uri.indexOf('things') > 0;
+			$rootScope.platformCode = $rootScope.isSmartThings ? 'st' : 'he';
 			var error = document.getElementById('error');
 			if (error) error.parentNode.removeChild(error);
 		}
 
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/load?' + getAccessToken(si) + 'token=' + (si && si.token ? si.token : '') + (pin ? '&pin=' + pin : '') + '&dashboard='+ (dashboard ? 1 : 0) + '&dev=' + deviceVersion, {jsonpCallbackParam: 'callback'}).then(function(response) {
+		return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/load?' + getAccessToken(si) + 'token=' + (si && si.token ? si.token : '') + (pin ? '&pin=' + pin : '') + '&dashboard='+ (dashboard ? 1 : 0) + '&dev=' + deviceVersion + '&session=' + sessionId, {jsonpCallbackParam: 'callback'}).then(function(response) {
 				var data = response.data;
 				if (data.now) {
 					adjustTimeOffset(data.now);
@@ -1131,7 +1134,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		var inst = dataService.getPistonInstance(pistonId);
 		if (!inst) { inst = dataService.getInstance() };
 		si = store ? store[inst.id] : null;
-    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/activity?' + getAccessToken(si) + 'id=' + pistonId + '&log=' + (lastLogTimestamp ? lastLogTimestamp : 0) + '&token=' + (si && si.token ? si.token : ''), {jsonpCallbackParam: 'callback'})
+    	return $http.jsonp((si ? si.uri : 'about:blank/') + 'intf/dashboard/piston/activity?' + getAccessToken(si) + 'id=' + pistonId + '&log=' + (lastLogTimestamp ? lastLogTimestamp : 0) + '&token=' + (si && si.token ? si.token : '') + '&session=' + sessionId, {jsonpCallbackParam: 'callback'})
 			.then(function(response) {
 				return response.data;
 			});
@@ -1687,6 +1690,15 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		return dataService.saveToStore('dashboard.colorscheme', theme);
 	}
 
+	dataService.randomHash = function(nChar, wrapWithColons) {
+		var chars = '0123456789abcdef'.split('');
+		var hex = '';
+		for (var i = 0; i < nChar; i++) {
+			hex += chars[Math.floor(Math.random() * 16)];
+		}
+		return wrapWithColons ? ':' + hex + ':' : hex;
+	}
+
 
 	var initialize = function() {
 		//initialize store
@@ -1708,6 +1720,7 @@ config.factory('dataService', ['$http', '$location', '$rootScope', '$window', '$
 		}
 
 		userId = 0;
+		sessionId = dataService.randomHash(16);
 
 		initialized = true;
 		window.ds = dataService;
