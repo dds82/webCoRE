@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update January 1, 2023 for Hubitat
+ * Last update January 2, 2023 for Hubitat
  */
 
 //file:noinspection unused
@@ -31,7 +31,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20221228_HE'
-@Field static final String sHVERSTR='v0.3.114.20221228_HE - January 1, 2023'
+@Field static final String sHVERSTR='v0.3.114.20221228_HE - January 2, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -97,8 +97,8 @@ preferences{
 	page((sNM): "pageCleanups")
 	page((sNM): "pageLogCleanups")
 	page((sNM): "pageUberCleanups")
-	page((sNM): "pageDumpR")
-	page((sNM): "pageDumpPR")
+	page((sNM): "pageDumpDashC")
+	page((sNM): "pageDumpGlob")
 	page((sNM): "pageRemove")
 	page((sNM): "graphDuplicationPage")
 	page((sNM):sPDPC)
@@ -373,7 +373,7 @@ private pageEngineBlock(){
 			String b='complete'
 			section('Debug'){
 				href sPDPC,(sTIT):'Dump base result Cache',description:sBLK, (sDESC): c, state: b
-				href "pageDumpR",(sTIT):'Dump dashload Cache',description:sBLK, (sDESC): c, state: b
+				href "pageDumpDashC",(sTIT):'Dump dashload Cache',description:sBLK, (sDESC): c, state: b
 				href "pageRebuildCache", (sTIT): "Clean up and rebuild IDE data cache", (sDESC): "Tap to change your clean up and rebuild your data cache", state: b
 			}
 		}
@@ -542,7 +542,7 @@ def pageSettings(){
 			String a='Tap to clear'
 			String c='Tap to display'
 			section("Display operational data"){
-				href "pageDumpPR",(sTIT):'Dump global variables in use',description:sBLK, (sDESC): c, state: b
+				href "pageDumpGlob",(sTIT):'Dump global variables in use',description:sBLK, (sDESC): c, state: b
 				href sPDPEXC,(sTIT):'Dump piston Execution Count',description:sBLK, (sDESC): c, state: b
 			}
 			section("Piston Cleanups"){
@@ -881,10 +881,10 @@ def pageUberCleanups(){
 	}
 }
 
-def pageDumpR(){
+def pageDumpDashC(){
 	Map<String,Object> t0 =api_get_base_result(true)
 	String message=getMapDescStr(t0)
-	return dynamicPage((sNM):"pageDumpR",(sTIT):sBLK,uninstall:false){
+	return dynamicPage((sNM):"pageDumpDashC",(sTIT):sBLK,uninstall:false){
 		section('Dashboard Data Cache dump'){
 			paragraph message
 		}
@@ -903,7 +903,7 @@ def pageDumpPCache(){
 	}
 }
 
-def pageDumpPR(){
+def pageDumpGlob(){
 	String n=handlePistn()
 	List t0
 	t0=wgetChildApps().findAll{ (String)it.name==n }
@@ -935,7 +935,7 @@ def pageDumpPR(){
 	newMap = newMap.sort { (String)it.key }
 
 	String message=getMapDescStr(newMap)
-	return dynamicPage((sNM):"pageDumpPR",(sTIT):sBLK,uninstall:false){
+	return dynamicPage((sNM):"pageDumpGlob",(sTIT):sBLK,uninstall:false){
 		section('Global variable in use dump'){
 			paragraph message
 		}
@@ -1116,8 +1116,8 @@ void clearChldCaches(Boolean all=false, Boolean clrLogs=false, Boolean uber=fals
 			if(all) recTime=1000L // aggressive cache cleanup
 			Long threshold=t1 - recTime
 			t0.sort().each{ chld ->
-				String myId=hashPID(chld.id)
-				Map meta; meta=gtMeta(chld,wName,myId)
+				String pid=hashPID(chld.id)
+				Map meta; meta=gtMeta(chld,wName,pid)
 				String schld=chld.id.toString()
 				Long t2; t2=cldClearFLD[wName][schld]
 				Long t3=(Long)meta?.t
@@ -1175,12 +1175,16 @@ private void initialize(){
 
 	verFLD[wName]=sVER
 	HverFLD[wName]=sHVER
+	clearLastPActivity(wName,sNL)
+	clearLastDActivity(wName,sNL)
+	clearCachedchildApps(wName)
 
 	refreshDevices()
 
 	if((String)state.accessToken) updateEndpoint()
 	registerInstance()
 
+	cleanDashboardApp()
 	checkWeather()
 
 	lastRecoveredFLD[wName]=0L
@@ -1393,9 +1397,9 @@ mappings{
 
 private Map api_get_error_result(String error,String m=sNL){
 	debug "Dashboard: error: ${error} m:$m"
-	lastActivityTOKFLD=sNL
-	tlastActivityFLD=0L
-	lastActivityFLD=sNL
+	String wName=sAppId()
+	clearLastPActivity(wName,sNL)
+	clearLastDActivity(wName,sNL)
 	return [
 		(sNM): (String)location.name + ' \\ ' + appName(),
 		(sERR): error,
@@ -1449,10 +1453,6 @@ static void releaseTheLock(String meth=sNL){
 	sema.release()
 }
 
-@Field static final String sCB='clearB'
-/**
- * clear cache for IDE
- */
 @CompileStatic
 private void clearBaseResult(String meth=sNL,String wNi=sNL){
 	String wName= wNi ?: sAppId()
@@ -1460,9 +1460,7 @@ private void clearBaseResult(String meth=sNL,String wNi=sNL){
 	Map a=null
 	base_resultFLD[wName]=a
 	base_resultFLD=base_resultFLD
-	lastActivityFLD=sNL
-	lastActivityTOKFLD=sNL
-	tlastActivityFLD=0L
+	clearLastDActivity(wName,sNL)
 	releaseTheLock(sCB)
 	//if(eric())debug "clearBaseResult "+meth
 }
@@ -1471,15 +1469,38 @@ private void clearBaseResult(String meth=sNL,String wNi=sNL){
 @Field volatile static Map<String,Integer> cntbase_resultFLD= [:]
 
 
+@Field volatile static Map<String,List<Map>> childAppsFLD= [:]
+
+List<Map> gtCachedchildApps(String wName){
+	List<Map> res
+	res= childAppsFLD[wName]
+	if(!res){
+		String n=handlePistn()
+		res= wgetChildApps().findAll{ (String)it.name==n }.sort{ (String)it.label }.collect{
+			String pid=hashPID(it.id)
+			[ (sID): it.id.toString(), pid: pid, (sNM): (String)it.name, label: (String)it.label, nlabel: normalizeLabel(it) ]
+		}
+		childAppsFLD[wName]= res
+		childAppsFLD= childAppsFLD
+	}
+	return res
+}
+
+void clearCachedchildApps(String wName){
+		childAppsFLD[wName]= []
+		childAppsFLD= childAppsFLD
+}
+
+
 @Field static final String sMETA='meta'
 /**
  * get Piston details
- * @returns [ (sID): myId, (sNM): normalizeLabel(it), meta: [:]+meta ]
+ * @returns [ (sID): pid, (sNM): normalizeLabel(it), meta: [:]+meta ]
  */
 private List<Map> presult(String wName){
 	String n=handlePistn()
-	return wgetChildApps().findAll{ (String)it.name==n }.sort{ (String)it.label }.collect{
-		String myId=hashPID(it.id)
+	return gtCachedchildApps(wName).sort{ (String)it.label }.collect{
+		String pid= (String)it.pid //hashPID(it.id)
 		/*Map meta=[
 			(sA):isAct(t0),
 			(sC):t0[sCTGRY],
@@ -1491,8 +1512,9 @@ private List<Map> presult(String wName){
 			(sS):st,
 			heCached:(Boolean)t0.Cached ?: false
 		] */
-		Map meta; meta=gtMeta(it,wName,myId)
-		[ (sID): myId, (sNM): normalizeLabel(it), (sMETA): (meta ? [:]+meta : [:])]
+		Map meta; meta=gtMeta(null,wName,pid)
+		//[ (sID): pid, (sNM): normalizeLabel(it), (sMETA): (meta ? [:]+meta : [:])]
+		[ (sID): pid, (sNM): it.nlabel, (sMETA): (meta ? [:]+meta : [:])]
 	}
 }
 
@@ -1516,12 +1538,12 @@ private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 			base_resultFLD[wName]=[:]+result
 			base_resultFLD=base_resultFLD
 			releaseTheLock(t)
-			result[sNOW]=lnow
+			result.put(sNOW,lnow)
 			return result
 		}
 	}
 
-	cntbase_resultFLD[wName]=0
+	cntbase_resultFLD[wName]=iZ
 	//log.warn "filling in"
 
 	TimeZone tz=mTZ()
@@ -1575,7 +1597,7 @@ private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 	base_resultFLD[wName]=[:]+result
 	base_resultFLD=base_resultFLD
 	releaseTheLock(t)
-	result[sNOW]=lnow
+	result.put(sNOW,lnow)
 	return result
 }
 
@@ -1628,8 +1650,51 @@ private static String transformHsmStatus(String status){
 	}
 }
 
-private TimeZone mTZ() { return (TimeZone)location.timeZone }
 
+@Field volatile static Map<String,Map<String,String>> lastDActivityFLD = [:]
+@Field volatile static Map<String,Map<String,String>> lastDActivityTOKFLD = [:]
+@Field volatile static Map<String,Map<String,Long>> tlastDActivityFLD=[:]
+
+@Field volatile static Map<String,Map<String,String>> lastPActivityFLD = [:]
+@Field volatile static Map<String,Map<String,String>> lastPActivityTOKFLD = [:]
+@Field volatile static Map<String,Map<String,String>> lastPActivityPIDFLD = [:]
+@Field volatile static Map<String,Map<String,Long>> tlastPActivityFLD=[:]
+
+private clearLastDActivity(String wName,String sess){
+	if(!lastDActivityFLD[wName] || !sess) lastDActivityFLD.put(wName,[:])
+	if(!lastDActivityTOKFLD[wName] || !sess) lastDActivityTOKFLD.put(wName,[:])
+	if(!tlastDActivityFLD[wName] || !sess) tlastDActivityFLD.put(wName,[:])
+	if(sess){
+		lastDActivityFLD[wName][sess]=sNL
+		lastDActivityTOKFLD[wName][sess]=sNL
+		tlastDActivityFLD[wName][sess]=0L
+	}
+	lastDActivityFLD= lastDActivityFLD
+	lastDActivityTOKFLD= lastDActivityTOKFLD
+	tlastDActivityFLD= tlastDActivityFLD
+}
+
+private clearLastPActivity(String wName,String sess){
+	if(!lastPActivityFLD[wName] || !sess) lastPActivityFLD.put(wName,[:])
+	if(!lastPActivityTOKFLD[wName] || !sess) lastPActivityTOKFLD.put(wName,[:])
+	if(!lastPActivityPIDFLD[wName] || !sess) lastPActivityPIDFLD.put(wName,[:])
+	if(!tlastPActivityFLD[wName] || !sess) tlastPActivityFLD.put(wName,[:])
+	if(sess){
+		lastPActivityPIDFLD[wName][sess]=sNL
+		lastPActivityTOKFLD[wName][sess]=sNL
+		tlastPActivityFLD[wName][sess]=0L
+		lastPActivityFLD[wName][sess]=sNL
+	}
+	lastPActivityPIDFLD= lastPActivityPIDFLD
+	lastPActivityTOKFLD= lastPActivityTOKFLD
+	tlastPActivityFLD= tlastPActivityFLD
+	lastPActivityFLD= lastPActivityFLD
+}
+
+@Field static final String sCB='clearB'
+/**
+ * clear cache for IDE
+ */
 private api_intf_dashboard_load(){
 	Map result; result=[:]
 	recoveryHandler()
@@ -1662,6 +1727,8 @@ private api_intf_dashboard_load(){
 		}
 	}
 
+	String wName=sAppId()
+	String sess=(String)params.session ?: 'default'
 	if(!err && result){
 		msg+=' no error & result'
 		String tok=(String)params.token
@@ -1669,21 +1736,27 @@ private api_intf_dashboard_load(){
 		String jsonData= JsonOutput.toJson(result)
 		String rl=generateMD5_A(jsonData)
 		Long t=wnow()
-		if(tlastActivityFLD < (t-11000L) || !lastActivityFLD || rl!=lastActivityFLD || !lastActivityTOKFLD || tok!=lastActivityTOKFLD){
+		if(!lastDActivityFLD[wName] || !lastDActivityTOKFLD[wName] || !tlastDActivityFLD[wName]){
+			clearLastDActivity(wName,sess)
+		}
+		if( !tlastDActivityFLD[wName][sess] || tlastDActivityFLD[wName][sess] < (t-11000L) ||
+				!lastDActivityFLD[wName][sess] || rl!=lastDActivityFLD[wName][sess] ||
+				!lastDActivityTOKFLD[wName][sess] || tok!=lastDActivityTOKFLD[wName][sess]){
 			//log.warn "rl: $rl lastAct: $lastActivityFLD"
-			lastActivityFLD=rl
-			lastActivityTOKFLD=tok
+			lastDActivityFLD[wName][sess]=rl
+			lastDActivityTOKFLD[wName][sess]=tok
+			lastDActivityFLD= lastDActivityFLD
+			lastDActivityTOKFLD= lastDActivityTOKFLD
 			msg+=' updating cache'
 		}else{
 			msg+=' using cache'
 			result=[:]
 		}
-		tlastActivityFLD=t
+		tlastDActivityFLD[wName][sess]=t
+		tlastDActivityFLD= tlastDActivityFLD
 	}else{
 		msg+=' error OR no result'
-		lastActivityTOKFLD=sNL
-		tlastActivityFLD=0L
-		lastActivityFLD=sNL
+		clearLastDActivity(wName,sess)
 	}
 
 	//debug "Dashboard: load ${params} " +msg
@@ -1691,8 +1764,8 @@ private api_intf_dashboard_load(){
 	if(getLogging()[sDBG]) checkResultSize(result, false, s)
 
 	//for accuracy, use the time as close as possible to the render
-	result[sNOW]= wnow()
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	result.put(sNOW,wnow())
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_devices(){
@@ -1706,8 +1779,8 @@ private api_intf_dashboard_devices(){
 				[ (sDEVVER): (String)gtAS(sDEVVER) ]
 	}else{ result=api_get_error_result(sERRTOK,s) }
 	//for accuracy, use the time as close as possible to the render
-	result[sNOW]= wnow()
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	result.put(sNOW,wnow())
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_refresh(){
@@ -1720,8 +1793,8 @@ private api_intf_dashboard_refresh(){
 		result=api_get_error_result(sERRTOK)
 	}
 	//for accuracy, use the time as close as possible to the render
-	result[sNOW]= wnow()
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	result.put(sNOW,wnow())
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private Map getDashboardData(){
@@ -1749,7 +1822,7 @@ private api_intf_dashboard_piston_new(){
 	if(verifySecurityToken((Map)params)){
 		result=[(sSTS): sSUCC, (sNM): generatePistonName()]
 	}else{ result=api_get_error_result(sERRTOK,s) }
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_create(){
@@ -1777,6 +1850,8 @@ private api_intf_dashboard_piston_create(){
 				}
 				debug "Created Piston "+pname
 				result=[(sSTS): sSUCC, (sID): hashPID(piston.id)]
+				String wName=sAppId()
+				clearCachedchildApps(wName)
 			}catch(ignored){
 				error "Please install the webCoRE Piston app"
 				result=[(sSTS): sERROR, (sERR): sERRUNK]
@@ -1786,7 +1861,7 @@ private api_intf_dashboard_piston_create(){
 			result=[(sSTS): sERROR, (sERR): sERRUNK]
 		}
 	}else{ result=api_get_error_result(sERRTOK,'piston_create') }
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private findPiston(String id, String nm=sNL){
@@ -1819,15 +1894,15 @@ private api_intf_dashboard_piston_getDb() {
 		Map theDb=[
 				capabilities: capabilities().sort{ (String)it.value.d },
 				commands: [
-						physical: gtAllCommands(),
-						virtual: virtualCommands().sort{ (String)it.value.d!=sNL ? (String)it.value.d : (String)it.value.n }
+					physical: gtAllCommands(),
+					virtual: virtualCommands().sort{ (String)it.value.d!=sNL ? (String)it.value.d : (String)it.value.n }
 				],
 				attributes: attributesFLD.sort{ (String)it.key },
 				comparisons: comparisonsFLD,
 				functions: functionsFLD,
 				colors: [
-						//standard: colorUtil?.ALL ?: getColors()
-						standard: getColors()
+					//standard: colorUtil?.ALL ?: getColors()
+					standard: getColors()
 				],
 		]
 		result.dbVersion=serverDbVersion
@@ -1835,8 +1910,8 @@ private api_intf_dashboard_piston_getDb() {
 	}else{ result=api_get_error_result(sERRTOK,'getDb') }
 	String wName=sAppId()
 	clearBaseResult('get Db',wName)
-	result[sNOW]=wnow()
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	result.put(sNOW,wnow())
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_get(){
@@ -1886,12 +1961,12 @@ private api_intf_dashboard_piston_get(){
 	}
 
 	//for accuracy, use the time as close as possible to the render
-	result[sNOW]=wnow()
+	result.put(sNOW,wnow())
 
 	//def jsonData=JsonOutput.toJson(result)
 	//log.debug "Trimmed resonse length: ${jsonData.getBytes(sUTF8).length}"
 	//render contentType: sAPPJAVA, data: "${params.callback}(${jsonData})"
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private void checkResultSize(Map result, Boolean requireDb=false, String caller=sNL){
@@ -1970,8 +2045,8 @@ private api_intf_dashboard_piston_backup(){
 		}
 	}else{ result=api_get_error_result(sERRTOK,'piston_backup') }
 	//for accuracy, use the time as close as possible to the render
-	result[sNOW]=wnow()
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	result.put(sNOW,wnow())
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private String decodeEmoji(String value){
@@ -2020,7 +2095,7 @@ private api_intf_dashboard_piston_set(){
 			result=[(sSTS): sSUCC] + saved
 		}else{ result=[(sSTS): sERROR, (sERR): sERRUNK] }
 	}else{ result=api_get_error_result(sERRTOK) }
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 @Field volatile static LinkedHashMap<String, LinkedHashMap> pPistonChunksFLD= [:]
@@ -2041,7 +2116,7 @@ private api_intf_dashboard_piston_set_start(){
 			result=[(sSTS): "ST_READY"]
 		}else{ result=[(sSTS): sERROR, (sERR): "ERR_INVALID_CHUNK_COUNT"] }
 	}else{ result=api_get_error_result(sERRTOK) }
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_set_chunk(){
@@ -2064,7 +2139,7 @@ private api_intf_dashboard_piston_set_chunk(){
 			result=[(sSTS): "ST_READY"]
 		}else{ result=[(sSTS): sERROR, (sERR): sERRCHUNK] }
 	}else{ result=api_get_error_result(sERRTOK) }
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_set_end(){
@@ -2112,7 +2187,7 @@ private api_intf_dashboard_piston_set_end(){
 			}else{ result=[(sSTS): sERROR, (sERR): sERRCHUNK] }
 		}else{ result=[(sSTS): sERROR, (sERR): sERRCHUNK] }
 	}else{ result=api_get_error_result(sERRTOK) }
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_pause(){
@@ -2127,7 +2202,7 @@ private api_intf_dashboard_piston_pause(){
 	}else result=api_get_error_result(sERRTOK)
 	debug "Dashboard: Request received to pause a piston"
 	clearBaseResult('pause piston')
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_resume(){
@@ -2143,7 +2218,7 @@ private api_intf_dashboard_piston_resume(){
 	}else result=api_get_error_result(sERRTOK)
 	debug "Dashboard: Request received to resume a piston"
 	clearBaseResult('resume piston')
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_test(){
@@ -2157,7 +2232,7 @@ private api_intf_dashboard_piston_test(){
 	}else result=api_get_error_result(sERRTOK)
 	debug "Dashboard: Request received to test a piston"
 	clearBaseResult('test piston')
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_presence_create(){
@@ -2174,7 +2249,7 @@ private api_intf_dashboard_presence_create(){
 			refreshDevices()
 		}else result=api_get_error_result("ERR_COULD_NOT_CREATE_DEVICE")
 	}else result=api_get_error_result(sERRTOK)
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_tile(){
@@ -2187,7 +2262,7 @@ private api_intf_dashboard_piston_tile(){
 			result[sSTS]=sSUCC
 		}else result=api_get_error_result(sERRID)
 	}else result=api_get_error_result(sERRTOK)
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_set_bin(){
@@ -2201,7 +2276,7 @@ private api_intf_dashboard_piston_set_bin(){
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
 	clearBaseResult('set bin')
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_set_category(){
@@ -2212,17 +2287,17 @@ private api_intf_dashboard_piston_set_category(){
 		def piston=findPiston((String)params.id)
 		if(piston){
 			result=(Map)piston.setCategory(params.category)
-			String myId=(String)params.id
-			Map st; st=gtMeta(piston,wName,myId)
+			String pid=(String)params.id
+			Map st; st=gtMeta(piston,wName,pid)
 			if(st){
 				st[sC]=params.category
-				ptMeta(wName,myId,st)
+				ptMeta(wName,pid,st)
 			}
 			result[sSTS]=sSUCC
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
 	clearBaseResult('set category')
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_logging(){
@@ -2236,7 +2311,7 @@ private api_intf_dashboard_piston_logging(){
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
 	clearBaseResult('change logging')
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_clear_logs(){
@@ -2250,7 +2325,7 @@ private api_intf_dashboard_piston_clear_logs(){
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
 	clearBaseResult('clear logs')
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_delete(){
@@ -2265,6 +2340,7 @@ private api_intf_dashboard_piston_delete(){
 			String schld=piston.id.toString()
 			if(!cldClearFLD[wName]){ cldClearFLD[wName]=(Map)[:]; cldClearFLD=cldClearFLD }
 			cldClearFLD[wName].remove(schld)
+			clearCachedchildApps(wName)
 			result=(Map)piston.deletePiston()
 			app.deleteChildApp(piston.id)
 //			p_executionFLD[wName][id]=null
@@ -2278,7 +2354,7 @@ private api_intf_dashboard_piston_delete(){
 			runIn(21, broadcastPistonList)
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_location_entered(){
@@ -2450,7 +2526,7 @@ private api_intf_variable_set(){
 		}
 	}else{ result=api_get_error_result(sERRTOK) }
 	clearBaseResult('set var')
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 //@Field static final String sDTIME='datetime'
@@ -2580,7 +2656,7 @@ private api_intf_fuelstreams_list(){
 	}
 	*/
 
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(["fuelStreams" : result])})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(["fuelStreams" : result])})"
 }
 
 private api_intf_fuelstreams_get(){
@@ -2602,7 +2678,7 @@ private api_intf_fuelstreams_get(){
 	if(stream)
 		result=stream.listFuelStreamData(id)
 
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(["points" : result])})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(["points" : result])})"
 }
 
 
@@ -2685,7 +2761,7 @@ private api_intf_settings_set(){
 		testLifx()
 		result=[(sSTS): sSUCC]
 	}else{ result=api_get_error_result(sERRTOK) }
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_evaluate(){
@@ -2700,40 +2776,57 @@ private api_intf_dashboard_piston_evaluate(){
 			trace msg
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
-@Field volatile static String lastActivityFLD
-@Field volatile static String lastActivityTOKFLD
-@Field volatile static Long tlastActivityFLD=0L
-
 private api_intf_dashboard_piston_activity(){
+	String s; s='piston activity'
+	String msg; msg=s
 	Map result
-	//debug "Dashboard: Activity request received $params"
 	if(verifySecurityToken((Map)params)){
+		msg+=' security ok'
 		String pistonId=(String)params.id
 		def piston=findPiston(pistonId)
 		if(piston!=null){
+			String wName=sAppId()
+			String sess=(String)params.session ?: 'default'
 			Map t0=(Map)piston.activity(params.log)
 			String jsonData= JsonOutput.toJson(t0)
 			String rl=generateMD5_A(jsonData)
 			String tok=(String)params.token
-			//Long t=wnow()
-			//if(tlastActivityFLD < (t-11000L) || !lastActivityFLD || rl!=lastActivityFLD || !lastActivityTOKFLD || tok!=lastActivityTOKFLD){
-			if(!lastActivityFLD || rl!=lastActivityFLD || !lastActivityTOKFLD || tok!=lastActivityTOKFLD){
-				lastActivityFLD=rl
-				lastActivityTOKFLD=tok
+			Long t=wnow()
+			if(!lastPActivityFLD[wName] || !lastPActivityTOKFLD[wName] || !lastPActivityPIDFLD[wName] || !tlastPActivityFLD[wName]){
+				clearLastPActivity(wName,sess)
+			}
+			if( !tlastPActivityFLD[wName][sess] || tlastPActivityFLD[wName][sess] < (t-11000L) ||
+					!lastPActivityFLD[wName][sess] || rl!=lastPActivityFLD[wName][sess] ||
+					!lastPActivityTOKFLD[wName][sess] || tok!=lastPActivityTOKFLD[wName][sess] ||
+					!lastPActivityPIDFLD[wName][sess] || pistonId!=lastPActivityPIDFLD[wName][sess]){
+				lastPActivityFLD[wName][sess]=rl
+				lastPActivityTOKFLD[wName][sess]=tok
+				lastPActivityPIDFLD[wName][sess]=pistonId
+				lastPActivityPIDFLD= lastPActivityPIDFLD
+				lastPActivityTOKFLD= lastPActivityTOKFLD
+				lastPActivityFLD= lastPActivityFLD
+				msg+=' updating cache'
 				result=[(sSTS):sSUCC, activity: (t0 ?: [:]) + [globalVars: listAvailableVariables1()/*, mode: hashId(location.getCurrentMode().id), shm: location.currentState("alarmSystemStatus")?.value, hubs: location.getHubs().collect{ [id: hashId(it.id), (sNM): it.name, firmware: it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]}*/]]
-			} else result=[(sSTS):sSUCC, activity: [:]]
-			tlastActivityFLD=wnow()
+			} else {
+				result=[(sSTS):sSUCC, activity: [:]]
+				msg+=' using cache'
+			}
+			tlastPActivityFLD[wName][sess]=wnow()
+			tlastPActivityFLD= tlastPActivityFLD
 		}else{
 			result=api_get_error_result(sERRID)
+			msg+=' piston not found'
 		}
 	}else{
+		msg+=' security NOT ok returning token error'
 		result=api_get_error_result(sERRTOK)
 	}
-	if(getLogging()[sDBG]) checkResultSize(result, false, "piston activity")
-	render contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	if(getLogging()[sDBG]) checkResultSize(result, false, s)
+	//debug "Dashboard: Activity request received $params " +msg
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 def api_ifttt(){
@@ -2757,7 +2850,7 @@ def api_ifttt(){
 	if(eventName){
 		sendLocationEvent([(sNM): "ifttt.${eventName}", (sVAL): eventName, isStateChange: true, linkText: "IFTTT event", descriptionText: "${handle()} has received an IFTTT event: $eventName", (sDATA): data])
 	}
-	render contentType: "text/html", data: "<!DOCTYPE html><html lang=\"en\">Received event $eventName.<body></body></html>"
+	wrender contentType: "text/html", data: "<!DOCTYPE html><html lang=\"en\">Received event $eventName.<body></body></html>"
 }
 
 def api_email(){
@@ -2767,7 +2860,7 @@ def api_email(){
 	if(pistonId){
 		sendLocationEvent([(sNM): "email.${pistonId}", (sVAL): pistonId, isStateChange: true, linkText: "Email event", descriptionText: "${handle()} has received an email from $from", (sDATA): data])
 	}
-	render contentType: "text/plain", data: 'OK'
+	wrender contentType: "text/plain", data: 'OK'
 }
 
 private api_execute(){
@@ -2805,7 +2898,7 @@ private api_execute(){
 		error "Piston not found for dashboard or web Request to execute a piston from IP $remoteAddr $pistonIdOrName"
 	}
 	result[sTMSTMP]=(new Date()).time
-	render contentType: sAPPJSON, data: JsonOutput.toJson(result)
+	wrender contentType: sAPPJSON, data: JsonOutput.toJson(result)
 }
 
 void sendExecuteEvt(String pistonId,val,String desc, String desc1,Map data){
@@ -2853,7 +2946,7 @@ private api_global(){
 	}
 	Integer st= err ? 400 : 200
 	result[sTMSTMP]=(new Date()).time
-	render contentType: sAPPJAVA, data: JsonOutput.toJson(result), status: st
+	wrender contentType: sAPPJAVA, data: JsonOutput.toJson(result), status: st
 }
 
 @Field volatile static Map<String,Long> lastRecoveredFLD= [:]
@@ -2924,14 +3017,14 @@ void finishRecovery(){
 		i=0
 		Long delay=Math.round(2000.0D * Math.random()) // 2 sec
 		for (Map piston in fPs){
-			String myId=(String)piston[sID]
+			String pid=(String)piston[sID]
 			Map meta= (Map)piston[sMETA] // gtMeta(null, wName,myId)
 			Long t=(Long)meta[n]
 			if(t < threshold){
 				if(i!=0) wpauseExecution(delay)
 				i++
 				String nm= (String)piston[sNM]
-				sendExecuteEvt(myId,'recovery',"Recovery event","Recovery event for piston ${nm}",null)
+				sendExecuteEvt(pid,'recovery',"Recovery event","Recovery event for piston ${nm}",null)
 				warn "Piston ${nm} was sent a recovery signal because it was ${lnow - t}ms late"
 			}
 		}
@@ -2955,14 +3048,14 @@ private void cleanUp(){
 		for(String foo in data)state.remove(foo)
 
 		String n=handlePistn()
-		String myId
+		String pid
 		List t0
 		t0=wgetChildApps().findAll{ (String)it.name==n }
 		for(it in t0){
-			myId=hashId(it.id)
-			state.remove(myId)
-			myId=hashPID(it.id)
-			state.remove(myId)
+			pid=hashId(it.id)
+			state.remove(pid)
+			pid=hashPID(it.id)
+			state.remove(pid)
 		}
 		t0=null
 		Map a=api_get_base_result(true)
@@ -3044,18 +3137,27 @@ def getWeatDev(){
 	return weatDev
 }
 
+private void cleanDashboardApp(){
+	if(!(Boolean)settings.enableDashNotifications){
+		String name=handle()+' Dashboard'
+		String myN= appName()
+		String label=myN+' (dashboard)'
+		def dashboardApp
+		dashboardApp=wgetChildApps().find{ (String)it.name==name }
+		if(dashboardApp!=null){
+			app.deleteChildApp(dashboardApp.id)
+		}
+	}
+}
+
 private getDashboardApp(Boolean install=false){
-	if(!settings.enableDashNotifications) return null
+	if(!(Boolean)settings.enableDashNotifications) return null
 	String name=handle()+' Dashboard'
 	String myN= appName()
 	String label=myN+' (dashboard)'
 	def dashboardApp
 	dashboardApp=wgetChildApps().find{ (String)it.name==name }
 	if(dashboardApp!=null){
-		if(!settings.enableDashNotifications){
-			app.deleteChildApp(dashboardApp.id)
-			return null
-		}
 		if(label!=dashboardApp.label){
 			dashboardApp.updateLabel(label)
 		}
@@ -3527,9 +3629,9 @@ private void registerInstance(Boolean force=true){
 		String name=handlePistn()
 		List<Map> pistons
 		pistons=wgetChildApps().findAll{ (String)it.name==name }.collect{
-			String myId=hashPID(it.id)
-			Map meta; meta=gtMeta(it,wName,myId)
-			[ (sID): myId, (sA): meta?.a ]
+			String pid=hashPID(it.id)
+			Map meta; meta=gtMeta(it,wName,pid)
+			[ (sID): pid, (sA): meta?.a ]
 		}
 		List lpa,lpd
 		lpa=pistons.findAll{ it.a }.collect{ it.id }
@@ -3639,6 +3741,9 @@ void pCallupdateRunTimeData(Map data){
 	updateRunTimeData(data,wName,id)
 }
 
+//wrappers
+private TimeZone mTZ() { return (TimeZone)location.timeZone }
+
 private gtSetting(String nm){ return settings."${nm}" }
 private gtSt(String nm){ return state."${nm}" }
 private gtAS(String nm){ return atomicState."${nm}" }
@@ -3646,6 +3751,7 @@ private void assignSt(String nm,v){ state."${nm}"=v }
 private void assignAS(String nm,v){ atomicState."${nm}"=v }
 Long wnow(){ return (Long)now() }
 List wgetChildApps() { return (List)getChildApps() }
+private Map wrender(Map options=[:]){ render options }
 
 @Field static final String sURT='updateRunTimeData'
 @Field static final String sGVCACHE='gvCache'
@@ -3766,15 +3872,16 @@ static void clearMeta(String wName){
 /**
  * get piston meta data (from cached, or from piston if missing)
  */
-Map gtMeta(chld, String wName, String myId){
+Map gtMeta(ichld, String wName, String pid){
 	Map meta; meta= null
-	if(wName && myId){
+	if(wName && pid){
 		if(pStateFLD[wName]==null){ clearMeta(wName) }
-		meta= pStateFLD[wName][myId]
+		meta= pStateFLD[wName][pid]
 		if(meta==null){
+			def chld= ichld ?: findPiston(pid)
 			if(chld) meta= (Map)chld.curPState()
 			else error "gtMeta no child"
-			if(meta) ptMeta(wName, myId, meta)
+			if(meta) ptMeta(wName, pid, meta)
 		}
 	}else error "gtMeta no id"
 	return meta
@@ -3805,8 +3912,8 @@ Boolean isPisPaused(String pistonId){
 	Map meta; meta=null
 	if(piston){
 		String wName=sAppId()
-		String myId=hashPID(piston.id)
-		meta=gtMeta(piston,wName,myId)
+		String pid=hashPID(piston.id)
+		meta=gtMeta(piston,wName,pid)
 		if(meta && !((Boolean)meta[sA])) return true
 	}
 	if(eric1() && (!piston || !meta))
@@ -5726,8 +5833,8 @@ def pageDumpExecution(){
 	String n=handlePistn()
 	String c='cnt'
 	List<Map> b= wgetChildApps().findAll{ (String)it.name==n }.sort{ (String)it.label }.collect{
-		String myId=hashPID(it.id)
-		[ (sID): myId, (sNM): normalizeLabel(it), (c): p_executionFLD[wName][myId] ]
+		String pid=hashPID(it.id)
+		[ (sID): pid, (sNM): normalizeLabel(it), (c): p_executionFLD[wName][pid] ]
 	}
 	LinkedHashMap<String,Map> a; a=[:]
 	b.sort{ Map bb -> (bb[c]!= null ? -(Long)bb[c] : bb[c]) }.each { Map it ->
