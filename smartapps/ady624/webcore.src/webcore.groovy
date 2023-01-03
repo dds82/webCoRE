@@ -1177,6 +1177,7 @@ private void initialize(){
 	HverFLD[wName]=sHVER
 	clearLastPActivity(wName,sNL)
 	clearLastDActivity(wName,sNL)
+	clearMeta(wName)
 	clearCachedchildApps(wName)
 
 	refreshDevices()
@@ -1486,7 +1487,7 @@ List<Map> gtCachedchildApps(String wName){
 	return res
 }
 
-void clearCachedchildApps(String wName){
+static void clearCachedchildApps(String wName){
 		childAppsFLD[wName]= []
 		childAppsFLD= childAppsFLD
 }
@@ -1506,7 +1507,7 @@ private List<Map> presult(String wName){
 			(sC):t0[sCTGRY],
 			(sT):(Long)t0[sLEXEC],
 			(sM): (Long)t0[sMODFD],
-			(sB): (Long)t0[sBIN],
+			(sB): (String)t0[sBIN],
 			(sN):(Long)t0[sNSCH],
 			(sZ):(String)t0.pistonZ,
 			(sS):st,
@@ -2072,6 +2073,8 @@ private Map api_intf_dashboard_piston_set_save(String id, String data, Map<Strin
 	*/
 		LinkedHashMap p=(LinkedHashMap) new JsonSlurper().parseText(decodeEmoji(new String(data.decodeBase64(), sUTF8)))
 		Map result=(Map)piston.setup(p, chunks)
+		String wName=sAppId()
+		clearCachedchildApps(wName) // name may change
 		broadcastPistonList(true)
 		return result
 	}
@@ -2091,6 +2094,8 @@ private api_intf_dashboard_piston_set(){
 			if(saved.rtData){
 				updateRunTimeData((Map)saved.rtData)
 				saved.rtData=null
+				String wName=sAppId()
+				clearCachedchildApps(wName)
 			}
 			result=[(sSTS): sSUCC] + saved
 		}else{ result=[(sSTS): sERROR, (sERR): sERRUNK] }
@@ -2181,6 +2186,7 @@ private api_intf_dashboard_piston_set_end(){
 					if(saved.rtData){
 						updateRunTimeData((Map)saved.rtData)
 						saved.rtData=null
+						clearCachedchildApps(wName)
 					}
 					result=[(sSTS): sSUCC] + saved
 				}else{ result=[(sSTS): sERROR, (sERR): sERRUNK] }
@@ -2197,6 +2203,8 @@ private api_intf_dashboard_piston_pause(){
 		if(piston){
 			Map rtData=(Map)piston.pausePiston()
 			updateRunTimeData(rtData)
+			String wName=sAppId()
+			clearCachedchildApps(wName)
 			result=[(sSTS): sSUCC, (sACT): false]
 		}else result=api_get_error_result(sERRID)
 	}else result=api_get_error_result(sERRTOK)
@@ -2214,6 +2222,8 @@ private api_intf_dashboard_piston_resume(){
 			result=(Map)rtData.result
 			updateRunTimeData(rtData)
 			result[sSTS]=sSUCC
+			String wName=sAppId()
+			clearCachedchildApps(wName)
 		}else result=api_get_error_result(sERRID)
 	}else result=api_get_error_result(sERRTOK)
 	debug "Dashboard: Request received to resume a piston"
@@ -2272,6 +2282,14 @@ private api_intf_dashboard_piston_set_bin(){
 		def piston=findPiston((String)params.id)
 		if(piston){
 			result=(Map)piston.setBin((String)params.bin)
+			String pid=(String)params.id
+			String wName=sAppId()
+			ptMeta(wName,pid,null)
+			/*Map st; st=gtMeta(piston,wName,pid)
+			if(st){
+				st[sB]=params.bin
+				ptMeta(wName,pid,st)
+			}*/
 			result[sSTS]=sSUCC
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
@@ -2288,11 +2306,12 @@ private api_intf_dashboard_piston_set_category(){
 		if(piston){
 			result=(Map)piston.setCategory(params.category)
 			String pid=(String)params.id
-			Map st; st=gtMeta(piston,wName,pid)
+			ptMeta(wName,pid,null)
+			/*Map st; st=gtMeta(piston,wName,pid)
 			if(st){
 				st[sC]=params.category
 				ptMeta(wName,pid,st)
-			}
+			}*/
 			result[sSTS]=sSUCC
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
@@ -2340,11 +2359,12 @@ private api_intf_dashboard_piston_delete(){
 			String schld=piston.id.toString()
 			if(!cldClearFLD[wName]){ cldClearFLD[wName]=(Map)[:]; cldClearFLD=cldClearFLD }
 			cldClearFLD[wName].remove(schld)
-			clearCachedchildApps(wName)
 			result=(Map)piston.deletePiston()
 			app.deleteChildApp(piston.id)
 //			p_executionFLD[wName][id]=null
 //			p_executionFLD=p_executionFLD
+			clearCachedchildApps(wName)
+			clearMeta(wName)
 			clearHashMap(wName)
 			mb()
 			clearBaseResult('delete Piston',wName)
@@ -3863,7 +3883,7 @@ static void clearMeta(String wName){
 	(sC):t0[sCTGRY],
 	(sT):(Long)t0[sLEXEC],
 	(sM): (Long)t0[sMODFD],
-	(sB): (Long)t0[sBIN],
+	(sB): (String)t0[sBIN],
 	(sN):(Long)t0[sNSCH],
 	(sZ):(String)t0.pistonZ,
 	(sS):st,
@@ -3976,8 +3996,9 @@ void broadcastPistonList(Boolean frc=false){
 			(sDATA): [
 				(sID): getInstanceSid(),
 				(sNM): appName(),
-				pistons: wgetChildApps().findAll{ (String)it.name==handlePistn() }.collect{
-					[ (sID): hashPID(it.id), (sNM): normalizeLabel(it), aname: (it?.label) ]
+				//pistons: wgetChildApps().findAll{ (String)it.name==handlePistn() }.collect{
+				pistons: gtCachedchildApps(wName).collect{
+					[ (sID): it.pid, (sNM): it.nlabel, aname: it.label ]
 				}
 			]
 		])

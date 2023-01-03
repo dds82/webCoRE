@@ -1,7 +1,7 @@
 {
   "packageName": "webCoRE",
   "author": "imnot_bob",
-  "version": "1.0.66",
+  "version": "1.0.67",
   "minimumHEVersion": "2.3.2",
   "licenseFile": "https://raw.githubusercontent.com/imnotbob/webCoRE/hubitat-patches/LICENSE",
   "releaseNotes": "Matchup to latest built-in code -  UI updates, improved tracking trigger monitoring bug fixes, cleanups",
