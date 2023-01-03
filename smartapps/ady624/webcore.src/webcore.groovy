@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update January 2, 2023 for Hubitat
+ * Last update January 3, 2023 for Hubitat
  */
 
 //file:noinspection unused
@@ -31,7 +31,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20221228_HE'
-@Field static final String sHVERSTR='v0.3.114.20221228_HE - January 2, 2023'
+@Field static final String sHVERSTR='v0.3.114.20221228_HE - January 3, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -1233,8 +1233,10 @@ Boolean checkSIDs(){
 		chg=true
 		atomicState.aSID=a
 		atomicState.lSID=l
+		state.lSIDchanged=wnow()
 		clearHashMap(wName)
 	}
+	if(!state.lSIDchanged) state.lSIDchanged=wnow() // for upgrade
 	return chg
 }
 
@@ -1374,6 +1376,7 @@ mappings{
 	path("/intf/dashboard/piston/set.bin"){action: [GET: "api_intf_dashboard_piston_set_bin"]}
 	path("/intf/dashboard/piston/tile"){action: [GET: "api_intf_dashboard_piston_tile"]}
 	path("/intf/dashboard/piston/set.category"){action: [GET: "api_intf_dashboard_piston_set_category"]}
+	path("/intf/dashboard/piston/set.modified"){action: [GET: "api_intf_dashboard_piston_set_modified"]}
 	path("/intf/dashboard/piston/logging"){action: [GET: "api_intf_dashboard_piston_logging"]}
 	path("/intf/dashboard/piston/clear.logs"){action: [GET: "api_intf_dashboard_piston_clear_logs"]}
 	path("/intf/dashboard/piston/delete"){action: [GET: "api_intf_dashboard_piston_delete"]}
@@ -1560,7 +1563,7 @@ private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 	Map<String,Object> result=[
 		(sNM): (String)location.name+ ' \\ ' +myN,
 		instance: [
-			account: [(sID): accountSid()],
+			account: [(sID): accountSid(), t: state.lSIDchanged  ],
 			pistons:  presult(wName),
 			(sID): instanceId,
 			locationId: locationId,
@@ -1924,7 +1927,7 @@ private api_intf_dashboard_piston_get(){
 	if(verifySecurityToken((Map)params)){
 		String pistonId=(String)params.id
 		def piston=findPiston(pistonId)
-		if(piston!=null){
+		if(piston){
 			debug "Dashboard: Request received to get piston ${pistonId} ${(String)piston.label}"
 
 			String serverDbVersion=sHVER
@@ -2075,7 +2078,7 @@ private Map api_intf_dashboard_piston_set_save(String id, String data, Map<Strin
 		Map result=(Map)piston.setup(p, chunks)
 		String wName=sAppId()
 		clearCachedchildApps(wName) // name may change
-		broadcastPistonList(true)
+		runIn(21, broadcastPistonList)
 		return result
 	}
 	debug myS+" $id $chunks NOT FOUND"
@@ -2205,6 +2208,7 @@ private api_intf_dashboard_piston_pause(){
 			updateRunTimeData(rtData)
 			String wName=sAppId()
 			clearCachedchildApps(wName)
+			runIn(21, broadcastPistonList)
 			result=[(sSTS): sSUCC, (sACT): false]
 		}else result=api_get_error_result(sERRID)
 	}else result=api_get_error_result(sERRTOK)
@@ -2224,6 +2228,7 @@ private api_intf_dashboard_piston_resume(){
 			result[sSTS]=sSUCC
 			String wName=sAppId()
 			clearCachedchildApps(wName)
+			runIn(21, broadcastPistonList)
 		}else result=api_get_error_result(sERRID)
 	}else result=api_get_error_result(sERRTOK)
 	debug "Dashboard: Request received to resume a piston"
@@ -2235,7 +2240,7 @@ private api_intf_dashboard_piston_test(){
 	Map result
 	if(verifySecurityToken((Map)params)){
 		def piston=findPiston((String)params.id)
-		if(piston!=null){
+		if(piston){
 			result=(Map)piston.test()
 			result[sSTS]=sSUCC
 		}else result=api_get_error_result(sERRID)
@@ -2262,89 +2267,51 @@ private api_intf_dashboard_presence_create(){
 	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
-private api_intf_dashboard_piston_tile(){
+private common_Simple(Map params, String msg, String oper, arg=null, Boolean clrC=false){
 	Map result
-	debug "Dashboard: Clicked a piston tile"
+	debug "Dashboard: "+msg
 	if(verifySecurityToken((Map)params)){
-		def piston=findPiston((String)params.id)
+		String pid=(String)params.id
+		def piston=findPiston(pid)
 		if(piston){
-			result=(Map)piston.clickTile(params.tile)
+			if(arg!=null)
+				result=(Map)piston."${oper}"(arg)
+			else
+				result=(Map)piston."${oper}"()
+			if(clrC){
+				String wName=sAppId()
+				ptMeta(wName,pid,null)
+			}
 			result[sSTS]=sSUCC
 		}else result=api_get_error_result(sERRID)
 	}else result=api_get_error_result(sERRTOK)
+	if(clrC)clearBaseResult(oper)
 	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+}
+
+
+private api_intf_dashboard_piston_tile(){
+	common_Simple((Map)params, "Clicked a piston tile", 'clickTile', params.tile, false)
 }
 
 private api_intf_dashboard_piston_set_bin(){
-	Map result
-	debug "Dashboard: Request received to set piston bin"
-	if(verifySecurityToken((Map)params)){
-		def piston=findPiston((String)params.id)
-		if(piston){
-			result=(Map)piston.setBin((String)params.bin)
-			String pid=(String)params.id
-			String wName=sAppId()
-			ptMeta(wName,pid,null)
-			/*Map st; st=gtMeta(piston,wName,pid)
-			if(st){
-				st[sB]=params.bin
-				ptMeta(wName,pid,st)
-			}*/
-			result[sSTS]=sSUCC
-		}else{ result=api_get_error_result(sERRID) }
-	}else{ result=api_get_error_result(sERRTOK) }
-	clearBaseResult('set bin')
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	common_Simple((Map)params, "Received set piston bin", 'setBin', (String)params.bin, true)
 }
 
 private api_intf_dashboard_piston_set_category(){
-	Map result
-	String wName=sAppId()
-	debug "Dashboard: Request received to set piston category"
-	if(verifySecurityToken((Map)params)){
-		def piston=findPiston((String)params.id)
-		if(piston){
-			result=(Map)piston.setCategory(params.category)
-			String pid=(String)params.id
-			ptMeta(wName,pid,null)
-			/*Map st; st=gtMeta(piston,wName,pid)
-			if(st){
-				st[sC]=params.category
-				ptMeta(wName,pid,st)
-			}*/
-			result[sSTS]=sSUCC
-		}else{ result=api_get_error_result(sERRID) }
-	}else{ result=api_get_error_result(sERRTOK) }
-	clearBaseResult('set category')
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	common_Simple((Map)params, "Received set piston category", 'setCategory', params.category, true)
+}
+
+private api_intf_dashboard_piston_set_modified(){
+	common_Simple((Map)params, "Received set piston modified time", 'updModified', wnow(), true)
 }
 
 private api_intf_dashboard_piston_logging(){
-	Map result
-	debug "Dashboard: Request received to set piston logging level"
-	if(verifySecurityToken((Map)params)){
-		def piston=findPiston((String)params.id)
-		if(piston){
-			result=(Map)piston.setLoggingLevel((String)params.level)
-			result[sSTS]=sSUCC
-		}else{ result=api_get_error_result(sERRID) }
-	}else{ result=api_get_error_result(sERRTOK) }
-	clearBaseResult('change logging')
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	common_Simple((Map)params, "Received set piston logging level", 'setLoggingLevel', (String)params.level, true)
 }
 
 private api_intf_dashboard_piston_clear_logs(){
-	Map result
-	debug "Dashboard: Request received to clear piston logs"
-	if(verifySecurityToken((Map)params)){
-		def piston=findPiston((String)params.id)
-		if(piston){
-			result=(Map)piston.clearLogs()
-			result[sSTS]=sSUCC
-		}else{ result=api_get_error_result(sERRID) }
-	}else{ result=api_get_error_result(sERRTOK) }
-	clearBaseResult('clear logs')
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	common_Simple((Map)params, "Received clear piston logs", 'clearLogs', null, true)
 }
 
 private api_intf_dashboard_piston_delete(){
@@ -2584,7 +2551,7 @@ def findCreateFuel(Map req){
 
 	// LTS can return multple streams
 	if(req[sC] == 'LTS'){
-		def lts = getChildAppByLabel("webCoRE Long Term Storage")
+		def lts = gtLTS()
 		String[] s= ((String)req[sN]).split('_')
 		String sensorId= s[0]
 		String attribute= s[1]
@@ -2693,7 +2660,7 @@ private api_intf_fuelstreams_get(){
 		stream=wgetChildApps().find { (String)it.name==n && ((String)it.label).startsWith("$id -")}
 		result=stream.listFuelStreamData(id)
 	} else {
-		stream = getChildAppByLabel("webCoRE Long Term Storage")
+		stream = gtLTS()
 	}
 	if(stream)
 		result=stream.listFuelStreamData(id)
@@ -2704,7 +2671,7 @@ private api_intf_fuelstreams_get(){
 
 // may not need
 Map quantParams(sensorId, String attribute){
-	def lts = getChildAppByLabel("webCoRE Long Term Storage")
+	def lts = gtLTS()
 
 	if (lts!=null) {
 		return (Map)lts.quantParams(sensorId, attribute)
@@ -2712,13 +2679,13 @@ Map quantParams(sensorId, String attribute){
 }
 
 Boolean ltsExists(){
-	def lts = getChildAppByLabel("webCoRE Long Term Storage")
+	def lts = gtLTS()
 	return (lts!=null)
 }
 
 // child graphs calls this
 Boolean ltsAvailable(sensorId, String attribute){
-	def lts = getChildAppByLabel("webCoRE Long Term Storage")
+	def lts = gtLTS()
 
 	if (lts!=null){
 		return (Boolean)lts.isStorage(sensorId, attribute)
@@ -2727,7 +2694,7 @@ Boolean ltsAvailable(sensorId, String attribute){
 }
 
 Boolean ltsQuant(sensorId, String attribute){
-	def lts = getChildAppByLabel("webCoRE Long Term Storage")
+	def lts = gtLTS()
 
 	if (lts!=null){
 		return (Boolean)lts.isQuant(sensorId, attribute)
@@ -3058,7 +3025,6 @@ void finishRecovery(){
 
 private void cleanUp(){
     try{
-		//List pistons=wgetChildApps().collect{ hashPID(it.id) }
 		for (item in ((Map<String,Object>)state).findAll{ (it.key.startsWith('sph') || it.key.contains('-') ) }){
 			state.remove(item.key)
 		}
@@ -3761,16 +3727,20 @@ void pCallupdateRunTimeData(Map data){
 	updateRunTimeData(data,wName,id)
 }
 
+private gtLTS() { wgetChildAppByLabel("webCoRE Long Term Storage") }
+
 //wrappers
 private TimeZone mTZ() { return (TimeZone)location.timeZone }
 
-private gtSetting(String nm){ return settings."${nm}" }
-private gtSt(String nm){ return state."${nm}" }
-private gtAS(String nm){ return atomicState."${nm}" }
-private void assignSt(String nm,v){ state."${nm}"=v }
-private void assignAS(String nm,v){ atomicState."${nm}"=v }
+private gtSetting(String nm){ return settings.get(nm) }
+private gtSt(String nm){ return state.get(nm) }
+private gtAS(String nm){ return atomicState.get(nm) }
+private void assignSt(String nm,v){ state.put(nm,v) }
+private void assignAS(String nm,v){ atomicState.put(nm,v) }
+private Date wtoDateTime(String s){ return (Date)toDateTime(s) }
 Long wnow(){ return (Long)now() }
 List wgetChildApps() { return (List)getChildApps() }
+private wgetChildAppByLabel(String n){ getChildAppByLabel(n) }
 private Map wrender(Map options=[:]){ render options }
 
 @Field static final String sURT='updateRunTimeData'
@@ -3996,7 +3966,6 @@ void broadcastPistonList(Boolean frc=false){
 			(sDATA): [
 				(sID): getInstanceSid(),
 				(sNM): appName(),
-				//pistons: wgetChildApps().findAll{ (String)it.name==handlePistn() }.collect{
 				pistons: gtCachedchildApps(wName).collect{
 					[ (sID): it.pid, (sNM): it.nlabel, aname: it.label ]
 				}
@@ -5635,7 +5604,7 @@ Map<String,Object> fixHeGType(Boolean toHubV, String typ, v, String dtyp){
 						//res= mystart[0]+'T'+t1[1]
 					}
 				}
-				Date tt1=(Date)toDateTime(res)
+				Date tt1=wtoDateTime(res)
 				Long lres
 				lres=tt1.getTime()
 				if(mtyp==sTIME){

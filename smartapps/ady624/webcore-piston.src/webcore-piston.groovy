@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update January 1, 2023 for Hubitat
+ * Last update January 3, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -447,7 +447,7 @@ static Boolean eric1(){ return false }
 @Field static final Double dMSDAY=86400000.0D
 
 @CompileStatic
-private static Boolean bIs(Map m,String v){ (Boolean)m[v] }
+private static Boolean bIs(Map m,String v){ (Boolean)m.get(v) }
 
 @CompileStatic
 private static Boolean isPep(Map m){ bIs(m,sPEP) }
@@ -460,15 +460,15 @@ private static Boolean isBrk(Map m){ bIs(m,sBREAK) }
 
 /** m.string  */
 @CompileStatic
-private static Map mMs(Map m,String s){ (Map)m[s] }
+private static Map mMs(Map m,String s){ (Map)m.get(s) }
 
 /** m.string  */
 @CompileStatic
-private static String sMs(Map m,String v){ (String)m[v] }
+private static String sMs(Map m,String v){ (String)m.get(v) }
 
 /** l[integer]  */
 @CompileStatic
-private static String sLi(List l,Integer v){ (String)l[v] }
+private static String sLi(List l,Integer v){ (String)l.get(v) }
 
 /** m.a  */
 @CompileStatic
@@ -484,11 +484,11 @@ private static String sMvt(Map m){ sMs(m,sVT) }
 
 /** m.t  */
 @CompileStatic
-private static Long lMt(Map m){ (Long)m[sT] }
+private static Long lMt(Map m){ (Long)m.get(sT) }
 
 /** m.string  */
 @CompileStatic
-private static Long lMs(Map m,String v){ (Long)m[v] }
+private static Long lMs(Map m,String v){ (Long)m.get(v) }
 
 /** m.s  */
 @CompileStatic
@@ -496,7 +496,7 @@ private static Integer iMsS(Map m){ iMs(m,sS) }
 
 /** m.string  */
 @CompileStatic
-private static Integer iMs(Map m,String v){ (Integer)m[v] }
+private static Integer iMs(Map m,String v){ (Integer)m.get(v) }
 
 /** returns m.v */
 @CompileStatic
@@ -504,31 +504,31 @@ private static String sMv(Map m){ sMs(m,sV) }
 
 /** returns m.v */
 @CompileStatic
-private static List liMv(Map m){ (List)m[sV] }
+private static List liMv(Map m){ (List)m.get(sV) }
 
 /** returns m.d */
 @CompileStatic
-private static List<String> liMd(Map m){ (List<String>)m[sD] }
+private static List<String> liMd(Map m){ (List<String>)m.get(sD) }
 
 /** returns m.string */
 @CompileStatic
-private static List<Map> liMs(Map m,String s){ (List)m[s] }
+private static List<Map> liMs(Map m,String s){ (List)m.get(s) }
 
 /** returns l.integer */
 @CompileStatic
-private static Integer iLi(List l,Integer i){ (Integer)l[i] }
+private static Integer iLi(List l,Integer i){ (Integer)l.get(i) }
 
 /** m[v]  */
 @CompileStatic
-private static oMs(Map m,String v){ m[v] }
+private static oMs(Map m,String v){ m.get(v) }
 
 /** returns m.v */
 @CompileStatic
-private static oMv(Map m){ m[sV] }
+private static oMv(Map m){ m.get(sV) }
 
 /** returns m.v */
 @CompileStatic
-private static Map mMv(Map m){ (Map)m[sV] }
+private static Map mMv(Map m){ (Map)m.get(sV) }
 
 /** returns m.v.v */
 @CompileStatic
@@ -692,8 +692,8 @@ def pageClear(){
 void clear1(Boolean ccache=false,Boolean some=true,Boolean most=false,Boolean all=false,Boolean reset=false){
 	String meth
 	meth='clear1'
-	if(some||all)state[sLOGS]=[]
-	if(most||all){ state[sTRC]=[:];state[sSTATS]=[:] }
+	if(some||all)state.put(sLOGS,[])
+	if(most||all){ state.put(sTRC,[:]);state.put(sSTATS,[:]) }
 	if(reset){wappRemoveSetting(sMLOGS); wappRemoveSetting(sMSTATS); wappRemoveSetting(sLOGHE) }
 	cleanState()
 	if(all){
@@ -703,21 +703,21 @@ void clear1(Boolean ccache=false,Boolean some=true,Boolean most=false,Boolean al
 		Boolean act=isAct(tRtData)
 		Boolean dis=!isEnbl(tRtData)
 		String pNm=sMs(tRtData,snId)
-		readDataFLD[pNm]=sNL; readTmpFLD[pNm]=sNL
-		fuelDataFLD[pNm]=[]
+		readDataFLD.put(pNm,sNL); readTmpFLD.put(pNm,sNL)
+		fuelDataFLD.put(pNm,[])
 		tRtData=null
-		state[sCACHE]=[:]
+		state.put(sCACHE,[:])
 		stNeedUpdate()
-		state[sST]=[:]
-		state[sVARS]=[:]
-		state[sSTORE]=[:]
-		state['pauses']=lZ
+		state.put(sST,[:])
+		state.put(sVARS,[:])
+		state.put(sSTORE,[:])
+		state.put('pauses',lZ)
 		clearMyCache(meth)
 
 		getTheLock(pNm,meth)
-		theSemaphoresVFLD[pNm]=lZ
+		theSemaphoresVFLD.put(pNm,lZ)
 		theSemaphoresVFLD=theSemaphoresVFLD
-		theQueuesVFLD[pNm]=[]
+		theQueuesVFLD.put(pNm,[])
 		theQueuesVFLD=theQueuesVFLD // forces volatile cache flush
 		releaseTheLock(pNm)
 
@@ -930,12 +930,12 @@ def pageDumpPiston(){ // dumps full piston
 void installed(){
 	if(app.id==null)return
 	Long t=wnow()
-	state[sCREAT]=t
-	state[sMODFD]=t
-	state[sBLD]=iZ
-	state[sVARS]=mMs(gtState(),sVARS) ?: [:]
-	state[sSUBS]=(Map)state[sSUBS] ?: [:]
-	state[sLOGNG]=iZ
+	state.put(sCREAT,t)
+	state.put(sMODFD,t)
+	state.put(sBLD,iZ)
+	state.put(sVARS,(Map)gtSt(sVARS) ?: [:])
+	state.put(sSUBS,(Map)gtSt(sSUBS) ?: [:])
+	state.put(sLOGNG,iZ)
 	initialize()
 }
 
@@ -946,7 +946,7 @@ void updated(){
 
 void uninstalled(){
 	if(eric())doLog(sDBG,'uninstalled')
-	if(!atomicState.pistonDeleted)Map a=deletePiston()
+	if(!(Boolean)gtAS('pistonDeleted'))Map a=deletePiston()
 }
 
 void initialize(){
@@ -1142,6 +1142,12 @@ private LinkedHashMap recreatePiston(Boolean shorten=false,Boolean inMem=false,B
 	return [:]
 }
 
+Map updModified(Long t){
+	assignSt(sMODFD,t)
+	clearMyCache(sMODFD)
+	return [(sMODFD):t]
+}
+
 Map setup(LinkedHashMap data,Map<String,String>chunks){
 	if(data==null){
 		doLog(sERROR,'setup: no data')
@@ -1153,8 +1159,8 @@ Map setup(LinkedHashMap data,Map<String,String>chunks){
 	String mSmaNm=sAppId()
 	getTheLock(mSmaNm,meth)
 
-	state[sMODFD]=wnow()
-	state[sBLD]=gtSt(sBLD)!=null ? iMs(gtState(),sBLD)+i1:i1
+	assignSt(sMODFD,wnow())
+	assignSt(sBLD,gtSt(sBLD)!=null ? iMs(gtState(),sBLD)+i1:i1)
 	LinkedHashMap piston=[
 		(sO): data[sO] ?: [:],
 		(sR): data[sR] ?: [],
@@ -1175,7 +1181,7 @@ Map setup(LinkedHashMap data,Map<String,String>chunks){
 	wappUpdateSetting(sBIN,[(sTYPE):sTEXT,(sVAL):sMs(gtState(),sBIN) ?: sBLK])
 	wappUpdateSetting(sATHR,[(sTYPE):sTEXT,(sVAL):sMs(gtState(),sATHR) ?: sBLK])
 
-	state[sPEP]=!!gtPOpt([(sPIS):piston],sPEP)
+	assignSt(sPEP,!!gtPOpt([(sPIS):piston],sPEP))
 
 	String lbl=sMs(data,sN)
 	if(lbl){
@@ -1183,14 +1189,14 @@ Map setup(LinkedHashMap data,Map<String,String>chunks){
 		assignAS(sSVLBL,lbl)
 		wappUpdateLabel(lbl)
 	}
-	state[sSCHS]=[]
-	state[sVARS]=mMs(gtState(),sVARS) ?: [:]
-	state.modifiedVersion=sVER
+	assignSt(sSCHS,[])
+	assignSt(sVARS,(Map)gtSt(sVARS) ?: [:])
+	assignSt('modifiedVersion',sVER)
 
-	state[sCACHE]=[:]
+	assignSt(sCACHE,[:])
 	stNeedUpdate()
-	state[sLOGS]=[]
-	state[sTRC]=[:]
+	assignSt(sLOGS,[])
+	assignSt(sTRC,[:])
 
 	Map r9; r9=[:]
 	r9[sPIS]=piston
@@ -1444,10 +1450,10 @@ static Boolean fndEmptyOper(Map oper){
 }
 
 Map deletePiston(){
+	assignAS('pistonDeleted',true)
 	String meth='deletePiston'
 	if(eric())doLog(sDBG,meth)
 	wremoveAllInUseGlobalVar()
-	assignAS('pistonDeleted',true)
 	assignSt(sACT,false)
 	clear1(true,true,true,true)	// calls clearMyCache(meth) && clearMyPiston
 	return [:]
@@ -3065,8 +3071,7 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 //update graph data
 	Map stats
 	s=sSTATS
-	if(myPep)stats=(Map)gtAS(s)
-	else stats=(Map)gtSt(s)
+	if(myPep)stats=(Map)gtAS(s) else stats=(Map)gtSt(s)
 	stats=stats ?: [:]
 
 	List<Map> tlist=(List<Map>)stats.timing ?: []
@@ -3083,8 +3088,7 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 	if(t2>t1)tlist=tlist[t2-t1..t2-i1]
 
 	stats.timing=tlist
-	if(myPep)assignAS(s,stats)
-	else assignSt(s,stats)
+	if(myPep)assignAS(s,stats) else assignSt(s,stats)
 	((Map)r9[s]).timing=null
 
 	t0=getCachedMaps(sFINLZ+s1)
@@ -3127,8 +3131,7 @@ private List<Map> sgetSchedules(String t,Boolean myPep){
 
 /** updates saved schedules  */
 private void updateSchCache(Map r9,List<Map> schedules,String t,String lt,Boolean myPep){
-	if(myPep)assignAS(sSCHS,schedules)
-	else assignSt(sSCHS,(List<Map>)[]+schedules)
+	if(myPep)assignAS(sSCHS,schedules) else assignSt(sSCHS,(List<Map>)[]+schedules)
 
 	updateCacheFld(r9,sSCHS,[]+schedules,t+lt,true)
 }
@@ -3275,8 +3278,7 @@ private void updateLogs(Map r9,Long lastExecute=null){
 				}
 			}
 		}
-		if(myPep)assignAS(s,logs)
-		else assignSt(s,logs)
+		if(myPep)assignAS(s,logs) else assignSt(s,logs)
 		if(nc && cacheMap!=null){
 			nc[s]=logs
 			theCacheVFLD[id]=nc
@@ -3943,9 +3945,9 @@ private Boolean executeTask(Map r9,List devices,Map statement,Map task,Boolean a
 				executePhysicalCommand(r9,device,command,prms)
 		}else{
 			if(vcmd!=null){
-				delay=executeVirtualCommand(r9,vcmd.a ? devices:device,command,prms)
+				delay=executeVirtualCommand(r9,vcmd[sA] ? devices:device,command,prms)
 				//aggregate commands only run once for all devices at the same time
-				if(vcmd.a)break
+				if(vcmd[sA])break
 			}
 		}
 	}
@@ -6848,7 +6850,7 @@ private Double evalDecimalOperand(Map r9,Map operand){
 void stNeedUpdate(){
 	String myId=sAppId()
 	if(!myId)return
-	needUpdateFLD[myId]=true
+	needUpdateFLD.put(myId,true)
 	needUpdateFLD=needUpdateFLD
 }
 
@@ -6969,7 +6971,7 @@ private Boolean evaluateCondition(Map r9,Map cndtn,String collection,Boolean asy
 				//trigger on device:attribute and timed trigger
 				if(lg)myDetail r9,"stays check ${co} isStays: $isStays result: $res options: $options",iN2
 				if(to!=null){
-					Map tvalue=mMs(to,sOPERAND) && mMs(to,sVALUES) ? mMs(to,sVALUES)+[(sF): mMs(to,sOPERAND).f]:null
+					Map tvalue=mMs(to,sOPERAND) && mMs(to,sVALUES) ? mMs(to,sVALUES)+[(sF): mMs(to,sOPERAND)[sF]]:null
 					if(tvalue!=null){
 						Long delay=longEvalExpr(r9,rtnMap1(tvalue))
 
@@ -7100,7 +7102,7 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 	Boolean oM=bIs(options,sMATCHES)
 	if(oM) options[sDEVS]=[(sMATCHED): [],(sUNMATCHED): []] as LinkedHashMap
 	//if multiple left values go through each
-	Map tvalue=to && to[sOPERAND] && to[sVALUES] ? mMs(to,sVALUES)+[(sF): mMs(to,sOPERAND).f]:null
+	Map tvalue=to && to[sOPERAND] && to[sVALUES] ? mMs(to,sVALUES)+[(sF): mMs(to,sOPERAND)[sF]]:null
 	Map tvalue2=to2 && to2[sOPERAND] && to2[sVALUES]? mMs(to2,sVALUES):null
 	if(!LT1) LT1=fill_TIM()
 	Boolean fa=bIs(options,'forceAll')
@@ -8441,7 +8443,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 
 			Long n=wnow()
 			Map event=[(sT):n,(sDEV):cvtLoc(),(sNM):sTIME,(sVAL):n,(sSCH):[(sT):lZ,(sS):iZ,(sI):iN9]]
-			r9[sCACHE]=[:] // reset followed by
+			r9.put(sCACHE,[:]) // reset followed by
 			assignSt(sCACHE,[:])
 			stNeedUpdate()
 			updateCacheFld(r9,sCACHE,[:],s,true)
@@ -9173,10 +9175,10 @@ private Map setVariable(Map r9,String name,value){
 				}
 			}else{
 				def v=(value instanceof GString)? "$value".toString():value
-				if(!variable.a) // cannot change constants
+				if(!variable[sA]) // cannot change constants
 					variable[sV]=matchCast(r9,v,t) ? v:cast(r9,v,t)
 			}
-			if(!variable.f){ // don't save fixed; (includes constants)
+			if(!variable[sF]){ // don't save fixed; (includes constants)
 				Map vars
 				Map t0=getCachedMaps(sSTVAR)
 				if(t0!=null)vars=mMs(t0,sVARS)
@@ -13066,16 +13068,16 @@ private Long wnow(){ return (Long)now() }
 private Date wtoDateTime(String s){ return (Date)toDateTime(s) }
 
 private String gtAppN(){ return (String)app.label }
-private gtSetting(String nm){ return settings."${nm}" }
-private gtSt(String nm){ return state."${nm}" }
-private gtAS(String nm){ return atomicState."${nm}" }
+private gtSetting(String nm){ return settings.get(nm) }
+private gtSt(String nm){ return state.get(nm) }
+private gtAS(String nm){ return atomicState.get(nm) }
 private void wstateRemove(String nm){ state.remove(nm) }
 
 /** assign to state  */
-private void assignSt(String nm,v){ state."${nm}"=v }
+private void assignSt(String nm,v){ state.put(nm,v) }
 
 /** assign to atomicState  */
-private void assignAS(String nm,v){ atomicState."${nm}"=v }
+private void assignAS(String nm,v){ atomicState.put(nm,v) }
 private Map gtState(){ return state }
 
 private gtLocation(){ return location }

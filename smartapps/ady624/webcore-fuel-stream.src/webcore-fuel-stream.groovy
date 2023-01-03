@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update December 29, 2022 for Hubitat
+ *  Last update January 2, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -62,7 +62,7 @@ private Boolean isSystemType(){
 definition(
 	namespace:"ady624",
 	(sNM):"${handle()} Fuel Stream",
-	description: "Local container for fuel streams",
+	description: "Local container for fuel streams, graphs",
 	author:"jp0550",
 	category:"My Apps",
 	iconUrl:gimg('app-CoRE.png'),
@@ -459,28 +459,28 @@ def getGraph(){
 	String s= (String)"${sMs(jumpFLD[typ],'getGraph')}"()
 	String ss= sBLK // s.replaceAll('<', '&lt;').replaceAll('>','&gt;')
 	if(isEric())myDetail null,"getGraph_${typ}: $ss",iN2
-	return render(contentType: "text/html", data: s)
+	return wrender(contentType: "text/html", data: s)
 }
 
 def getData(){
 	String typ=sMs(settings,sGRAPHT)
 	String s= (String)"${sMs(jumpFLD[typ],'getData')}"()
 	if(isEric())myDetail null,"getData_${typ}: $s",iN2
-	return render(contentType: "text/json", data: s)
+	return wrender(contentType: "text/json", data: s)
 }
 
 def getOptions(){
 	String typ=sMs(settings,sGRAPHT)
 	String s= JsonOutput.toJson( (Map)"${sMs(jumpFLD[typ],'getOptions')}"() )
 	if(isEric())myDetail null,"getOptions_${typ}: $s",iN2
-	return render(contentType: "text/json", data: s)
+	return wrender(contentType: "text/json", data: s)
 }
 
 def getSubscriptions(){
 	String typ=sMs(settings,sGRAPHT)
 	String s= JsonOutput.toJson( (Map)"${sMs(jumpFLD[typ],'getSubscriptions')}"() )
 	if(isEric())myDetail null,"getSubscriptions_${typ}: $s",iN2
-	return render(contentType: "text/json", data: s)
+	return wrender(contentType: "text/json", data: s)
 }
 
 def updateSettings(){
@@ -492,24 +492,50 @@ def getTile(){
 }
 
 
-
+void revokeAccessToken(){
+	state.remove('accessToken')
+	state.remove('endpoint')
+	state.remove('endpointSecret')
+	state.remove('localEndpointURL')
+	state.remove('remoteEndpointURL')
+}
 
 /* shared method */
-void initializeAppEndpoint(){
-	if(!state.endpoint){
+void initializeAppEndpoint(Boolean disableRetry=false){
+	String accessToken; accessToken=(String)state.accessToken
+	if(!state.endpoint || !accessToken){
 		try{
-			def accessToken=createAccessToken()
-			if(accessToken){
-				state.endpoint=getApiServerUrl()
-				state.localEndpointURL=fullLocalApiServerUrl(sBLK)
-				state.remoteEndpointURL=fullApiServerUrl(sBLK)
-				state.endpointSecret=accessToken
-			}
+			if(!accessToken) accessToken=createAccessToken() // this fills in state.accessToken
 		} catch(e){
 			debug "Error: ",null,iN2,e
-			state.remove('endpoint')
-			state.remove('endpointSecret')
 		}
+		if(accessToken){
+			state.endpoint=getApiServerUrl()
+			state.localEndpointURL=fullLocalApiServerUrl(sBLK)
+			state.remoteEndpointURL=fullApiServerUrl(sBLK)
+			state.endpointSecret=accessToken
+		}else if(!disableRetry){
+			state.accessToken=null
+			enableOauth()
+			initializeAppEndpoint(true)
+		}else {
+			error "Could not get access token"
+			revokeAccessToken()
+		}
+	}
+}
+
+private void enableOauth(){
+	Map params=[
+			uri: "http://localhost:8080/app/edit/update?_action_update=Update&oauthEnabled=true&id=${app.appTypeId}".toString(),
+			headers: ['Content-Type':'text/html;charset=utf-8']
+	]
+	try{
+		httpPost(params){ resp ->
+			//LogTrace("response (sDATA): ${resp.data}")
+		}
+	}catch(e){
+		error "enableOauth something went wrong: ",null,iN2,e
 	}
 }
 
@@ -533,8 +559,6 @@ def disableAPIPage(){
 				try{
 					revokeAccessToken()
 				}catch(ignored){}
-				state.remove('endpoint')
-				state.remove('endpointSecret')
 			}
 			paragraph "It has been done. Your token has been REVOKED. Tap Done to continue."
 		}
@@ -10163,12 +10187,12 @@ String getWeatherTile_weather2(Boolean config){
 
 //oauth endpoints
 def getTile_weather2(){
-	return render(contentType: "text/html", data: getWeatherTile_weather2(false))
+	return wrender(contentType: "text/html", data: getWeatherTile_weather2(false))
 }
 
 String getGraph_weather2(){
 	return getWeatherTile_weather2(true)
-	//return render(contentType: "text/html", data: getWeatherTile_weather2(true))
+	//return wrender(contentType: "text/html", data: getWeatherTile_weather2(true))
 }
 
 String getData_weather2(){
@@ -10182,7 +10206,7 @@ def updateSettings_weather2(){
 	state.tile_settings=request.JSON
 	//atomicState.temp_tile_settings=request.JSON
 
-	return render(contentType: "application/json", data: """{"status":"success"}""")
+	return wrender(contentType: "application/json", data: """{"status":"success"}""")
 }
 
 
@@ -14093,6 +14117,7 @@ private Map queueSemaphore(Map event){
 
 }
 
+private wrender(Map options=[:]){ render options }
 private Long wnow(){ return (Long)now() }
 private Date wtoDateTime(String s){ return (Date)toDateTime(s) }
 private String sAppId(){ return ((Long)app.id).toString() }
