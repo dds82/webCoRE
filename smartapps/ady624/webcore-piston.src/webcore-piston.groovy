@@ -32,7 +32,7 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20221228_HE'
+@Field static final String sHVER='v0.3.114.20230103_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
