@@ -27,8 +27,8 @@
 //file:noinspection GroovyUnusedAssignment
 //file:noinspection unused
 //file:noinspection GroovyAssignabilityCheck
-//file:noinspection GroovyFallthrough
 //file:noinspection SpellCheckingInspection
+//file:noinspection GroovyFallthrough
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
@@ -1068,11 +1068,6 @@ Map curPState(){
 	return rVal
 }
 
-Map clearLogs(){
-	clear1()
-	return [:]
-}
-
 private String decodeEmoji(String value){
 	if(!value) return sBLK
 	return value.replaceAll(/(\:%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}\:)/){
@@ -1140,12 +1135,6 @@ private LinkedHashMap recreatePiston(Boolean shorten=false,Boolean inMem=false,B
 		return piston
 	}
 	return [:]
-}
-
-Map updModified(Long t){
-	assignSt(sMODFD,t)
-	clearMyCache(sMODFD)
-	return [(sMODFD):t]
 }
 
 Map setup(LinkedHashMap data,Map<String,String>chunks){
@@ -1449,16 +1438,6 @@ static Boolean fndEmptyOper(Map oper){
 	return sz==iZ || ( (sz==i2 || sz==i3) && sMt(oper)==sC && !oper[sD] && sMs(oper,sG)==sANY)
 }
 
-Map deletePiston(){
-	assignAS('pistonDeleted',true)
-	String meth='deletePiston'
-	if(eric())doLog(sDBG,meth)
-	wremoveAllInUseGlobalVar()
-	assignSt(sACT,false)
-	clear1(true,true,true,true)	// calls clearMyCache(meth) && clearMyPiston
-	return [:]
-}
-
 private void checkLabel(Map r9=null){
 	Boolean act=isAct(r9)
 	Boolean dis=!isEnbl(r9)
@@ -1479,6 +1458,18 @@ private void checkLabel(Map r9=null){
 	}
 }
 
+// main api call points
+
+Map deletePiston(){
+	assignAS('pistonDeleted',true)
+	String meth='deletePiston'
+	if(eric())doLog(sDBG,meth)
+	wremoveAllInUseGlobalVar()
+	assignSt(sACT,false)
+	clear1(true,true,true,true)	// calls clearMyCache(meth) && clearMyPiston
+	return [:]
+}
+
 void config(Map data){ // creates a new piston
 	if(data==null)return
 	String r=sMs(data,sBIN)
@@ -1495,18 +1486,6 @@ void config(Map data){ // creates a new piston
 	t=sMs(data,s)
 	if(t!=sNL)assignSt(s,t)
 	clearMyCache('config')
-}
-
-Map setBin(String bin){
-	String typ='setBin'
-	if(!bin || !!sMs(gtState(),sBIN)){
-		doLog(sERROR,typ+': bad bin')
-		return [:]
-	}
-	assignSt(sBIN,bin)
-	wappUpdateSetting(sBIN,[(sTYPE):sTEXT,(sVAL):bin])
-	clearMyCache(typ)
-	return [:]
 }
 
 @CompileStatic
@@ -1538,6 +1517,8 @@ Map pausePiston(){
 	wstateRemove(sLEVT)
 	clear1(true,false,false,false)	// calls clearMyCache(meth) && clearMyPiston
 	Map nRtd=shortRtd(r9)
+	Map t=[ (sACT):false ]
+	nRtd.result=t
 	r9=null
 	return nRtd
 }
@@ -1608,6 +1589,19 @@ static Map shortRtd(Map r9){
 	return myRt
 }
 
+
+Map setBin(String bin){
+	String typ='setBin'
+	if(!bin || !!sMs(gtState(),sBIN)){
+		doLog(sERROR,typ+': bad bin')
+		return [:]
+	}
+	assignSt(sBIN,bin)
+	wappUpdateSetting(sBIN,[(sTYPE):sTEXT,(sVAL):bin])
+	clearMyCache(typ)
+	return [:]
+}
+
 Map setLoggingLevel(String level,Boolean clrC=true){
 	Integer mlogging; mlogging=level.isInteger()? level.toInteger():iZ
 	mlogging=Math.min(Math.max(iZ,mlogging),i3)
@@ -1624,23 +1618,33 @@ Map setCategory(String category){
 	return [(sCTGRY):category]
 }
 
-void resumeHandler(){
-	handleEvents([(sDATE): new Date(), (sDEV): gtLocation(), (sNM): sPSTNRSM, (sVAL): wnow()])
+Map updModified(Long t){
+	assignSt(sMODFD,t)
+	clearMyCache(sMODFD)
+	return [(sMODFD):t]
 }
+
+Map clearLogs(){
+	clear1()
+	return [:]
+}
+
 
 Map test(){
 	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):'test',(sVAL):wnow()])
 	return [:]
 }
 
-Map execute(Map data,String src){
-	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):'execute',(sVAL): src!=null ? src:wnow(),(sJSOND):data],false)
-	return [:]
-}
-
 Map clickTile(tidx){
 	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):sTILE,(sVAL):tidx])
 	return (Map)gtSt(sST) ?: [:]
+}
+
+
+
+Map execute(Map data,String src){
+	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):'execute',(sVAL): src!=null ? src:wnow(),(sJSOND):data],false)
+	return [:]
 }
 
 Map clearCache(){
@@ -1657,6 +1661,7 @@ Map clearAllQ(){
 	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):sCLRA,(sVAL):wnow()])
 	return [:]
 }
+
 
 @Field volatile static Map<String,Long> lockTimesVFLD=[:]
 @Field volatile static Map<String,String> lockHolderVFLD=[:]
@@ -2296,6 +2301,10 @@ private void checkVersion(Map r9){
 }
 
 /** EVENT HANDLING								**/
+
+void resumeHandler(){
+	handleEvents([(sDATE): new Date(), (sDEV): gtLocation(), (sNM): sPSTNRSM, (sVAL): wnow()])
+}
 
 void deviceHandler(event){ handleEvents(event) }
 
