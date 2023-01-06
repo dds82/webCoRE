@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update January 3, 2023 for Hubitat
+ * Last update January 5, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -123,7 +123,7 @@ private static Boolean graphsOn(){ return true }
 @Field static final String sNL=(String)null
 @Field static final String sBLK=''
 @Field static final String sSPC=' '
-@Field static final String sCOLON=':'
+@Field static final String sCLN=':'
 @Field static final String sDIV='/'
 @Field static final String sBOOL='bool'
 @Field static final String sAPPJAVA="application/javascript;charset=utf-8"
@@ -482,16 +482,16 @@ def pageSettings(){
 				input "apixuKey", sTXT, (sTIT): mreq+" key?", (sREQ): true
 				switch(mreq){
 				case apiXU:
-					defaultLoc=(String)location.zipCode
+					defaultLoc=gtLzip()
 					zipDesc="Override zip code (${defaultLoc}), or set city name or latitude,longitude?".toString()
 					break
 				case DarkSky:
-					defaultLoc="${location.latitude},${location.longitude}".toString()
+					defaultLoc=gtLlat()+','+gtLlong()
 					zipDesc="Override latitude,longitude (Default: ${defaultLoc})?".toString()
 					break
 				case OpnW:
-					defaultLoc="${location.latitude}".toString()
-					defaultLoc1="${location.longitude}".toString()
+					defaultLoc=gtLlat()
+					defaultLoc1=gtLlong()
 					zipDesc="Override latitude (Default: ${defaultLoc})?".toString()
 					zipDesc1="Override longitude (Default: ${defaultLoc1})?".toString()
 					break
@@ -675,16 +675,16 @@ private pageSectionAcctId(Boolean ins=false){
 
 		String acctHash = getHubAccountHash()
 		Boolean setA; setA = (Boolean)settings.setACCT
-		String acct; acct = setA ? (String)settings.acctID : sNL
+		String acct; acct = setA ? (String)gtSetting('acctID') : sNL
 
 		if(!acctHash){
 			paragraph "Did not find hub account hash.  It is recommended to register all your hubs and use same account hash in webCoRE."
 		}
 
 		if(acctHash && ins && setA==(Boolean)null){
-			app.updateSetting("properSID", [type: sBOOL, (sVAL): true])
-			app.updateSetting("setACCT", [type: sBOOL, (sVAL): true])
-			app.updateSetting("acctID", [type: sTXT, (sVAL): acctHash])
+			app.updateSetting('properSID', [type: sBOOL, (sVAL): true])
+			app.updateSetting('setACCT', [type: sBOOL, (sVAL): true])
+			app.updateSetting('acctID', [type: sTXT, (sVAL): acctHash])
 			setA=true
 			acct=acctHash
 		}
@@ -704,13 +704,13 @@ private pageSectionAcctId(Boolean ins=false){
 					msg=sNL
 					if(!ins){
 						noteshown=true
-						paragraph span("NOTE changing these settings will require all piston references to be corrected (calling other webCoRE pistons, URL access, and access apps such as HomeBridge or Echo Speaks.)",sCLRORG)
+						paragraph span("NOTE changing these settings will require all pistons to be backed up again.  It may affect accessing apps like Homebridge V2 or Echo Speaks)",sCLRORG)
 					}
 					input "acctUpdate", sBOOL, (sTIT): "Update to hub account hash?", (sDESC): "Tap to change", defaultValue: false, submitOnChange: true, (sREQ): false
 					if((Boolean)settings.acctUpdate){
-						app.updateSetting("properSID", [type: sBOOL, (sVAL): true])
-						app.updateSetting("setACCT", [type: sBOOL, (sVAL): true])
-						app.updateSetting("acctID", [type: sTXT, (sVAL): acctHash])
+						app.updateSetting('properSID', [type: sBOOL, (sVAL): true])
+						app.updateSetting('setACCT', [type: sBOOL, (sVAL): true])
+						app.updateSetting('acctID', [type: sTXT, (sVAL): acctHash])
 						setA=true
 						acct=acctHash
 					}
@@ -736,29 +736,29 @@ private pageSectionAcctId(Boolean ins=false){
 			paragraph "Advanced - Custom account identifier"
 			if(!noteshown && !ins){
 				noteshown=true
-				paragraph span("NOTE changing these settings will require all piston references to be corrected (calling other webCoRE pistons, URL access, and access apps such as HomeBridge or Echo Speaks.)",sCLRORG)
+				paragraph span("NOTE changing these settings will require all pistons to be backed up again.  It may affect accessing apps like Homebridge V2 or Echo Speaks)",sCLRORG)
 			}
 			input "setACCT", sBOOL, (sTIT): "Set custom account identifier?", (sDESC): "Tap to change", defaultValue: ins, submitOnChange: true, (sREQ): false
 			if(setA){
 				//paragraph "An email address is usually a good choice (is not used/shared)"
-				input "acctID", sTXT, (sTIT): 'Account identifier (hub account hash is best)', (sREQ): true
+				input 'acctID', sTXT, (sTIT): 'Account identifier (hub account hash is best)', (sREQ): true
 			}else{
-				app.removeSetting("acctID")
-				app.removeSetting("locID")
-				input "properSID", sBOOL, (sTIT): "Use New SID for location?", (sDESC): "Tap to change", defaultValue: true, (sREQ): false
+				app.removeSetting('acctID')
+				app.removeSetting('locID')
+				input 'properSID', sBOOL, (sTIT): "Use New SID for location?", (sDESC): "Tap to change", defaultValue: true, (sREQ): false
 			}
 		}
 
 		if(setA && acct){
-			app.updateSetting("properSID", [type: sBOOL, (sVAL): true])
+			app.updateSetting('properSID', [type: sBOOL, (sVAL): true])
 			paragraph "<br>"
 			paragraph "All hubs in same location may have a common location identifier. This could be Boston, Vacation, or Home1, etc..."
 			if(!noteshown && !ins){
 				noteshown=true
 				paragraph "<br>"
-				paragraph span("NOTE changing these settings will require all piston references to be corrected (calling other webCoRE pistons, URL access, and access apps such as HomeBridge or Echo Speaks.)",sCLRORG)
+				paragraph span("NOTE changing these settings will require all pistons to be backed up again.  It may affect accessing apps like Homebridge V2 or Echo Speaks)",sCLRORG)
 			}
-			input "locID", sTXT, (sTIT): 'Location identifier - no imbedded spaces', (sREQ): true
+			input 'locID', sTXT, (sTIT): 'Location identifier - no imbedded spaces', (sREQ): true
 		}
 
 		String wName=sAppId()
@@ -987,29 +987,29 @@ void updated(){
 	frcResub=false
 	verchg=false
 
-	if((Boolean)atomicState.disabled!=(Boolean)settings.disabled){
-		atomicState.disabled=(Boolean)settings.disabled==true
+	if((Boolean)gtAS('disabled')!=(Boolean)settings.disabled){
+		assignAS('disabled',(Boolean)settings.disabled==true)
 		chg=true
 	}
-	if((Boolean)atomicState.lPE!=(Boolean)settings.logPistonExecutions){
-		atomicState.lPE=(Boolean)settings.logPistonExecutions==true
+	if((Boolean)gtAS('lPE')!=(Boolean)settings.logPistonExecutions){
+		assignAS('lPE',(Boolean)settings.logPistonExecutions==true)
 		chg=true
 	}
-	if(atomicState.doResub){
+	if(gtAS('doResub')){
 		chg=true
 		frcResub=true
 		verchg=true
 	}
-	if((String)atomicState.cV!=sVER || (String)atomicState.hV!=sHVER){
-		debug "Detected version change ${state.cV} ${sVER} ${state.hV} ${sHVER}"
-		atomicState.cV=sVER
-		atomicState.hV=sHVER
+	if((String)gtAS('cV')!=sVER || (String)gtAS('hV')!=sHVER){
+		debug "Detected version change ${gtSt('cV')} ${sVER} ${gtSt('hV')} ${sHVER}"
+		assignAS('cV',sVER)
+		assignAS('hV',sHVER)
 		frcResub=true
 		chg=true
 		verchg=true
 	}
-	if((Boolean)atomicState.lFS!=(Boolean)settings.localFuelStreams){
-		atomicState.lFS=(Boolean)settings.localFuelStreams==true
+	if((Boolean)gtAS('lFS')!=(Boolean)settings.localFuelStreams){
+		assignAS('lFS',(Boolean)settings.localFuelStreams==true)
 		chg=true
 	}
 	if(chg){
@@ -1027,7 +1027,7 @@ void updated(){
 }
 
 void afterRun(){
-	atomicState.doResub=false
+	assignAS('doResub',false)
 	state.remove('doResub')
 	clearParentPistonCache("parent updated", true, true)
 	cleanUp()
@@ -1036,11 +1036,12 @@ void afterRun(){
 	doLog(sINFO,"webCoRE upgrade completed")
 }
 
+// parent states that children share in cache
 Map getChildPstate(){ gtPdata() }
 Map gtPdata(){
-	LinkedHashMap msettings=(LinkedHashMap)atomicState.settings
-	if((String)state.accessToken) updateEndpoint()
-	List a1=[ hashId(((Long)location.id).toString()+sML), hashId(hubUID.toString()+location.name.toString()+sML)]
+	LinkedHashMap msettings=(LinkedHashMap)gtAS('settings')
+	if((String)gtSt('accessToken')) updateEndpoint()
+	List a1=[ hashId(((Long)location.id).toString()+sML), hashId(hubUID.toString()+gtLname()+sML)]
 	String lsid=locationSid()
 	return [
 		sCv: sVER,
@@ -1048,26 +1049,18 @@ Map gtPdata(){
 		stsettings: msettings,
 		lifx: state.lifx ?: [:],
 		powerSource: state.powerSource ?: 'mains',
-		region: ((String)state.endpointCloud).contains('graph-eu') ? 'eu' : 'us',
+		region: ((String)gtSt('endpointCloud')).contains('graph-eu') ? 'eu' : 'us',
 		instanceId: getInstanceSid(),
 		accountId: accountSid(),
 		newAcctSid: acctANDloc(),
 		locationId: lsid,
 		oldLocations: a1,
 		allLocations: [lsid]+a1,
-		enabled: (Boolean)atomicState.disabled!=true,
-		logPExec: (Boolean)atomicState.lPE==true,
+		enabled: (Boolean)gtAS('disabled')!=true,
+		logPExec: (Boolean)gtAS('lPE')==true,
 		incidents: getIncidents(),
-		useLocalFuelStreams: (Boolean)atomicState.lFS==true
+		useLocalFuelStreams: (Boolean)gtAS('lFS')==true
 	]
-}
-
-private void clearGlobalPistonCache(String meth=null){
-	String n=handlePistn()
-	List t0; t0=wgetChildApps().findAll{ (String)it.name==n }
-	def t1=t0[0]
-	if(t1!=null) t1.clearGlobalCache(meth) // will cause a child to read global Vars
-	t0=null
 }
 
 private void clearParentPistonCache(String meth=sNL, Boolean frcResub=false, Boolean callAll=false){
@@ -1138,25 +1131,36 @@ void clearChldCaches(Boolean all=false, Boolean clrLogs=false, Boolean uber=fals
 	t0=null
 }
 
+// clear child cache of globals (children refill cache via listAvailableVariables()
+
+private void clearGlobalPistonCache(String meth=null){
+	String n=handlePistn()
+	List t0; t0=wgetChildApps().findAll{ (String)it.name==n }
+	def t1=t0[0]
+	if(t1!=null) t1.clearGlobalCache(meth) // will cause a child to read global Vars
+	t0=null
+}
+
 private void initialize(){
 	Boolean chg//,initT
 	chg=false
 //	initT=false
-	Boolean reSub=(Boolean)atomicState.forceResub1
+	Boolean reSub=(Boolean)gtAS('forceResub1')
 	if(reSub==null){
-		atomicState.forceResub1=true
-		atomicState.properSID=null
+		assignAS('forceResub1',true)
+		assignAS('properSID',null)
 		warn "SID reset requested"
 	}
 
 	String wName=sAppId()
 
-	Boolean prpSid=(Boolean)atomicState.properSID
-	if(prpSid==null || prpSid!=(Boolean)settings.properSID){
-		Boolean t0=settings.properSID!=null ? (Boolean)settings.properSID : true
-		atomicState.properSID=t0
-		state.properSID=t0
-		app.updateSetting("properSID", [type: sBOOL, (sVAL): t0])
+	Boolean prpSid=(Boolean)gtAS('properSID')
+	Boolean sprp= (Boolean)gtSetting('properSID')
+	if(prpSid==null || prpSid!=sprp){
+		Boolean t0=sprp!=null ?: true
+		assignAS('properSID',t0)
+		assignSt('properSID',t0)
+		app.updateSetting('properSID', [type: sBOOL, (sVAL): t0])
 		initTokens()
 		//initT=true
 		chg=true
@@ -1168,7 +1172,7 @@ private void initialize(){
 
 	if(checkSIDs()) chg=true
 
-	if(chg) atomicState.doResub=true
+	if(chg) assignAS('doResub',true)
 	//if(initT)initTokens()
 
 	subscribeAll()
@@ -1209,8 +1213,8 @@ Boolean checkSIDs(){
 	a=accountSid()
 	l=locationSid()
 	if(!acctANDloc()){
-		app.removeSetting("acctID")
-		app.removeSetting("locID")
+		app.removeSetting('acctID')
+		app.removeSetting('locID')
 		acctlocFLD[wName]=null
 		locFLD[wName]=sNL
 		a1=accountSid()
@@ -1224,8 +1228,8 @@ Boolean checkSIDs(){
 	locFLD[wName]=sNL
 	a=accountSid()
 	l=locationSid()
-	a1=(String)atomicState.aSID
-	l1=(String)atomicState.lSID
+	a1=(String)gtAS('aSID')
+	l1=(String)gtAS('lSID')
 	if(a1!=a || l1!=l){
 		if(a1!=null || l1!=null){
 			debug "Detected account SID change ${a1} -> ${a} ${l1} -> ${l}"
@@ -1233,12 +1237,12 @@ Boolean checkSIDs(){
 		initTokens()
 		//initT=true
 		chg=true
-		atomicState.aSID=a
-		atomicState.lSID=l
-		state.lSIDchanged=wnow()
+		assignAS('aSID',a)
+		assignAS('lSID',l)
+		assignSt('lSIDchanged',wnow())
 		clearHashMap(wName)
 	}
-	if(!state.lSIDchanged) state.lSIDchanged=wnow() // for upgrade
+	if(!gtSt('lSIDchanged')) assignSt('lSIDchanged',wnow()) // for upgrade
 	return chg
 }
 
@@ -1336,10 +1340,6 @@ private void enableOauth(){
 	}
 }
 
-private getHub(){
-	return ((List)location.getHubs()).find{ (String)it.getType()=='PHYSICAL' }
-}
-
 private void subscribeAll(){
 	subscribe(location, handle()+".poll", webCoREHandler)
 //	subscribe(location, sAT2+handle(), webCoREHandler)
@@ -1407,14 +1407,10 @@ private Map api_get_error_result(String error,String m=sNL){
 	clearLastPActivity(wName,sNL)
 	clearLastDActivity(wName,sNL)
 	return [
-		(sNM): (String)location.name + ' \\ ' + appName(),
+		(sNM): gtLname() + ' \\ ' + appName(),
 		(sERR): error,
 		(sNOW): wnow()
 	]
-}
-
-private Map getHubitatVersion(){
-	return ((List)location.getHubs()).collectEntries{ [(it.id.toString()): it.getFirmwareVersionString()] }
 }
 
 private static String normalizeLabel(pisN){
@@ -1528,6 +1524,7 @@ private void clearBaseResult(String meth=sNL,String wNi=sNL){
 @Field static final String sHSMALRTS='hsmAlerts'
 @Field static final String sDEVVER='deviceVersion'
 
+@CompileStatic
 private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 	String t='baseR'
 	String wName=sAppId()
@@ -1538,7 +1535,7 @@ private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 	if(base_resultFLD[wName]!=null){
 		cntbase_resultFLD[wName]=cntbase_resultFLD[wName]+i1
 		if(cntbase_resultFLD[wName]>200){
-			base_resultFLD[wName]=null
+			base_resultFLD[wName]=(Map)null
 		}else{
 			Map<String,Object> result=[:]+base_resultFLD[wName]
 			((Map)result.instance).pistons= presult(wName)
@@ -1563,10 +1560,10 @@ private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 	String locationId=locationSid()
 
 	String myN= appName()
-	Map<String,Object> result=[
-		(sNM): (String)location.name+ ' \\ ' +myN,
+	Map<String,Object> result= [
+		(sNM): gtLname()+ ' \\ ' +myN,
 		instance: [
-			account: [(sID): accountSid(), t: state.lSIDchanged  ],
+			account: [(sID): accountSid(), t: gtSt('lSIDchanged')  ],
 			pistons:  presult(wName),
 			(sID): instanceId,
 			locationId: locationId,
@@ -1583,24 +1580,25 @@ private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 			fuelStreamUrls: getFuelStreamUrls(instanceId),
 		],
 		location: [
-			//hubs: location.getHubs().findAll{ !((String)it.name).contains(':') }.collect{ [id: it.id /*hashId(it.id)*/, (sNM): (String)it.name, firmware: isHubitat() ? getHubitatVersion()[it.id] : it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
-			hubs: ((List)location.getHubs()).collect{ [(sID): it.id /*hashId(it.id)*/, (sNM): (String)location.name, firmware: isHubitat() ? (String)((Map)getHubitatVersion())[(String)it.id.toString()] : (String)it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
+			////hubs: location.getHubs().findAll{ !((String)it.name).contains(':') }.collect{ [id: it.id /*hashId(it.id)*/, (sNM): (String)it.name, firmware: isHubitat() ? getHubitatVersion()[it.id] : it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
+			//hubs: ((List)location.getHubs()).collect{ [(sID): it.id /*hashId(it.id)*/, (sNM): gtLname(), firmware: isHubitat() ? (String)getHubitatVersion()[(String)it.id.toString()] : (String)it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
+			hubs: gtHubs().collect { [id: it.id, name: gtLname(), firmware: it.fw, physical: it.physical, powerSource: it.powerSource ] },
 			incidents: alerts.collect{it}.findAll{ (Long)it.date >= incidentThreshold },
 			//incidents: isHubitat() ? [] : location.activeIncidents.collect{[date: it.date.time, (sTIT): it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
 			(sID): locationId,
-			mode: hashId(location.getCurrentMode().id),
-			modes: location.getModes().collect{ [(sID): hashId(it.id), (sNM): (String)it.name ]},
-			shm: transformHsmStatus((String)location.hsmStatus),
-			(sNM): (String)location.name,
-			temperatureScale: (String)location.temperatureScale,
+			mode: hashId(gtCurrentMode()[sID]),
+			modes: gtModes().collect{ [id: hashId(it.id), name: (String)it.name ]},
+			shm: transformHsmStatus(gtLhsmStatus()),
+			(sNM): gtLname(),
+			temperatureScale: gtLtScale(),
 			timeZone: tz ? [
 				(sID): tz.ID,
 				(sNM): tz.displayName,
 				offset: tz.rawOffset
 			] : null,
-			zipCode: (String)location.zipCode,
+			zipCode: gtLzip(),
 		],
-	]
+	] as Map<String, Object>
 	base_resultFLD[wName]=[:]+result
 	base_resultFLD=base_resultFLD
 	releaseTheLock(t)
@@ -2207,7 +2205,7 @@ private common_pause_resume(Map params, String oper, String msg){
 	Map result
 	String wName=sAppId()
 	if(verifySecurityToken(params)){
-		def piston=findPiston((String)params.id)
+		def piston=findPiston((String)params[sID])
 		if(piston){
 			Map rtData
 			if(oper!='resume')
@@ -2257,7 +2255,7 @@ private common_Simple(Map params, String msg, String oper, arg=null, Boolean clr
 	debug "Dashboard: "+msg
 	String wName=sAppId()
 	if(verifySecurityToken(params)){
-		String pid=(String)params.id
+		String pid=(String)params[sID]
 		def piston=findPiston(pid)
 		if(piston){
 			if(arg!=null)
@@ -2730,7 +2728,7 @@ private api_intf_settings_set(){
 	if(verifySecurityToken((Map)params)){
 		String pset=(String)params.settings
 		LinkedHashMap msettings=pset ? (LinkedHashMap) new JsonSlurper().parseText(new String(pset.decodeBase64(), sUTF8)) : null
-		atomicState.settings=msettings
+		assignAS('settings',msettings)
 
 		clearParentPistonCache("dashboard changed settings")
 		clearBaseResult('settings change')
@@ -3377,7 +3375,7 @@ private String transformCommand(command, Map<String,Map> overrides, String dvn){
 
 private void setPowerSource(String powerSource, Boolean atomic=true){
 	if(state.powerSource==powerSource) return
-	atomicState.powerSource=powerSource
+	assignAS('powerSource',powerSource)
 	sendLocationEvent([(sNM): 'powerSource', (sVAL): powerSource, isStateChange: true, linkText: "webCoRE power source event", descriptionText: handle()+" has detected a new power source: "+powerSource])
 }
 
@@ -3400,11 +3398,13 @@ private Map AddHeGlobals(Map<String,Map> globalVars, String meth){
 	return res
 }
 
+// children use this to get variables (they cache)
 Map listAvailableVariables(){
 	Map myV=(Map)gtAS(sVARS)
 	return listAV(myV, 'list variables')
 }
 
+// ide uses this
 private Map listAvailableVariables1(){
 	Map myV=(Map)gtSt(sVARS)
 	return listAV(myV, 'list variables1')
@@ -3490,7 +3490,7 @@ private void startDashboard(){
 	Map t0=listAvailableDevices(true)
 	dashboardApp.start(t0.collect{ it.value }, getInstanceSid())
 	if((String)state.dashboard!=sACT){
-		atomicState.dashboard=sACT
+		assignAS('dashboard',sACT)
 	}
 }
 
@@ -3499,15 +3499,16 @@ private void stopDashboard(){
 	def dashboardApp=getDashboardApp()
 	if(!dashboardApp) return //false
 	dashboardApp.stop()
-	if((String)state.dashboard!=sINACT) atomicState.dashboard=sINACT
+	if((String)state.dashboard!=sINACT) assignAS('dashboard',sINACT)
 }
 
 private String accountSid(){
-	Boolean useNew=state.properSID!=null ? (Boolean)state.properSID : true
+	Boolean stprp= (Boolean)gtSt('properSID')
+	Boolean useNew=stprp!=null ?: true
 	String t='-A'
 	String accountStr
 	accountStr= hubUID.toString() + (useNew ? t : sNL)
-	if(acctANDloc()) accountStr= (String)settings.acctID
+	if(acctANDloc()) accountStr= (String)gtSetting('acctID')
 	//if(eric()) debug "instance acct: $accountStr"
 	return hashId(accountStr)
 }
@@ -3519,7 +3520,7 @@ private Boolean acctANDloc(){
 	String wName=sAppId()
 	Boolean t; t=acctlocFLD[wName]
 	if(t==null){
-		t= ((String)settings.acctID && (String)settings.locID)
+		t= ((String)gtSetting('acctID') && (String)gtSetting('locID'))
 		acctlocFLD[wName]=t
 	}
 	return t
@@ -3531,10 +3532,11 @@ private String locationSid(){
 	String wName=sAppId()
 	String t; t=locFLD[wName]
 	if(t==sNL){
-		if(acctANDloc()) t= (String)settings.acctID + (String)settings.locID + sML
+		if(acctANDloc()) t= (String)gtSetting('acctID') + (String)gtSetting('locID') + sML
 		else{
-			Boolean useNew=state.properSID!=null ? (Boolean)state.properSID : true
-			t= (useNew ? hubUID.toString()+location.name.toString() : location.id.toString()) + sML
+			Boolean stprp= (Boolean)gtSt('properSID')
+			Boolean useNew=stprp!=null ?: true
+			t= (useNew ? hubUID.toString()+gtLname() : location.id.toString()) + sML
 		}
 		//if(eric()) debug "instance location: $t"
 		t= hashId(t)
@@ -3544,7 +3546,8 @@ private String locationSid(){
 }
 
 private String getInstanceSid(){
-	Boolean useNew=state.properSID!=null ? (Boolean)state.properSID : true
+	Boolean stprp= (Boolean)gtSt('properSID')
+	Boolean useNew=stprp!=null ?: true
 	String hsh=sAppId()
 	String t='-I'
 	String instStr=useNew ? hubUID.toString()+hsh+t : hsh
@@ -3720,7 +3723,44 @@ void pCallupdateRunTimeData(Map data){
 private gtLTS() { wgetChildAppByLabel("webCoRE Long Term Storage") }
 
 //wrappers
+private getHub(){
+	return ((List)location.getHubs()).find{ (String)it.getType()=='PHYSICAL' }
+}
+
+private List<Map> gtHubs(){
+	List a= (List)location.getHubs()
+	return a.collect{ it ->
+		Long id=it.getId()
+		[
+				(sID): id,
+				fw: it.getFirmwareVersionString(),
+				physical: ((String)it.getType()).contains('PHYSICAL'),
+				powerSource: it.isBatteryInUse() ? 'battery' : 'mains'
+		]
+	}
+}
+/*
+private Map getHubitatVersion(){
+	return ((List)location.getHubs()).collectEntries{ [(it.id.toString()): it.getFirmwareVersionString()] }
+} */
+
 private TimeZone mTZ() { return (TimeZone)location.timeZone }
+private gtLocation(){ return location }
+private String gtLtScale(){ return (String)location.getTemperatureScale() }
+private String gtLname(){ return (String)location.getName() }
+private String gtLzip(){ return (String)location.zipCode }
+private String gtLlat(){ return ((BigDecimal)location.latitude).toString() }
+private String gtLlong(){ return ((BigDecimal)location.longitude).toString() }
+private String gtLhsmStatus(){ return (String)location.hsmStatus }
+private Map gtCurrentMode(){
+	def a=location.getCurrentMode()
+	if(a)return [(sID):(Long)a.getId(),(sNM): (String)a.getName()]
+	return null
+}
+private List<Map> gtModes(){
+	List modes= (List)location.getModes()
+	return modes.collect{ [(sID): (Long)it.getId(), (sNM): (String)it.getName()] }
+}
 
 private gtSetting(String nm){ return settings.get(nm) }
 private gtSt(String nm){ return state.get(nm) }
@@ -5450,35 +5490,42 @@ static String myObj(obj){
 	else return 'unknown'
 }
 
+/** Returns true if string is encoded device hash  */
+@CompileStatic
+private static Boolean isWcDev(String dev){ return (dev && dev.size()==34 && dev.startsWith(sCLN) && dev.endsWith(sCLN)) }
+
+@Field static final Double d60=60.0D
+@Field static final Double d1000=1000.0D
+@Field static final Double dSECHR=3600.0D
+
+/** Converts v to either webCoRE or hubitat hub variable types and values */
 @SuppressWarnings('GroovyAssignabilityCheck')
-Map<String,Object> fixHeGType(Boolean toHubV, String typ, v, String dtyp){
-	Map ret
-	ret=[:]
-	def myv
-	myv=v
-	if(toHubV){ // from webcore(9 types) -> global(5 types + 3 overloads + sDYN becomes sSTR)
-		//noinspection GroovyFallthrough
-		switch(typ) {
+@CompileStatic
+Map fixHeGType(Boolean toHubV,String typ,v,String dtyp){
+	Map ret; ret=[:]
+	def myv; myv=v
+	String T='T'
+	String s9s='9999'
+	if(toHubV){ // from webcore(9 types) -> hub (5 types + 3 overloads + sDYN becomes sSTR)
+		switch(typ){
 			case sINT:
-				ret=[(sINT): v]
+				ret=[(sINT):v]
 				break
 			case sBOOLN:
-				ret=[(sBOOLN): v]
+				ret=[(sBOOLN):v]
 				break
 			case sDEC:
-				ret=['bigdecimal': v]
+				ret=['bigdecimal':v]
 				break
 			case sDEV:
-				// HE this is a List<String> -> String of words separated by a space (can split())
-				List<String> dL= v instanceof List ? (List<String>)v : (v ? (List<String>)[v]:[])
-				String res
-				res=sNL
-				Boolean ok
-				ok=true
-				dL.each{ String it->
-					if(ok && it && it.size()==34 && it.startsWith(sCOLON) && it.endsWith(sCOLON)){
-						res= res ? res+sSPC+it : it
-					} else ok=false
+				// HE is a List<String> -> String of words separated by a space (can split())
+				List<String> dL= v instanceof List ? (List<String>)v: ((v ? [v]:[]) as List<String>)
+				String res; res=sNL
+				Boolean ok; ok=true
+				for(String d in dL){
+					if(ok && isWcDev(d)){
+						res=res ? res+sSPC+d:d
+					}else ok=false
 				}
 				if(ok){
 					ret=[(sSTR):res]
@@ -5486,61 +5533,57 @@ Map<String,Object> fixHeGType(Boolean toHubV, String typ, v, String dtyp){
 				}
 			case sDYN:
 			case sSTR:
-				ret=[(sSTR): v]
+				ret=[(sSTR):v]
 				break
 			case sTIME:
-				if(eric())warn "got time $v"
-				Long aaa= ("$v".isNumber()) ? v as Long : null
+				Double aa
+				Boolean fnd; fnd=false
+				try{
+					aa= v as Double
+					fnd=true
+				}catch(ignored){}
+				Long aaa= fnd ? aa.toLong():("$v".isNumber() ? v as Long: null)
 				if(aaa!=null){
-					if(aaa<lMSDAY && aaa>=0L) {
+					if(aaa<lMSDAY && aaa>=lZ){
 						Long t0=getMidnightTime()
-						Long aa=t0+aaa
+						Long a1=t0+aaa
 						TimeZone tz=mTZ()
-						myv=aa+(tz.getOffset(t0)-tz.getOffset(aa))
-						if(eric())warn "extended midnight time by $aaa  +($t0) $myv"
-					} else {
+						myv=a1+(tz.getOffset(t0)-tz.getOffset(a1))
+					}else{
 						Date t1=new Date(aaa)
-						Long t2=Math.round((t1.hours*3600+t1.minutes*60+t1.seconds)*1000.0D)
+						Long t2=Math.round((t1.hours*dSECHR+t1.minutes*d60+t1.seconds)*d1000)
 						myv=t2
-						if(eric())warn "strange time $aaa new myv is $myv"
 					}
-				} else if(eric())warn "trying to convert nonnumber time"
+				}else if(eric()) warn "trying to convert nonnumber time",null
 			case sDATE:
 			case sDTIME: //@@
-				//if(eric())warn "found myv is $myv"
 				Date nTime=new Date((Long)myv)
-				/*TimeZone aa=mTZ()
-				Boolean a= aa.inDaylightTime(nTime)
-				if(eric())warn "found inDaylight  $a"
-				if(eric())warn "found current offset is  ${aa.getOffset(wnow())}"
-				if(eric())warn "found rawoffset is  ${aa.rawOffset}"*/
 				String format="yyyy-MM-dd'T'HH:mm:ss.sssXX"
 				SimpleDateFormat formatter=new SimpleDateFormat(format)
 				formatter.setTimeZone(mTZ())
-				String tt=(String) formatter.format(nTime)
-				if(eric())warn "found time tt is $tt"
-				String[] t1=tt.split('T')
+				String tt=formatter.format(nTime)
+				String[] t1=tt.split(T)
 
-				if(typ==sDATE) {
+				if(typ==sDATE){
 					// comes in long format should be string -> 2021-10-13T99:99:99:999-9999
-					String t2=t1[0]+'T99:99:99:999-9999'
-					ret=[(sDTIME): t2]
+					String t2=t1[iZ]+'T99:99:99:999-9999'
+					ret=[(sDTIME):t2]
 					break
 				}
-				if(typ==sTIME) {
+				if(typ==sTIME){
 					//comes in long format should be string -> 9999-99-99T14:25:09.009-0700
-					String t2='9999-99-99T'+t1[1]
-					ret=[(sDTIME): t2]
+					String t2='9999-99-99T'+t1[i1]
+					ret=[(sDTIME):t2]
 					break
 				}
-				//	if(typ==sDTIME) {
-				// this comes in as a long, needs to be string -> 2021-10-13T14:25:09.009-0700
-				ret=[(sDTIME): tt]
+				//	if(typ==sDTIME){
+				// long needs to be string -> 2021-10-13T14:25:09.009-0700
+				ret=[(sDTIME):tt]
 				break
 				//	}
 		}
-	} else { // from global(5 types + 3 overloads ) -> to webcore(8 (cannot restore sDYN)
-		switch(typ) {
+	}else{ // from hub (5 types + 3 overloads ) -> to webcore(8 (cannot restore sDYN)
+		switch(typ){
 			case sINT:
 				ret=[(sINT):v]
 				break
@@ -5554,55 +5597,56 @@ Map<String,Object> fixHeGType(Boolean toHubV, String typ, v, String dtyp){
 			case sSTR:
 				// if(dtyp==sDEV)
 				List<String> dvL=[]
-				Boolean ok
-				ok=true
+				Boolean ok; ok=true
 				String[] t1=((String)v).split(sSPC)
-				t1.each{ String it ->
-					// sDEV is a string in global, need to detect if it is really devices :xxxxx:
-					if(ok && it && it.size()==34 && it.startsWith(sCOLON) && it.endsWith(sCOLON)){
-						dvL.push(it)
-					} else ok=false
+				for(String t in t1){
+					// sDEV is a string in hub need to detect if it is really devices :xxxxx:
+					if(ok && isWcDev(t))dvL.push(t)
+					else ok=false
 				}
-				if(ok){ ret=[(sDEV):dvL]}
+				if(ok) ret=[(sDEV):dvL]
 				else ret=[(sSTR):v]
 				break
 				// cannot really return a string to dynamic type here res=sDYN
-			case sDTIME: // global times: everything is datetime -> these come in as a string and needs to be a long of appropriate type
-				String iD=v
-				String mtyp,res
+			case sDTIME: // global times: everything is datetime -> these come in string and needs to be a long of the type
+				String iD,mtyp,res
+				iD=v
 				mtyp=sDTIME
 				res=v
-				if(iD.endsWith("9999") || iD.startsWith("9999")) {
+				if(iD.endsWith(s9s) || iD.startsWith(s9s)){
 					Date nTime=new Date()
 					String format="yyyy-MM-dd'T'HH:mm:ss.sssXX"
 					SimpleDateFormat formatter=new SimpleDateFormat(format)
 					formatter.setTimeZone(mTZ())
-					String tt= (String)formatter.format(nTime)
-					String[] mystart=tt.split('T')
+					String tt=formatter.format(nTime)
+					String[] mystart=tt.split(T)
 
-					String[] t1= iD.split('T')
+					String[] t1=iD.split(T)
 
-					if(iD.endsWith("9999")) {
+					if(iD.endsWith(s9s)){
 						mtyp=sDATE
-						res= t1[0]+'T'+mystart[1] // 00:15:00.000'+myend //'-9999'
-					} else if(iD.startsWith("9999")) {
+						res=t1[iZ]+T+mystart[i1]
+					}else if(iD.startsWith(s9s)){
 						mtyp=sTIME
 						// we are ignoring the -0000 offset at end and using our current one
-						String withOutEnd=t1[1][0..-6]
-						String myend=tt[-5..-1]
-						//if(eric())warn "tt: ${tt}  myend: ${myend}  iD: ${iD}  mystart: ${mystart}  withOutEnd: ${withOutEnd}"
-						res= mystart[0]+'T'+withOutEnd+myend
-						//res= mystart[0]+'T'+t1[1]
+						String withOutEnd=t1[i1][iZ..-i6]
+						String myend=tt[-i5..-i1]
+						res=mystart[iZ]+T+withOutEnd+myend
 					}
 				}
-				Date tt1=wtoDateTime(res)
-				Long lres
-				lres=tt1.getTime()
-				if(mtyp==sTIME){
-					Date m1=new Date(lres)
-					Long m2=Math.round((m1.hours*3600+m1.minutes*60+m1.seconds)*1000.0D)
-					//if(eric())warn "fixing $res $lres to $m2"
-					lres=m2
+				Date tt1; tt1=null
+				Long lres; lres=null
+				try{
+					tt1=wtoDateTime(res)
+				} catch(e){
+					error "datetime parse of hub variable failed",-2,e
+				}
+				if(tt1!=null){
+					lres=tt1.getTime()
+					if(mtyp==sTIME){
+						Long m2=Math.round((tt1.hours*dSECHR+tt1.minutes*d60+tt1.seconds)*d1000)
+						lres=m2
+					}
 				}
 				//if(eric())warn "returning $lres"
 				ret=[(mtyp):lres]
@@ -5650,7 +5694,7 @@ private String hashId(id){
 	if(theHashMapVFLD[wName]==null){ theHashMapVFLD[wName]= [:]; theHashMapVFLD=theHashMapVFLD }
 	result=(String)theHashMapVFLD[wName][myId]
 	if(result==sNL){
-		result=sCOLON+md5('core.' + myId)+sCOLON
+		result=sCLN+md5('core.' + myId)+sCLN
 		theHashMapVFLD[wName][myId]=result
 		theHashMapVFLD=theHashMapVFLD
 		mb()
@@ -5667,10 +5711,13 @@ static void mb(String meth=sNL){
 	}
 }
 
+@Field static final Long lZ=0L
 @Field static final Integer iZ=0
 @Field static final Integer i1=1
 @Field static final Integer i2=2
 @Field static final Integer i3=3
+@Field static final Integer i5=5
+@Field static final Integer i6=6
 
 @Field static final String sSPCSB7='      │'
 @Field static final String sSPCSB6='     │'

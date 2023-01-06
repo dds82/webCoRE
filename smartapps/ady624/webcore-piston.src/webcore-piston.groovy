@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update January 3, 2023 for Hubitat
+ * Last update January 5, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -1308,12 +1308,30 @@ private void cleanCode(Map i,Boolean inMem){
 	String av='avg'
 	String ty=sMt(item)
 
-	//tasks with empty mode restriction
-	if(ty==sNL && item[sC] && item[sM] instanceof List && !(List)item[sM])a=item.remove(sM)
+	// cruft when editing operands/parameters
+	if(ty==sNL){
+		//tasks with empty mode restriction
+		if(item[sC] && item[sM] instanceof List && !(List)item[sM])a=item.remove(sM)
 
-	if(ty==sNL && item[sD] instanceof List && !item[sD] && sMs(item,sG)==av && sMs(item,sF)==sL && item[sVT]!=null){
-		if(item.size()==i5 && item[sC]!=null) a=item.remove(sC) // cruft when editing operands
-		if(inMem && item.size()==i4){ a=item.remove(sD); a=item.remove(sG) }
+		// task parameters (sP) without 'Nothing selected'
+		if(sMs(item,sG) in [av,sANY] && sMs(item,sF)==sL && item[sVT]!=null){
+			if(item[sX]!=null){ a=item.remove(sX);a=item.remove(sXI)}
+			if(item[sE]!=null)a=item.remove(sE)
+			if(item[sC]!=null)a=item.remove(sC)
+			if(item[sV]!=null)a=item.remove(sV)
+			if(item[sS]!=null)a=item.remove(sS)
+			if(item[sU]!=null)a=item.remove(sU)
+			if(item[sEXP])a=item.remove(sEXP)
+			if(item[sA]!=null)a=item.remove(sA)
+
+			// task parameters (sP) without types, but have devices
+			if(item[sD] instanceof List && item[sD]) item[sD] = []
+
+			if(item[sD] instanceof List && !item[sD]){
+				//if(item.size()==i5 && item[sC]!=null) a=item.remove(sC)
+				if(inMem && item.size()==i4){ a=item.remove(sD); a=item.remove(sG) }
+			}
+		}
 	}
 
 	if(ty in ListAL){ // cleanup operands
@@ -1339,6 +1357,7 @@ private void cleanCode(Map i,Boolean inMem){
 		if(ty!=sC && item[sC]!=null)a=item.remove(sC)
 		if(ty!=sV && oMv(item)!=null)a=item.remove(sV)
 		if(ty!=sS && item[sS]!=null)a=item.remove(sS)
+		if(ty!=sU && item[sU]!=null)a=item.remove(sU)
 		if(ty!=sP && item[sA]!=null)a=item.remove(sA)
 	}
 	if(inMem && ty==sEXPR && item[sI] && liMs(item,sI).size()==i1){ // simplify un-needed nesting
@@ -1363,6 +1382,52 @@ private void cleanCode(Map i,Boolean inMem){
 		if(sMs(item,'ctp')==sI)a=item.remove('ctp') // case traversal switch stmt
 		if(item[sN] && ty && sMa(item)==sD)a=item.remove(sA) // variable.a sS -> constant  sD-> dynamic
 
+		/*
+			statement.t = null; //type
+			statement.d = []; //devices
+			statement.o = 'and'; //operator  (if, while on
+			statement.n = false; //negation
+
+			statement.a = '0'; //sync '1' async  Execution method
+			statement.di = false; //disabled
+			statement.tcp = 'c'; //tcp - cancel on condition state change task cancelation policy
+			statement.tep = ''; //tep always task execution policy
+			statement.tsp = ''; //tsp override task scheduling policy
+
+			statement.rop = 'and'; //restriction operator
+			statement.rn = false; //restriction negation
+			statement.r = []; // Restrictions
+
+			statement.c = []  // conditions  (on, if)
+			statement.k = []; // Tasks (ACTION)
+			statement.s = []; // statements
+
+			statement.ei = []; // else if statements (if)
+			statement.e = []; // else (if, switch)
+			statement.cs = []; // case statements (switch)
+			statement.lo    // operand data (switch)
+			statement.ctp = 'i'; // case traversal policy
+
+			statement.x = ''; //variable (for, each)
+
+			statement.z = ''; //desc
+
+			statement.p = ''; // old
+			statement.pr = ''; // old
+			statement.os = ''; // old
+
+			statement.sm = // subscription method, always, never, auto/''
+			condition.co // condition operator
+			condition.ts = [] // true statements
+			condition.fs= [] // false statements
+			condition.wt = wait type for followed by // wt: l- loose (ignore unexpected events), s- strict, n- negated (lack of requested event continues group)
+			condition.wd = wait delay  for followed by
+
+			//added by subscribe all
+			condition.s = 'local'; //tos - subscription
+			condition / statement.w = warning
+			condition.ct = t or c (trigger, condition)
+		 */
 		// from IDE: cancel on c- condition state change (def), p- piston state change, b- condition or piston state change, ""- never cancel
 		// makes 'c' the default empty for the groovy code
 		if(!ListStmt)ListStmt=fill_STMT()
@@ -1407,6 +1472,7 @@ private void cleanCode(Map i,Boolean inMem){
 		if(item[sL]!=null && item[sL] instanceof String)a=item.remove(sL)
 	}
 
+	// operands
 	if(ty==sEVERY){ // scheduleTimer
 		if(sMvt(mMs(item,sLO)) in [sMS,sS,sM,sH]){ a=item.remove(sLO2); a=item.remove(sLO3) }
 		else if(sMt(mMs(item,sLO2))==sC)a=item.remove(sLO3)
@@ -1418,9 +1484,9 @@ private void cleanCode(Map i,Boolean inMem){
 	if(item[sLO2]!=null)cleanCode(mMs(item,sLO2),inMem)
 	if(item[sLO3]!=null)cleanCode(mMs(item,sLO3),inMem)
 
-	if(item[sRO]!=null){
+	if(item[sRO]!=null){ // .ro was overloaded in some old pistons as String like 'and'
 		if(inMem && (item[sRO] instanceof String || fndEmptyOper(mMs(item,sRO))) )a=item.remove(sRO)
-		else cleanCode(mMs(item,sRO),inMem)
+		else if(item[sRO] instanceof Map) cleanCode(mMs(item,sRO),inMem)
 	}
 	for(String t in ['wd',sRO2,sTO,sTO2]){
 		if(item.containsKey(t)){
@@ -8190,13 +8256,17 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 		statementTraverser={ Map node,parentNode,Map<String,Boolean>data,Map<String,Integer>lvl ->
 			dwnGrdTrig= data!=null && bIs(data,sTIMER)
 			if(node[sR])traverseRestrictions(node[sR],restrictionTraverser,node,data)
-			for(String mdeviceId in liMd(node)){
-				String deviceId; deviceId=mdeviceId
-				if(deviceId in oLIDS)deviceId=LID
-				if(deviceId) incrementDevices(deviceId,sNL,sNL)
-			}
 
 			String t=sMt(node)
+			if(t!=sACTION){
+				String attr=sMa(node)
+				for(String mdeviceId in liMd(node)){
+					String deviceId; deviceId=mdeviceId
+					if(deviceId in oLIDS)deviceId=LID
+					if(deviceId) incrementDevices(deviceId,sNL,attr)
+				}
+			}
+
 			Integer lastlvl
 			lastlvl=null
 			Map lastStatement; lastStatement=null
@@ -8224,7 +8294,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 					if(node[sK]){
 						for(Map k in liMs(node,sK)){
 							String kc=sMs(k,sC)
-							if(kc in ['setLocationMode'] || kc.contains('Tile') ||
+							if(kc in ['setLocationMode', 'setAlarmSystemStatus'] || kc.contains('Tile') ||
 										kc.contains('lifx') || kc.contains('Rule') ||
 										kc.contains('Piston')){
 								if(lge)myDetail r9,"Found location command $kc",iN2
@@ -12703,13 +12773,11 @@ private static Boolean isWcDev(String dev){ return (dev && dev.size()==34 && dev
 @SuppressWarnings('GroovyAssignabilityCheck')
 @CompileStatic
 Map fixHeGType(Boolean toHubV,String typ,v){
-	Map ret
-	ret=[:]
-	def myv
-	myv=v
+	Map ret; ret=[:]
+	def myv; myv=v
 	String T='T'
 	String s9s='9999'
-	if(toHubV){ // from webcore(9 types) -> global(5 types + 3 overloads + sDYN becomes sSTR)
+	if(toHubV){ // from webcore(9 types) -> hub (5 types + 3 overloads + sDYN becomes sSTR)
 		switch(typ){
 			case sINT:
 				ret=[(sINT):v]
@@ -12740,8 +12808,7 @@ Map fixHeGType(Boolean toHubV,String typ,v){
 				break
 			case sTIME:
 				Double aa
-				Boolean fnd
-				fnd=false
+				Boolean fnd; fnd=false
 				try{
 					aa= v as Double
 					fnd=true
@@ -12786,7 +12853,7 @@ Map fixHeGType(Boolean toHubV,String typ,v){
 				break
 				//	}
 		}
-	}else{ // from global(5 types + 3 overloads ) -> to webcore(8 (cannot restore sDYN)
+	}else{ // from hub (5 types + 3 overloads ) -> to webcore(8 (cannot restore sDYN)
 		switch(typ){
 			case sINT:
 				ret=[(sINT):v]
@@ -12838,13 +12905,21 @@ Map fixHeGType(Boolean toHubV,String typ,v){
 						res=mystart[iZ]+T+withOutEnd+myend
 					}
 				}
-				Date tt1=wtoDateTime(res)
-				Long lres
-				lres=tt1.getTime()
-				if(mtyp==sTIME){
-					Long m2=Math.round((tt1.hours*dSECHR+tt1.minutes*d60+tt1.seconds)*d1000)
-					lres=m2
+				Date tt1; tt1=null
+				Long lres; lres=null
+				try{
+					tt1=wtoDateTime(res)
+				} catch(e){
+					error "datetime parse of hub variable failed",null,-2,e
 				}
+				if(tt1!=null){
+					lres=tt1.getTime()
+					if(mtyp==sTIME){
+						Long m2=Math.round((tt1.hours*dSECHR+tt1.minutes*d60+tt1.seconds)*d1000)
+						lres=m2
+					}
+				}
+				//if(eric())warn "returning $lres"
 				ret=[(mtyp):lres]
 		}
 	}
@@ -13091,7 +13166,7 @@ private Map gtState(){ return state }
 
 private gtLocation(){ return location }
 private Map cvtLoc(){ cvtDev(location) }
-private static TimeZone mTZ(){ return TimeZone.getDefault() } // (TimeZone)location.timeZone
+private static TimeZone mTZ(){ return TimeZone.getDefault() }
 private String gtLMode(){ return (String)location.getMode() }
 private Map fndMode(Map r9,String m){
 	def mode= ((List)location.getModes())?.find{ it-> hashId(r9,(Long)it.getId())==m || (String)it.getName()==m }
