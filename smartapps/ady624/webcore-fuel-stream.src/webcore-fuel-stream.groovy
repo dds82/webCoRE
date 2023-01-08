@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update January 3, 2023 for Hubitat
+ *  Last update January 7, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -27,7 +27,6 @@
 //file:noinspection GroovyDoubleNegation
 //file:noinspection GroovyUnusedAssignment
 //file:noinspection unused
-//file:noinspection GroovyAssignabilityCheck
 //file:noinspection SpellCheckingInspection
 //file:noinspection GroovyFallthrough
 //file:noinspection GrMethodMayBeStatic

@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update January 5, 2023 for Hubitat
+ * Last update January 8, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -26,7 +26,6 @@
 //file:noinspection GroovyDoubleNegation
 //file:noinspection GroovyUnusedAssignment
 //file:noinspection unused
-//file:noinspection GroovyAssignabilityCheck
 //file:noinspection SpellCheckingInspection
 //file:noinspection GroovyFallthrough
 //file:noinspection GrMethodMayBeStatic
@@ -105,6 +104,7 @@ preferences{
 	page((sNM): "graphDuplicationPage")
 	page((sNM):sPDPC)
 	page((sNM):sPDPEXC)
+	page((sNM):sPDPDEV)
 }
 
 @CompileStatic
@@ -375,6 +375,7 @@ private pageEngineBlock(){
 			String b='complete'
 			section('Debug'){
 				href sPDPC,(sTIT):'Dump base result Cache',description:sBLK, (sDESC): c, state: b
+				href sPDPDEV,(sTIT):'Dump devices result',description:sBLK, (sDESC): c, state: b
 				href "pageDumpDashC",(sTIT):'Dump dashload Cache',description:sBLK, (sDESC): c, state: b
 				href "pageRebuildCache", (sTIT): "Clean up and rebuild IDE data cache", (sDESC): "Tap to change your clean up and rebuild your data cache", state: b
 			}
@@ -884,7 +885,7 @@ def pageUberCleanups(){
 }
 
 def pageDumpDashC(){
-	Map<String,Object> t0 =api_get_base_result(true)
+	Map<String,Object> t0 =api_get_base_result()
 	String message=getMapDescStr(t0)
 	return dynamicPage((sNM):"pageDumpDashC",(sTIT):sBLK,uninstall:false){
 		section('Dashboard Data Cache dump'){
@@ -1348,6 +1349,8 @@ private void subscribeAll(){
 //below unused
 //	subscribe(location, "HubUpdated", hubUpdatedHandler, [filterEvents: false])
 //	subscribe(location, "summary", summaryHandler, [filterEvents: false])
+	subscribe(location, "hsmRule", hsmRuleHandler, [filterEvents: false])
+	subscribe(location, "hsmRules", hsmRulesHandler, [filterEvents: false])
 	subscribe(location, "hsmStatus", hsmHandler, [filterEvents: false])
 	subscribe(location, "hsmAlert", hsmAlertHandler, [filterEvents: false])
 	setPowerSource(getHub()?.isBatteryInUse() ? 'battery' : 'mains')
@@ -1415,9 +1418,13 @@ private Map api_get_error_result(String error,String m=sNL){
 
 private static String normalizeLabel(pisN){
 	String label=(String)pisN.label
+	return normalizeString(label)
+}
+
+private static String normalizeString(String s){
 	String regex=' <span style.*$'
-	String t0=label.replaceAll(regex, sBLK)
-	return t0!=sNL ? t0 : label
+	String t0=s.replaceAll(regex, sBLK)
+	return t0!=sNL ? t0 : s
 }
 
 @Field static Semaphore theSerialLockFLD=new Semaphore(1)
@@ -1521,11 +1528,10 @@ private void clearBaseResult(String meth=sNL,String wNi=sNL){
 @Field volatile static Map<String,Integer> cntbase_resultFLD= [:]
 
 
-@Field static final String sHSMALRTS='hsmAlerts'
 @Field static final String sDEVVER='deviceVersion'
 
 @CompileStatic
-private Map<String,Object> api_get_base_result(Boolean updateCache=false){
+private Map<String,Object> api_get_base_result(){
 	String t='baseR'
 	String wName=sAppId()
 
@@ -1552,9 +1558,10 @@ private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 
 	TimeZone tz=mTZ()
 	String currentDeviceVersion=(String)gtSt(sDEVVER)
+/*
 	Long incidentThreshold=Math.round(lnow - 604800000.0D)
 	def a=gtSt(sHSMALRTS)
-	List<Map> alerts= a ? (List<Map>)a : []
+	List<Map> alerts= a ? (List<Map>)a : [] */
 
 	String instanceId=getInstanceSid()
 	String locationId=locationSid()
@@ -1575,7 +1582,7 @@ private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 			enabled: !gtSetting('disabled'),
 			settings: gtSt('settings') ?: [:],
 			lifx: gtSt('lifx') ?: [:],
-			virtualDevices: virtualDevices(updateCache),
+			virtualDevices: virtualDevices(),
 			globalVars: listAvailableVariables1(),
 			fuelStreamUrls: getFuelStreamUrls(instanceId),
 		],
@@ -1583,7 +1590,8 @@ private Map<String,Object> api_get_base_result(Boolean updateCache=false){
 			////hubs: location.getHubs().findAll{ !((String)it.name).contains(':') }.collect{ [id: it.id /*hashId(it.id)*/, (sNM): (String)it.name, firmware: isHubitat() ? getHubitatVersion()[it.id] : it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
 			//hubs: ((List)location.getHubs()).collect{ [(sID): it.id /*hashId(it.id)*/, (sNM): gtLname(), firmware: isHubitat() ? (String)getHubitatVersion()[(String)it.id.toString()] : (String)it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
 			hubs: gtHubs().collect { [id: it.id, name: gtLname(), firmware: it.fw, physical: it.physical, powerSource: it.powerSource ] },
-			incidents: alerts.collect{it}.findAll{ (Long)it.date >= incidentThreshold },
+			//incidents: alerts.collect{it}.findAll{ (Long)it.date >= incidentThreshold },
+			incidents: getIncidents(),
 			//incidents: isHubitat() ? [] : location.activeIncidents.collect{[date: it.date.time, (sTIT): it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
 			(sID): locationId,
 			mode: hashId(gtCurrentMode()[sID]),
@@ -1709,7 +1717,7 @@ private api_intf_dashboard_load(){
 	Boolean err; err=false
 	if(verifySecurityToken((Map)params)){
 		msg+=' security ok'
-		result=api_get_base_result(true)
+		result=api_get_base_result()
 
 		if((String)params.dashboard=="1"){
 			startDashboard()
@@ -1721,7 +1729,7 @@ private api_intf_dashboard_load(){
 		msg+=' security NOT ok'
 		if((String)params.pin!=sNL){
 			if(settings.PIN && md5('pin:'+(String)settings.PIN)==(String)params.pin){
-				result=api_get_base_result(true)
+				result=api_get_base_result()
 				result.instance.token=createSecurityToken()
 			}else{
 				error "Dashboard: Authentication failed due to an invalid PIN"
@@ -1781,7 +1789,7 @@ private api_intf_dashboard_devices(){
 		String soffset= "${params.offset}".toString()
 		Integer offset= soffset.isInteger() ? soffset.toInteger() : 0
 		if(eric())debug s+soffset
-		result=listAvailableDevices(false, false, offset) +
+		result=listAvailableDevices(false, true, offset) +
 				[ (sDEVVER): (String)gtAS(sDEVVER) ]
 	}else{ result=api_get_error_result(sERRTOK,s) }
 	//for accuracy, use the time as close as possible to the render
@@ -3032,7 +3040,7 @@ private void cleanUp(){
 			state.remove(pid)
 		}
 		t0=null
-		Map a=api_get_base_result(true)
+		Map a=api_get_base_result()
 	}catch(ignored){}
 }
 
@@ -3212,7 +3220,7 @@ private String getDashboardRegistrationUrl(){
 	return "https://api.${domain()}/dashboard/".toString()
 }
 
-Map listAvailableDevices(Boolean raw=false, Boolean updateCache=false, Integer offset=0){
+Map listAvailableDevices(Boolean raw=false, Boolean batch=true, Integer offset=0){
 	Long time=wnow()
 	def storageApp //=getStorageApp()
 	Map result; result=[:]
@@ -3238,7 +3246,7 @@ Map listAvailableDevices(Boolean raw=false, Boolean updateCache=false, Integer o
 					Boolean stop; stop=false
 					String jsonData=JsonOutput.toJson(result)
 					Integer responseLength=jsonData.getBytes(sUTF8).length
-					if(responseLength > 50000 || wnow()-time > 4000) stop=true
+					if(batch && (responseLength > 50000 || wnow()-time > 4000) ) stop=true
 					if(stop && idx < dsz-i1 ){
 						result.nextOffset= offset+idx+i1
 						return true
@@ -3271,26 +3279,56 @@ Map listAvailableDevices(Boolean raw=false, Boolean updateCache=false, Integer o
 
 Map getDevDetails(dev, Boolean addtransform=false){
 	Map<String,Map> overrides=commandOverrides()
-	String nm=dev.getDisplayName()
+	String dnm=dev.getDisplayName()
 	List<Map> newCL; newCL=[]
 	List cmdL; cmdL=dev.getSupportedCommands()
-	if(eric()) error("DEVICE $nm")
+	if(eric()) error("DEVICE $dnm")
 	if(eric()) warn("COMMANDS $cmdL")
 	cmdL=cmdL.unique{ (String)it.getName() }
 	for(cmd in cmdL){
 		Map mycmd=[:]
-		mycmd[sN]=cmd.getName()
-		mycmd[sP]=cmd.getArguments()
+		String cnm=(String)cmd.getName()
+		mycmd[sN]=cnm
+		List myargs=(List)cmd.getArguments()
+		List<Map> prms = null // cmd.getParameters()
+		if(eric()) warn("$cnm arguments: $myargs")
+		if(eric()) warn("$cnm Parameters: $prms")
+		if(myargs){
+			Boolean ok; ok=false
+			List<Map> myL; myL=[]
+			if(prms){
+				ok=true
+				Integer i
+				for(i=0; i<prms.size();i++){
+					Map myD; myD=[:]
+					if(ok && prms[i] && prms[i].type){
+						String nm1; nm1=(String)prms[i].name
+						if(nm1){
+							if(nm1[-1]=='*'){
+								nm1=nm1[0..-2]
+								myD.m=1
+							}
+						}
+						myD.n= nm1 ?: "arg $i"
+						if(prms[i].type) myD.t= ((String)prms[i].type).toUpperCase()
+						if(prms[i].description) myD.h=prms[i].description
+						if(prms[i].constraints) myD.c=prms[i].constraints
+						myL.push([:]+myD)
+					} else ok=false
+				}
+			}
+			mycmd[sP]= ok && myL ? myL : myargs
+		}
 		newCL.push(mycmd)
 		if(addtransform){
-			String an=transformCommand(cmd,overrides,nm)
+			String an=transformCommand(cmd,overrides,dnm)
 			if(an){
 				mycmd[sN]=an
 				newCL.push(mycmd)
 			}
 		}
 	}
-	if(eric()) warn("COMMANDS $newCL")
+	if(eric()) warn("PROCESSED COMMANDS $newCL")
 
 	newCL= newCL.unique{ (String)it.n }
 
@@ -3306,12 +3344,20 @@ Map getDevDetails(dev, Boolean addtransform=false){
 			}
 		}else{
 			cmd.cm=true
-			if(cmd[sP]){
-				List<String> typs
-				typs=[]
-				for(String typ in (List<String>)cmd[sP]){
-					if(typ) typs.push(typ.toUpperCase())
-					else if(getLogging()[sDBG] || eric()) debug("Device $nm has strange command $cmdName with commands $cmd has nulls")
+			if((List)cmd[sP]){
+				List typs; typs=[]
+				Integer i; i=0
+				for(item in (List)cmd[sP]){
+					if(item instanceof String){
+						if(item) typs.push(item.toUpperCase())
+						else if(getLogging()[sDBG] || eric()) debug("Device $dnm has strange command $cmdName with commands $cmd has nulls")
+					} else {
+						Map mitem=(Map)item
+						if((String)mitem.t) mitem.t= ((String)mitem.t).toUpperCase()
+						else if(getLogging()[sDBG] || eric()) debug("Device $dnm has strange command $cmdName with commands $cmd has nulls")
+						typs[i]=mitem
+					}
+					i++
 				}
 				cmd[sP]=typs
 			}
@@ -3320,7 +3366,7 @@ Map getDevDetails(dev, Boolean addtransform=false){
 	}
 
 	Map res=[
-		(sN): nm,
+		(sN): dnm,
 		cn: dev.getCapabilities()*.name,
 		(sA): ((List)dev.getSupportedAttributes()).unique{ (String)it.name }.collect{
 			//Map x=[
@@ -4083,15 +4129,73 @@ def newIncidentHandler(evt){
 	//log.error "$evt.name >>> ${evt.jsonData}"
 }
 
-def hsmHandler(evt){
-	state.hsmStatus=evt.value
-	def a=getIncidents() // cause trimming
-	clearParentPistonCache("hsmHandler")
-	clearBaseResult('hsmHandler')
+@Field static final String sHSMALRTS='hsmAlerts'
+
+void addHsmEvent(evt){
+	String evNm = (String)evt.name
+	String evV=evt.value.toString()
+	String evDesc=(String)evt.descriptionText
+	String nevDesc= normalizeString(evDesc)
+	if(eric())log.debug "received event: name: $evNm, value: $evV, Desc:$evDesc desc1: $nevDesc  json >> ${evt.jsonData}"
+
+	def a; a=gtAS(sHSMALRTS)
+	Map alert; alert=null
+	List<Map> alerts; alerts= a? (List<Map>)a : []
+
+	if(evNm in ['hsmAlert', 'hsmRule']){
+		String s= evNm == 'hsmAlert' ? 'HSM Alert: ' : sBLK
+		String title=s+ evV + (evV=='rule' ? ',  '+evDesc : sBLK)
+		String src=s+ evV
+		String msg= evNm == 'hsmAlert' ?  'HSM '+evV+' Alert' : sNL
+
+		alert=[
+				date:((Date)evt.date).getTime(),
+				(sNM): evNm,
+				(sV):evt.value,
+				des:evDesc,
+				(sTIT): title,
+				message: msg,
+				args: evt.data,
+				sourceType: src,
+				//d: evt.data
+		]
+		Boolean aa=alerts.push(alert)
+		assignAS(sHSMALRTS,alerts)
+		clearParentPistonCache("hsmAlerts changed")
+		clearBaseResult('hsmAlertHandler')
+	}
+	if(alerts) a=getIncidents() // cause trimming
 }
 
-def hsmAlertHandler(evt){
+def hsmRuleHandler(evt){ // hsmRule event
+	addHsmEvent(evt)
+	// gets cancelRuleALerts value, with description as name of rule
+}
+
+def hsmRulesHandler(evt){ // hsmRules event
+	addHsmEvent(evt)
+	// gets armedRule value, with description as name of rule
+	// gets disarmedRule value, with description name of rule
+}
+
+def hsmHandler(evt){ // hsmStatus event
+	state.hsmStatus=evt.value
+	addHsmEvent(evt)
+	// gets allDisarmed value
+	//@Field static final String sALLDISARM='allDisarmed'
+	// gets disarmed value (leave rule alone?)
+/*	def a=getIncidents() // cause trimming
+	clearParentPistonCache("hsmHandler")
+	clearBaseResult('hsmHandler')*/
+}
+
+def hsmAlertHandler(evt){ // hsmAlert event
+	// get value of rule to say rule fired?
+	// get value of water, temperature
 //push incidents
+	addHsmEvent(evt)
+
+/*
 	String evV=evt.value.toString()
 	String title='HSM Alert: '+ evV + (evV=='rule' ? ',  '+(String)evt.descriptionText : sBLK)
 	String src='HSM Alert:'+ evV
@@ -4106,7 +4210,7 @@ def hsmAlertHandler(evt){
 		(sV):evt.value,
 		des:evt.descriptionText,
 		//d: evt.data
-	]
+	] */
 	//incidents: isHubitat() ? [] : location.activeIncidents.collect{[date: it.date.time, (sTIT): it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
 
 // this should search the db from hsmAlert events?
@@ -4118,11 +4222,13 @@ List t1=getLocationEventsSince('hsmAlert', new Date() - 10)
 		}
 		if(t2 && t2.value){ return stringToTime(t2.value) + 1000 }
 */
+	/*
 	String locStat=(String)location.hsmStatus
 
 	def a; a=gtAS(sHSMALRTS)
 	List<Map> alerts; alerts= a? (List<Map>)a : []
 	Boolean aa=alerts.push(alert)
+	if(locStat==sALLDISARM) alerts=[]
 	if(locStat==sALLDISARM || evV in [sCANCEL, sCANRULEA]) alerts=[]
 	assignAS(sHSMALRTS,alerts)
 
@@ -4130,33 +4236,77 @@ List t1=getLocationEventsSince('hsmAlert', new Date() - 10)
 	clearParentPistonCache("hsmAlerts changed")
 	clearBaseResult('hsmAlertHandler')
 
-	info 'HSM Alert: '+title
+	info 'HSM Alert: '+title */
 }
 
 private List<Map> getIncidents(){
-	Long incidentThreshold=Math.round(wnow() - 604800000.0D) // 1 week
-	String locStat=(String)location.hsmStatus
+
+	List<Map> alerts,newAlerts,new2Alerts,new3Alerts,new4Alerts
 	def a; a=gtAS(sHSMALRTS)
-	List<Map> alerts,newAlerts,new2Alerts,new3Alerts
 	alerts= a? (List<Map>)a : []
 	Integer osz; osz=alerts.size()
 	if(osz==0) return []
+
+	String locStat=(String)location.hsmStatus
 	if(locStat==sALLDISARM){ alerts=[]; state.remove(sHSMALRTS) }
-	newAlerts=alerts.collect{it}.findAll{ (Long)it.date >= incidentThreshold }
+
+	/*
+	(sNM): evNm,
+	(sV):evt.value,
+	des:evDesc,
+	ndes:nevDesc,
+	String evNm = (String)evt.name
+	String evV=evt.value.toString()
+	String evDesc=(String)evt.descriptionText
+	String nevDesc= normalizeString(evDesc)
+*/
+	Long incidentThreshold=Math.round(wnow() - 604800000.0D) // 1 week
+	newAlerts=alerts.collect{ it }.findAll{
+		(Long)it.date >= incidentThreshold }.sort{ (Long)it.date }
+
+	new2Alerts=[]
+	Map<String,List<Map>> rules
+	rules=[:]
 	String intrusion='intrusion'
-	new2Alerts=newAlerts.collect{it}.findAll{ !(locStat==sDISARMD && ((String)it.v).contains(intrusion)) }.sort { (Long)it.date }
-	new3Alerts=[]
-	for(Map myE in new2Alerts){
-		if((String)myE.v in [sCANCEL,sCANRULEA]) new3Alerts=[]
-		else Boolean aa=new3Alerts.push(myE)
+
+	for(Map myE in newAlerts) {
+		String evNm = (String)myE[sNM]
+		String v= (String)myE[sV]
+		String desc=(String)myE.des
+		if(evNm=='hsmAlert'){
+			if( locStat!=sDISARMD && v.contains(intrusion) ){
+				new2Alerts.push(myE)
+			} else if( v in ['water','smoke','arming'] ){
+				new2Alerts.push(myE)
+			} else if(v == sCANCEL){
+				new2Alerts=[]
+				rules= [:]
+			} else if(v == 'rule'){
+				String ruleKey=desc
+				if(ruleKey){
+					List<Map> trule= rules[ruleKey] ?: []
+					trule.push(myE)
+					rules[ruleKey]=trule
+				}
+			} else log.warn "unknown $evNm $v"
+		} else if(evNm=='hsmRule' && v==sCANRULEA){
+			String ruleKey=desc
+			if(ruleKey) rules[ruleKey]=[]
+		} else log.warn "unknown $evNm $v"
 	}
-	a=null
-	alerts=null
-	newAlerts=null
-	new2Alerts=null
-	Integer nsz=new3Alerts.size()
-	if(osz!=nsz) assignAS(sHSMALRTS,new3Alerts)
-	return new3Alerts
+	new3Alerts= []+new2Alerts
+	for(l in rules.keySet()){
+		new3Alerts += rules[l]
+	}
+	new4Alerts = new3Alerts.collect { it }.sort { (Long)it.date }
+
+	Integer nsz=new4Alerts.size()
+	if(osz!=nsz) {
+		assignAS(sHSMALRTS,[]+new4Alerts)
+		clearParentPistonCache("hsmAlerts changed")
+		clearBaseResult('hsmAlertHandler')
+	}
+	return new4Alerts
 }
 
 void modeHandler(evt){
@@ -5222,7 +5372,7 @@ def getLifxToken(){
 	return (module && module.connected ? module.token : null)
 }
 */
-private Map getLocationModeOptions(Boolean updateCache=false){
+private Map getLocationModeOptions(){
 	Map result=[:]
 	for (mode in location.modes){
 		if(mode) result[hashId((Long)mode.getId())]=(String)mode.name
@@ -5288,14 +5438,14 @@ private static Map getAlarmSystemRuleOptions(){
 
 
 /*
-private Map getRoutineOptions(updateCache=false){
+private Map getRoutineOptions(){
 	def routines=location.helloHome?.getPhrases()
 	def result=[:]
 	if(routines){
 		routines=routines.sort{ it?.label ?: sBLK }
 		for(routine in routines){
 			if(routine && routine?.label)
-				result[hashId(routine.id, updateCache)]=routine.label
+				result[hashId(routine.id)]=routine.label
 		}
 	}
 	return result
@@ -5312,7 +5462,7 @@ private Map getEchoSistantOptions(){
 
 import hubitat.helper.RMUtils
 
-private Map getRuleOptions(Boolean updateCache){
+private Map getRuleOptions(){
 	Map result=[:]
 	['4.1', '5.0'].each { String ver ->
 		def rules=RMUtils.getRuleList(ver ?: sNL)
@@ -5344,7 +5494,7 @@ Map getChildVirtDevices(){
 	return cleanResult
 }
 
-private Map<String,Map> virtualDevices(Boolean updateCache=false){
+private Map<String,Map> virtualDevices(){
 	return [
 		date:			[ (sN): 'Date',				(sT): sDATE,		],
 		datetime:		[ (sN): 'Date & Time',		(sT): sDTIME,	],
@@ -5352,11 +5502,11 @@ private Map<String,Map> virtualDevices(Boolean updateCache=false){
 		email:			[ (sN): 'Email',			(sT): 'email',						(sM): true	],
 		powerSource:	[ (sN): 'Hub power source',	(sT): sENUM,	(sO): [battery: 'battery', mains: 'mains'],					x: true	],
 		ifttt:			[ (sN): 'IFTTT',			(sT): sSTR,						(sM): true	],
-		mode:			[ (sN): 'Location mode',	(sT): sENUM,	(sO): getLocationModeOptions(updateCache),	x: true],
+		mode:			[ (sN): 'Location mode',	(sT): sENUM,	(sO): getLocationModeOptions(),	x: true],
 		tile:			[ (sN): 'Piston tile',		(sT): sENUM,	(sO): ['1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','10':'10','11':'11','12':'12','13':'13','14':'14','15':'15','16':'16'],		(sM): true	],
 		pistonResume: 	[ (sN): 'Piston Resumed',	(sT): sSTR,		x: true],
 // HE specific events
-		rule:			[ (sN): 'Rule',				(sT): sENUM,	(sO): getRuleOptions(updateCache),		(sM): true ],
+		rule:			[ (sN): 'Rule',				(sT): sENUM,	(sO): getRuleOptions(),		(sM): true ],
 		systemStart:	[ (sN): 'System Start',		(sT): sSTR,		x: true],
 		severeLoad:		[ (sN): 'Severe Load',		(sT): sSTR,		x: true],
 		zigbeeOff:		[ (sN): 'Zibee Off',		(sT): sSTR,		x: true],
@@ -5506,6 +5656,7 @@ Map fixHeGType(Boolean toHubV,String typ,v,String dtyp){
 	def myv; myv=v
 	String T='T'
 	String s9s='9999'
+	String format="yyyy-MM-dd'T'HH:mm:ss.sssXX"
 	if(toHubV){ // from webcore(9 types) -> hub (5 types + 3 overloads + sDYN becomes sSTR)
 		switch(typ){
 			case sINT:
@@ -5558,7 +5709,6 @@ Map fixHeGType(Boolean toHubV,String typ,v,String dtyp){
 			case sDATE:
 			case sDTIME: //@@
 				Date nTime=new Date((Long)myv)
-				String format="yyyy-MM-dd'T'HH:mm:ss.sssXX"
 				SimpleDateFormat formatter=new SimpleDateFormat(format)
 				formatter.setTimeZone(mTZ())
 				String tt=formatter.format(nTime)
@@ -5615,7 +5765,6 @@ Map fixHeGType(Boolean toHubV,String typ,v,String dtyp){
 				res=v
 				if(iD.endsWith(s9s) || iD.startsWith(s9s)){
 					Date nTime=new Date()
-					String format="yyyy-MM-dd'T'HH:mm:ss.sssXX"
 					SimpleDateFormat formatter=new SimpleDateFormat(format)
 					formatter.setTimeZone(mTZ())
 					String tt=formatter.format(nTime)
@@ -5843,12 +5992,15 @@ static String getMapDescStr(Map data,Boolean reorder=true){
 	return str!=sBLK ? str:'No Data was returned'
 }
 
-def pageDumpPiston1(){
+@Field static final String sPDPDEV='pageDumpDevices'
+def pageDumpDevices(){
 	String wName=sAppId()
-	if(!cldClearFLD[wName]){ cldClearFLD[wName]=(Map)[:]; cldClearFLD=cldClearFLD }
-	String message=getMapDescStr(cldClearFLD[wName])
-	return dynamicPage((sNM):sPDPIS1,(sTIT):sBLK,uninstall:false){
-		section('Cached Piston dump'){
+	Map result; result=[:]
+	result=listAvailableDevices(false, false) +
+				[ (sDEVVER): (String)gtSt(sDEVVER) ]
+	String message=getMapDescStr(result)
+	return dynamicPage((sNM):sPDPDEV,(sTIT):sBLK,uninstall:false){
+		section('Devices dump'){
 			paragraph message
 		}
 	}

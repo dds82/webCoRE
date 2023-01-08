@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update January 5, 2023 for Hubitat
+ * Last update January 7, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -26,10 +26,10 @@
 //file:noinspection GroovyDoubleNegation
 //file:noinspection GroovyUnusedAssignment
 //file:noinspection unused
-//file:noinspection GroovyAssignabilityCheck
 //file:noinspection SpellCheckingInspection
 //file:noinspection GroovyFallthrough
 //file:noinspection GrMethodMayBeStatic
+//file:noinspection GroovyAssignabilityCheck
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20230103_HE'
@@ -532,7 +532,7 @@ private static Map mMv(Map m){ (Map)m.get(sV) }
 
 /** returns m.v.v */
 @CompileStatic
-private static oMvv(Map<String,Map> m){ m[sV][sV] }
+private static oMvv(Map m){ Map mv=mMv(m); oMv(mv) }
 
 @CompileStatic
 private static Integer gtPOpt(Map r9,String nm){
@@ -1200,11 +1200,11 @@ Map setup(LinkedHashMap data,Map<String,String>chunks){
 private void clearMsetIds(Map node){
 	if(node==null)return
 	for(list in node.findAll{ it.value instanceof List }){
-		for(item in ((List)list.value).findAll{ it instanceof Map })clearMsetIds(item)
+		for(item in ((List)list.value).findAll{ it instanceof Map })clearMsetIds(item as Map)
 	}
 	if(node instanceof Map && node[sDLR]!=null)node[sDLR]=null
 
-	for(item in node.findAll{ it.value instanceof Map })clearMsetIds(item.value)
+	for(item in node.findAll{ it.value instanceof Map })clearMsetIds(item.value as Map)
 }
 
 @Field static List<String> ListCmd=[]
@@ -5672,7 +5672,7 @@ private Long vcmd_iftttMaker(Map r9,device,List prms){
 }
 
 
-private Long do_lifx(Map r9,String cmd,String path,Map body,duration,String c){
+private Long do_lifx(Map r9,String cmd,String path,Map body,Long duration,String c){
 	String token=mMs(r9,sSETTINGS)?.lifx_token
 	if(!token){
 		error "Sorry, enable the LIFX integration in the dashboard's Settings section before trying to execute a LIFX operation.",r9
@@ -6378,7 +6378,7 @@ private Long vcmd_loadStateLocally(Map r9,device,List prms,Boolean global=false)
 	//noinspection GroovyAssignabilityCheck
 	Boolean empty=prms.size()>i2 ? bcast(r9,prms[i2]):false
 
-	Map sD=[:]
+	Map svd=[:]
 	List<String> newattrs=[]
 	List vals=[]
 
@@ -6401,7 +6401,7 @@ private Long vcmd_loadStateLocally(Map r9,device,List prms,Boolean global=false)
 		if(value==null)continue
 
 		if(attr==sHUE)value= wcHue2DevHue(value as Integer)
-		if(attr in [sSWITCH,sLVL,sSATUR,sHUE,sCLRTEMP]) sD[attr]=value
+		if(attr in [sSWITCH,sLVL,sSATUR,sHUE,sCLRTEMP]) svd[attr]=value
 		else{
 			newattrs.push(attr)
 			a=vals.push(value)
@@ -6410,12 +6410,12 @@ private Long vcmd_loadStateLocally(Map r9,device,List prms,Boolean global=false)
 
 	Boolean lg=isDbg(r9)
 	String msg='loadState '
-	if(isEric(r9)&& sD)debug msg+"${sD}",r9
-	Boolean wOn= sD.containsKey(sSWITCH) ? sMs(sD,sSWITCH)==sON :null
-	Boolean isOn; isOn= sD.containsKey(sSWITCH) ? gtSwitch(r9,device)==sON :null
-	Boolean chgHSL= sD.containsKey(sLVL) && sD.containsKey(sSATUR) && sD.containsKey(sHUE)
-	Boolean chgLvl= !chgHSL && sD.containsKey(sLVL) ? true : null
-	Boolean chgCtemp= sD.containsKey(sCLRTEMP) ?: null
+	if(isEric(r9)&& svd)debug msg+"${svd}",r9
+	Boolean wOn= svd.containsKey(sSWITCH) ? sMs(svd,sSWITCH)==sON :null
+	Boolean isOn; isOn= svd.containsKey(sSWITCH) ? gtSwitch(r9,device)==sON :null
+	Boolean chgHSL= svd.containsKey(sLVL) && svd.containsKey(sSATUR) && svd.containsKey(sHUE)
+	Boolean chgLvl= !chgHSL && svd.containsKey(sLVL) ? true : null
+	Boolean chgCtemp= svd.containsKey(sCLRTEMP) ?: null
 	String scheduleDevice= hashD(r9,device)
 	Long del; del=lZ
 	if((chgLvl || chgCtemp) && isOn==false){
@@ -6424,16 +6424,16 @@ private Long vcmd_loadStateLocally(Map r9,device,List prms,Boolean global=false)
 		del=1500L
 	}
 	if(chgHSL){
-		executePhysicalCommand(r9,device,sSTCLR,[(sHUE):sD[sHUE],(sSATUR):sD[sSATUR],(sLVL):sD[sLVL]],del,scheduleDevice)
+		executePhysicalCommand(r9,device,sSTCLR,[(sHUE):svd[sHUE],(sSATUR):svd[sSATUR],(sLVL):svd[sLVL]],del,scheduleDevice)
 		del+=l100
 	}
 	if(chgLvl){
-		List larg=[sD[sLVL]]
+		List larg=[svd[sLVL]]
 		executePhysicalCommand(r9,device,sSTLVL,larg,del,scheduleDevice)
 		del+=l100
 	}
 	if(chgCtemp){
-		List larg=[sD[sCLRTEMP]]
+		List larg=[svd[sCLRTEMP]]
 		executePhysicalCommand(r9,device,sSTCLRTEMP,larg,del,scheduleDevice)
 		del+=l100
 	}
@@ -6483,7 +6483,7 @@ private Long vcmd_loadStateLocally(Map r9,device,List prms,Boolean global=false)
 	}
 	if(wOn!=null && wOn!=isOn){
 		del+= wOn ? lZ:1200L
-		executePhysicalCommand(r9,device,sMs(sD,sSWITCH),null,del,scheduleDevice)
+		executePhysicalCommand(r9,device,sMs(svd,sSWITCH),null,del,scheduleDevice)
 	}
 	return del
 }
@@ -7449,7 +7449,7 @@ private Boolean valueWas(Map r9,Map comparisonValue,Map rightValue,Map rightValu
 	def v
 	for(Map stte in states) {
 		v= stte[sVAL]
-		if(nattr==sTHREAX && nattr!=attr) v= gtThreeAxisVal((Map)v,attr)
+		if(nattr==sTHREAX && nattr!=attr) v= gtThreeAxisVal(v,attr)
 		if(!(i==i1 && thisEventWokeUs)){
 			if(!callComp(r9,"comp_$func", [(sI):sMs(comparisonValue,sI),(sV):rtnMap(comp_t,cast(r9,v,comp_t))],
 					rightValue,rightValue2,timeValue,null))break
@@ -7481,10 +7481,10 @@ private Boolean valueChanged(Map r9,Map comparisonValue,Map timeValue){
 	if(states.size()==iZ)return false
 	def value,v
 	value=states[iZ][sVAL]
-	if(nattr==sTHREAX && nattr!=attr) value= gtThreeAxisVal((Map)value,attr)
+	if(nattr==sTHREAX && nattr!=attr) value= gtThreeAxisVal(value,attr)
 	for(Map tstate in states){
 		v= tstate[sVAL]
-		if(nattr==sTHREAX && nattr!=attr) v= gtThreeAxisVal((Map)v,attr)
+		if(nattr==sTHREAX && nattr!=attr) v= gtThreeAxisVal(v,attr)
 		if(v!=value)return true
 	}
 	return false
@@ -8624,7 +8624,8 @@ private static String fixAttr(String attr){
 	return attr
 }
 
-private static gtThreeAxisVal(Map xyz, String attr){
+private static gtThreeAxisVal(ixyz, String attr){
+	Map xyz = ixyz instanceof String ? ixyz as Map : ixyz
 	switch(attr){
 		case sORIENT:
 			return getThreeAxisOrientation(xyz)
@@ -8635,7 +8636,7 @@ private static gtThreeAxisVal(Map xyz, String attr){
 		case sAXISZ:
 			return xyz.z
 		case sTHREAX:
-			return xyz
+			return ixyz
 	}
 }
 
@@ -8678,8 +8679,8 @@ private getDeviceAttributeValue(Map r9,device,String attr,Boolean skipCurEvt=fal
 	if(nattr==sSTS){
 		return device.getStatus()
 	}else if(nattr==sTHREAX){
-		Map xyz
-		xyz= !skipCurEvt && r9EvN==sTHREAX && r9EdID && ce && ce[sVAL] ? ce[sVAL]:null
+		def xyz
+		xyz= !skipCurEvt && r9EvN==sTHREAX && r9EdID && ce && ce[sVAL] ? ce[sVAL] :null
 		if(xyz==null){
 			try{
 				xyz=device.currentValue(sTHREAX,true)
@@ -12777,6 +12778,7 @@ Map fixHeGType(Boolean toHubV,String typ,v){
 	def myv; myv=v
 	String T='T'
 	String s9s='9999'
+	String format="yyyy-MM-dd'T'HH:mm:ss.sssXX"
 	if(toHubV){ // from webcore(9 types) -> hub (5 types + 3 overloads + sDYN becomes sSTR)
 		switch(typ){
 			case sINT:
@@ -12829,7 +12831,6 @@ Map fixHeGType(Boolean toHubV,String typ,v){
 			case sDATE:
 			case sDTIME: //@@
 				Date nTime=new Date((Long)myv)
-				String format="yyyy-MM-dd'T'HH:mm:ss.sssXX"
 				SimpleDateFormat formatter=new SimpleDateFormat(format)
 				formatter.setTimeZone(mTZ())
 				String tt=formatter.format(nTime)
@@ -12886,7 +12887,6 @@ Map fixHeGType(Boolean toHubV,String typ,v){
 				res=v
 				if(iD.endsWith(s9s) || iD.startsWith(s9s)){
 					Date nTime=new Date()
-					String format="yyyy-MM-dd'T'HH:mm:ss.sssXX"
 					SimpleDateFormat formatter=new SimpleDateFormat(format)
 					formatter.setTimeZone(mTZ())
 					String tt=formatter.format(nTime)
@@ -13072,7 +13072,7 @@ private Boolean wexecutePiston(String pistonId,Map data,String selfId){ return (
 private Boolean wpausePiston(String pistonId,String selfId){ return (Boolean)parent.pausePiston(pistonId,selfId) }
 private Boolean wresumePiston(String pistonId,String selfId){ return (Boolean)parent.resumePiston(pistonId,selfId) }
 private Map wgetGStore(){ return (Map)parent.getGStore() }
-private Map wlistAvailableDevices(Boolean t){ return parent.listAvailableDevices(t) }
+private Map wlistAvailableDevices(Boolean raw){ return parent.listAvailableDevices(raw) }
 private Map wgetWData(){ return (Map)parent.getWData() }
 private Map wlistAvailableVariables(){ return (Map)parent.listAvailableVariables() }
 private String sPAppId(){ return ((Long)parent.id).toString() }
@@ -13121,7 +13121,7 @@ private void wremoveAllInUseGlobalVar(){
 		List<String> pstns
 		pstns= it.value //tvars[vn] ?: []
 		if(k && sa in pstns){
-			pstns= pstns-[sa]
+			pstns= pstns-[sa] as List<String>
 			vars[k]= pstns
 		}
 	}
