@@ -3308,8 +3308,8 @@ Map getDevDetails(dev, Boolean addtransform=false){
 								nm1=nm1[0..-2]
 								myD.m=1
 							}
+							myD[sN]= nm1
 						}
-						myD.n= nm1 ?: "arg $i"
 						if(prms[i].type) myD.t= ((String)prms[i].type).toUpperCase()
 						if(prms[i].description) myD.h=prms[i].description
 						if(prms[i].constraints) myD.c=prms[i].constraints
