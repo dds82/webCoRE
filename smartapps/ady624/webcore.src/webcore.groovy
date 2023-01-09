@@ -3353,7 +3353,7 @@ Map getDevDetails(dev, Boolean addtransform=false){
 						else if(getLogging()[sDBG] || eric()) debug("Device $dnm has strange command $cmdName with commands $cmd has nulls")
 					} else {
 						Map mitem=(Map)item
-						if((String)mitem.t) mitem.t= ((String)mitem.t).toUpperCase()
+						if(mitem && (String)mitem.t) mitem.t= ((String)mitem.t).toUpperCase()
 						else if(getLogging()[sDBG] || eric()) debug("Device $dnm has strange command $cmdName with commands $cmd has nulls")
 						typs[i]=mitem
 					}
