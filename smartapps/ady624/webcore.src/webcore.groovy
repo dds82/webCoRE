@@ -3348,15 +3348,18 @@ Map getDevDetails(dev, Boolean addtransform=false){
 				List typs; typs=[]
 				Integer i; i=0
 				for(item in (List)cmd[sP]){
+					Boolean bad; bad=false
 					if(item instanceof String){
 						if(item) typs.push(item.toUpperCase())
-						else if(getLogging()[sDBG] || eric()) debug("Device $dnm has strange command $cmdName with commands $cmd has nulls")
+						else bad=true
 					} else {
 						Map mitem=(Map)item
-						if(mitem && (String)mitem.t) mitem.t= ((String)mitem.t).toUpperCase()
-						else if(getLogging()[sDBG] || eric()) debug("Device $dnm has strange command $cmdName with commands $cmd has nulls")
-						if(mitem)typs[i]=mitem
+						if(mitem && (String)mitem.t){
+							mitem.t= ((String)mitem.t).toUpperCase()
+							typs[i]=mitem
+						} else bad=true
 					}
+					if(bad && (getLogging()[sDBG] || eric())) debug("Device $dnm has strange command $cmdName with commands $cmd has nulls")
 					i++
 				}
 				cmd[sP]=typs
