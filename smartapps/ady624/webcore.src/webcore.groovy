@@ -3290,7 +3290,7 @@ Map getDevDetails(dev, Boolean addtransform=false){
 		String cnm=(String)cmd.getName()
 		mycmd[sN]=cnm
 		List myargs=(List)cmd.getArguments()
-		List<Map> prms = null // cmd.getParameters()
+		List<Map> prms = cmd.getParameters()
 		if(eric()) warn("$cnm arguments: $myargs")
 		if(eric()) warn("$cnm Parameters: $prms")
 		if(myargs){
