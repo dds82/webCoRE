@@ -1314,7 +1314,7 @@ private void cleanCode(Map i,Boolean inMem){
 		//tasks with empty mode restriction
 		if(item[sC] && item[sM] instanceof List && !(List)item[sM])a=item.remove(sM)
 
-		// task parameters (sP) without 'Nothing selected'
+		// task parameters (sP) with 'Nothing selected'
 		if(sMs(item,sG) in [av,sANY] && sMs(item,sF)==sL && item[sVT]!=null){
 			if(item[sX]!=null){ a=item.remove(sX);a=item.remove(sXI)}
 			if(item[sE]!=null)a=item.remove(sE)
@@ -12987,7 +12987,7 @@ private static String md5(String md5){
 @Field volatile static Map<String,Map<String,String>> theHashMapVFLD=[:]
 
 static void clearHashMap(String wName){
-	theHashMapVFLD=[:]
+	if(theHashMapVFLD==null) theHashMapVFLD=[:]
 	theHashMapVFLD[wName]=[:] as Map<String,String>
 	theHashMapVFLD=theHashMapVFLD
 	mb()
