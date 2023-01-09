@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update January 7, 2023 for Hubitat
+ * Last update January 9, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 //file:noinspection GroovyAssignabilityCheck
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230103_HE'
+@Field static final String sHVER='v0.3.114.20230109_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -77,6 +77,7 @@ static Boolean eric1(){ return false }
 @Field static final String sSTR='string'
 @Field static final String sINT='integer'
 @Field static final String sDEC='decimal'
+@Field static final String sVEC='vector3'
 @Field static final String sDYN='dynamic'
 @Field static final String sDTIME='datetime'
 @Field static final String sTRUE='true'
@@ -8624,25 +8625,47 @@ private static String fixAttr(String attr){
 	return attr
 }
 
+private static Map fixVector(String s1){
+	String s; s=s1
+	Map xyz; xyz=[:]
+	if(stJson1(s)){
+		s=s.replace(sLB,sOB)
+		s=s.replace(sRB,sCB)
+		s=s.replace('x:','"x":')
+		s=s.replace('y:','"y":')
+		s=s.replace('z:','"z":')
+		xyz=(Map)new JsonSlurper().parseText(s)
+	}
+	return xyz
+}
+
+/**
+ *
+ * @param ixyz - may be string or a map
+ */
 private static gtThreeAxisVal(ixyz, String attr){
-	Map xyz = ixyz instanceof String ? ixyz as Map : ixyz
+	Map xyz
+	if(ixyz instanceof String){
+		String s; s=ixyz
+		xyz= fixVector(s)
+	} else xyz = ixyz instanceof Map ? (Map)ixyz : [:]
 	switch(attr){
 		case sORIENT:
 			return getThreeAxisOrientation(xyz)
 		case sAXISX:
-			return xyz.x
+			return xyz[sX]
 		case sAXISY:
-			return xyz.y
+			return xyz[sY]
 		case sAXISZ:
-			return xyz.z
+			return xyz[sZ]
 		case sTHREAX:
-			return ixyz
+			return xyz
 	}
 }
 
 @SuppressWarnings('GroovyAssignabilityCheck')
 private static String getThreeAxisOrientation(Map m /*, Boolean getIndex=false */){
-	if(m.x!=null && m.y!=null && m.z!=null){
+	if(m && m[sX]!=null && m[sY]!=null && m[sZ]!=null){
 		Integer dx,dy,dz,x,y,z,side
 		dx=iMs(m,sX)
 		dy=iMs(m,sY)
@@ -8669,33 +8692,49 @@ private getDeviceAttributeValue(Map r9,device,String attr,Boolean skipCurEvt=fal
 	String r9EvN=ce!=null ? sMs(ce,sNM):sBLK
 	Boolean r9EdID=ce!=null ? sMs(ce,sDEV)==hashD(r9,device):false
 
-	if(isEric(r9))myDetail r9,"getDeviceAttributeValue device: $device attr: $attr skipCurEvt: $skipCurEvt ce: ${ce}",iN2
-	if(!skipCurEvt && r9EvN==attr && r9EdID)return ce[sVAL]
+	String s; s=sBLK
+	if(isEric(r9)){
+		s= "getDeviceAttributeValue device: $device attr: $attr skipCurEvt: $skipCurEvt ce: ${ce}"
+		myDetail r9,s,iN2
+	}
+	def result; result=null
+	if(!skipCurEvt && r9EvN==attr && r9EdID){
+		result= ce[sVAL]
+		if(isEric(r9))myDetail r9,s+" event $result (${myObj(result)})",iN2
+	}else{
+		String msg="Error reading current value for ${device}.".toString()
 
-	def result
-	String msg="Error reading current value for ${device}.".toString()
-
-	String nattr=fixAttr(attr)
-	if(nattr==sSTS){
-		return device.getStatus()
-	}else if(nattr==sTHREAX){
-		def xyz
-		xyz= !skipCurEvt && r9EvN==sTHREAX && r9EdID && ce && ce[sVAL] ? ce[sVAL] :null
-		if(xyz==null){
+		String nattr=fixAttr(attr)
+		if(nattr==sSTS){
+			result= device.getStatus()
+		}else if(nattr==sTHREAX){
+			def xyz
+			//try { xyz= !skipCurEvt && r9EvN==sTHREAX && r9EdID && ce && ce[sVAL] ? ce[sVAL] :null } catch(ignored){}
+			xyz= !skipCurEvt && r9EvN==sTHREAX && r9EdID && ce && ce[sVAL] ? ce[sVAL] :null
+			if(isEric(r9) && xyz)myDetail r9,s+" event $xyz (${myObj(xyz)})",iN2
+			Boolean errmsg; errmsg=false
+			if(!xyz){
+				try{
+					xyz=device.currentValue(sTHREAX,true)
+					if(xyz && isEric(r9))myDetail r9,s+" read $xyz (${myObj(xyz)})",iN2
+				}catch(al){
+					error msg+sTHREAX+sCLN,r9,iN2,al
+					errmsg=true
+				}
+			}
+			if(xyz){
+				result= gtThreeAxisVal(xyz,attr)
+			}else if(!errmsg) error msg+sTHREAX+sCLN,r9,iN2
+		}else{
 			try{
-				xyz=device.currentValue(sTHREAX,true)
-			}catch(al){
-				error msg+sTHREAX+sCLN,r9,iN2,al
+				result=device.currentValue(attr,true)
+			}catch(all){
+				error msg+attr+sCLN,r9,iN2,all
 			}
 		}
-		if(xyz!=null) return gtThreeAxisVal(xyz,attr)
-	}else{
-		try{
-			result=device.currentValue(attr,true)
-		}catch(all){
-			error msg+attr+sCLN,r9,iN2,all
-		}
 	}
+
+	if(isEric(r9))myDetail r9,s+" result $result (${myObj(result)})",iN2
 	return result!=null ? result:sBLK
 }
 
@@ -9307,7 +9346,8 @@ private static Boolean matchCast(Map r9,v,String t){
 		(t==sLONG && v instanceof Long)||
 		(t==sINT && v instanceof Integer)||
 		(t==sBOOLN && v instanceof Boolean)||
-		(t==sDEV && v instanceof List)
+		(t==sDEV && v instanceof List) ||
+		(t==sVEC && v instanceof Map)
 	)
 	return match
 }
@@ -11516,7 +11556,7 @@ private static Map dataT(ival,String isrcDT){
 		else if(value instanceof BigDecimal || value instanceof Float){srcDt=sDEC; isfbd=true}
 		else if(value instanceof Map){
 			Map m=(Map)value
-			if(m.x!=null && m.y!=null && m.z!=null)srcDt='vector3'
+			if(m && m[sX]!=null && m[sY]!=null && m[sZ]!=null)srcDt=sVEC
 		}else{ value="$value".toString(); srcDt=sSTR }
 	}
 	//overrides
@@ -11731,8 +11771,9 @@ private cast(Map r9,ival,String dataTT,String isrcDT=sNL){
 				d=Math.round((Math.floor(d/d1000)*d1000) - ((t1.hours*dSECHR+t1.minutes*d60+t1.seconds)*d1000) )
 			}
 			return d
-		case 'vector3':
-			return value instanceof Map && value.x!=null && value.y!=null && value.z!=null ? value:[(sX):iZ,y:iZ,(sZ):iZ]
+		case sVEC:
+			if(value instanceof String) value= fixVector(value)
+			return value instanceof Map && value!=null && value[sX]!=null && value[sY]!=null && value[sZ]!=null ? value:[(sX):iZ,(sY):iZ,(sZ):iZ]
 		case sORIENT:
 			return value instanceof Map ? getThreeAxisOrientation(value):value
 		case sMS:
@@ -12229,6 +12270,7 @@ private void error(message,Map r9,Integer shift=iN2,Exception err=null){
 	if(aa||bb)
 		doLog(sERROR,"webCoRE exception: "+aa+" \n"+bb)
 }
+//error "object: ${describeObject(e)}",r9
 
 private Map timer(String message,Map r9,Integer shift=iN2,err=null){ log(message,r9,shift,err,sTIMER)}
 
@@ -12763,7 +12805,10 @@ static String myObj(obj){
 	else if(obj instanceof Float)return 'Float'
 	else if(obj instanceof Byte)return 'Byte'
 	else if(obj instanceof com.hubitat.app.DeviceWrapper)return 'Device'
-	else return 'unknown'
+	else{
+	//	if(eric()) log.error "object: ${describeObject(obj)}"
+		return 'unknown'
+	}
 }
 
 /** Returns true if string is encoded device hash  */
@@ -12942,8 +12987,10 @@ private static String md5(String md5){
 @Field volatile static Map<String,Map<String,String>> theHashMapVFLD=[:]
 
 static void clearHashMap(String wName){
+	theHashMapVFLD=[:]
 	theHashMapVFLD[wName]=[:] as Map<String,String>
 	theHashMapVFLD=theHashMapVFLD
+	mb()
 }
 
 @CompileStatic
@@ -12967,8 +13014,10 @@ private static String hashId(Map r9,id){ return hashId2(id,sMs(r9,spId)) }
 private static String hashId2(id,String wName){
 	String result
 	String tId=id.toString()
-	if(theHashMapVFLD[wName]==null) clearHashMap(wName)
-	result=theHashMapVFLD[wName][tId]
+	Map<String,String> a
+	a= theHashMapVFLD ? theHashMapVFLD[wName] : null
+	if(a==null){ clearHashMap(wName); a=[:] }
+	result=a[tId]
 	if(result==sNL){
 		result=sCLN+md5(sCR+tId)+sCLN
 		theHashMapVFLD[wName][tId]=result
@@ -13073,7 +13122,7 @@ private Boolean wpausePiston(String pistonId,String selfId){ return (Boolean)par
 private Boolean wresumePiston(String pistonId,String selfId){ return (Boolean)parent.resumePiston(pistonId,selfId) }
 private Map wgetGStore(){ return (Map)parent.getGStore() }
 private Map wlistAvailableDevices(Boolean raw){ return parent.listAvailableDevices(raw) }
-private Map wgetWData(){ return (Map)parent.getWData() }
+private Map wgetWData(){ return [:]+(Map)parent.getWData() }
 private Map wlistAvailableVariables(){ return (Map)parent.listAvailableVariables() }
 private String sPAppId(){ return ((Long)parent.id).toString() }
 

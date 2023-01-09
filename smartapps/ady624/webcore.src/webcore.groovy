@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update January 8, 2023 for Hubitat
+ * Last update January 9, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -31,8 +31,8 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230103_HE'
-@Field static final String sHVERSTR='v0.3.114.20230103_HE - January 3, 2023'
+@Field static final String sHVER='v0.3.114.20230109_HE'
+@Field static final String sHVERSTR='v0.3.114.20230109_HE - January 9, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -3299,14 +3299,14 @@ Map getDevDetails(dev, Boolean addtransform=false){
 			if(prms){
 				ok=true
 				Integer i
-				for(i=0; i<prms.size();i++){
+				for(i=iZ; i<prms.size();i++){
 					Map myD; myD=[:]
 					if(ok && prms[i] && prms[i].type){
 						String nm1; nm1=(String)prms[i].name
 						if(nm1){
 							if(nm1[-1]=='*'){
 								nm1=nm1[0..-2]
-								myD.m=1
+								myD.m=i1
 							}
 							myD[sN]= nm1
 						}
@@ -4473,6 +4473,7 @@ private void debug(String message, Integer shift=-2, err=null)	{ Map a=log messa
 private void trace(message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, sTRC }
 private void warn(String message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, sWARN }
 private void error(String message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, sERR }
+//error "object: ${describeObject(e)}",r9
 private Map timer(String message, Integer shift=-2, err=null)	{ log message, shift, err, sTIMER }
 
 @Field static final String sLTH='<'
@@ -4666,12 +4667,12 @@ Map getChildAttributes(){
 	airQualityIndex		: [ (sN): "air quality index",	(sT): sINT,	(sR): [0, 500],		u: "AQI",				],
 	alarm				: [ (sN): "alarm",				(sT): sENUM,		(sO): ["both", sOFF, "siren", "strobe"],	],
 	amperage			: [ (sN): "amperage",			(sT): sDEC,	(sR): [0, null],		u: "A",					],
-//	axisX				: [ (sN): "X axis",				(sT): sINT,	(sR): [-1024, 1024],	(sS): "threeAxis",			],
-//	axisY				: [ (sN): "Y axis",				(sT): sINT,	(sR): [-1024, 1024],	(sS): "threeAxis",			],
-//	axisZ				: [ (sN): "Z axis",				(sT): sINT,	(sR): [-1024, 1024],	(sS): "threeAxis",			],
-	axisX				: [ (sN): "axis X",				(sT): sDEC,	(sS): "threeAxis" ],
-	axisY				: [ (sN): "axis Y",				(sT): sDEC,	(sS): "threeAxis" ],
-	axisZ				: [ (sN): "axis Z",				(sT): sDEC,	(sS): "threeAxis" ],
+	axisX				: [ (sN): "X axis",				(sT): sINT,	(sR): [-1024, 1024],	/*(sS): "threeAxis",*/			],
+	axisY				: [ (sN): "Y axis",				(sT): sINT,	(sR): [-1024, 1024],	/*(sS): "threeAxis",*/			],
+	axisZ				: [ (sN): "Z axis",				(sT): sINT,	(sR): [-1024, 1024],	/*(sS): "threeAxis",*/			],
+//	axisX				: [ (sN): "axis X",				(sT): sDEC,	(sS): "threeAxis" ],
+//	axisY				: [ (sN): "axis Y",				(sT): sDEC,	(sS): "threeAxis" ],
+//	axisZ				: [ (sN): "axis Z",				(sT): sDEC,	(sS): "threeAxis" ],
 	battery				: [ (sN): "battery",			(sT): sINT,	(sR): [0, 100],		u: "%",							],
 	camera				: [ (sN): "camera",				(sT): sENUM,		(sO): [sON, sOFF, "restarting", "unavailable"],				],
 	carbonDioxide		: [ (sN): "carbon dioxide",		(sT): sDEC,	(sR): [0, null],									],
