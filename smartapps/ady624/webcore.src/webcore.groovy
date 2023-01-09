@@ -3355,7 +3355,7 @@ Map getDevDetails(dev, Boolean addtransform=false){
 						Map mitem=(Map)item
 						if(mitem && (String)mitem.t) mitem.t= ((String)mitem.t).toUpperCase()
 						else if(getLogging()[sDBG] || eric()) debug("Device $dnm has strange command $cmdName with commands $cmd has nulls")
-						typs[i]=mitem
+						if(mitem)typs[i]=mitem
 					}
 					i++
 				}
