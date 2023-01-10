@@ -4123,7 +4123,7 @@ void addHsmEvent(evt){
 	Map alert; alert=null
 	List<Map> alerts; alerts= a? (List<Map>)a : []
 
-	if(evNm in ['hsmAlert', 'hsmRule']){
+	if(evNm in ['hsmAlert','hsmRule','hsmRules']){
 		String s= evNm == 'hsmAlert' ? 'HSM Alert: ' : sBLK
 		String title=s+ evV + (evV=='rule' ? ',  '+evDesc : sBLK)
 		String src=s+ evV

@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update January 9, 2023 for Hubitat
+ * Last update January 10, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -427,6 +427,7 @@ static Boolean eric1(){ return false }
 @Field static final Integer i10=10
 @Field static final Integer i11=11
 @Field static final Integer i12=12
+@Field static final Integer i16=16
 @Field static final Integer i20=20
 @Field static final Integer i50=50
 @Field static final Integer i100=100
@@ -438,6 +439,7 @@ static Boolean eric1(){ return false }
 @Field static final Double dZ=0.0D
 @Field static final Double d1=1.0D
 @Field static final Double d2=2.0D
+@Field static final Double d3=3.0D
 @Field static final Double d60=60.0D
 @Field static final Double d100=100.0D
 @Field static final Double d360=360.0D
@@ -1835,7 +1837,7 @@ static Semaphore sema(Integer snum){
 		case 13: return theLock13FLD
 		case 14: return theLock14FLD
 		case 15: return theLock15FLD
-		case 16: return theLock16FLD
+		case i16: return theLock16FLD
 		case 17: return theLock17FLD
 		case 18: return theLock18FLD
 		case 19: return theLock19FLD
@@ -4930,7 +4932,7 @@ private Long vcmd_setState(Map r9,device,List prms){
 
 private static Long vcmd_setTileColor(Map r9,device,List prms){
 	Integer index=matchCastI(r9,prms[iZ])
-	if(index<i1 || index>16)return lZ
+	if(index<i1 || index>i16)return lZ
 	String sIdx=index.toString()
 	Map t0=mMs(r9,sST)
 	t0[sC+sIdx]=(String)gtColor(r9,(String)prms[i1])?.hex
@@ -4949,14 +4951,14 @@ private static Long vcmd_setTileOTitle(Map r9,device,List prms){ return helper_s
 
 private static Long helper_setTile(Map r9,String typ,List prms){
 	Integer index=matchCastI(r9,prms[iZ])
-	if(index<i1 || index>16)return lZ
+	if(index<i1 || index>i16)return lZ
 	r9[sST]["${typ}$index".toString()]=sLi(prms,i1)
 	return lZ
 }
 
 private static Long vcmd_setTile(Map r9,device,List prms){
 	Integer index=matchCastI(r9,prms[iZ])
-	if(index<i1 || index>16)return lZ
+	if(index<i1 || index>i16)return lZ
 	String sIdx=index.toString()
 	Map t0=mMs(r9,sST)
 	t0[sI+sIdx]=sLi(prms,i1)
@@ -4970,7 +4972,7 @@ private static Long vcmd_setTile(Map r9,device,List prms){
 
 private static Long vcmd_clearTile(Map r9,device,List prms){
 	Integer index=matchCastI(r9,prms[iZ])
-	if(index<i1 || index>16)return lZ
+	if(index<i1 || index>i16)return lZ
 	String sIdx=index.toString()
 	Map t0=mMs(r9,sST)
 	t0.remove(sI+sIdx)
@@ -5011,7 +5013,7 @@ private Long vcmd_setAlarmSystemStatus(Map r9,device,List prms){
 	return lZ
 }
 
-// todo: need commands to arm / disarm monitoring rules
+// todo: need commands to arm / disarm monitoring rules; need ability to list rules
 
 private Long vcmd_sendEmail(Map r9,device,List prms){
 	Map<String,String> data=[
@@ -5876,7 +5878,7 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 		String b; b=uri.tokenize(sDOT)[i1] //substring(4,6)
 		if(b.isInteger()){
 			Integer bi=b.toInteger()
-			internal=(bi>=16 && bi<=31)
+			internal=(bi>=i16 && bi<=31)
 		}
 	}
 	Map headers; headers=[:]
@@ -11915,7 +11917,7 @@ private Long stringToTime(dateOrTimeOrString){ // convert to dtime
 		}
 
 		if(result==lnull){
-			cnt=16
+			cnt=i16
 			try{
 				result=(new Date()).parse( 'h:mm:ss a z',sdate).getTime()
 			}catch(ignored){ result=lnull }
@@ -12075,14 +12077,14 @@ private static Map hexToColor(String hex){
 
 @CompileStatic
 private static Double _hue2rgb(Double p,Double q,Double ti){
-	Double d6=6.0D
+	Double d6=d3*d2
 	Double t
 	t=ti
 	if(t<dZ)t+=d1
 	if(t>=d1)t-=d1
 	if(t<d1/d6)return p+(q-p)*d6*t
 	if(t<d1/d2)return q
-	if(t<d2/3.0D)return p+(q-p)*(d2/3.0D-t)*d6
+	if(t<d2/d3)return (p+(q-p)*(d2/d3-t)*d6).toDouble()
 	return p
 }
 
@@ -12106,9 +12108,9 @@ private static String hslToHex(Double hue,Double saturation,Double level){
 	}else{
 		Double q=l<0.5D ? l*(d1+s):l+s-(l*s)
 		Double p=d2*l-q
-		r=_hue2rgb(p,q,h+d1/3.0D)
+		r=_hue2rgb(p,q,(h+d1/d3).toDouble())
 		g=_hue2rgb(p,q,h)
-		b=_hue2rgb(p,q,h-d1/3.0D)
+		b=_hue2rgb(p,q,(h-d1/d3).toDouble())
 	}
 	Double d255=255.0D
 	return sprintf('#%02X%02X%02X',Math.round(r*d255),Math.round(g*d255),Math.round(b*d255))
@@ -12130,9 +12132,9 @@ private static List<Integer> hexToHsl(String hex){
 	mhex=hex!=sNL ? hex:sZ6
 	if(mhex.startsWith('#'))mhex=mhex.substring(i1)
 	if(mhex.size()!=i6)mhex=sZ6
-	Double r=Integer.parseInt(mhex.substring(iZ,i2),16)/255.0D
-	Double g=Integer.parseInt(mhex.substring(i2,i4),16)/255.0D
-	Double b=Integer.parseInt(mhex.substring(i4,i6),16)/255.0D
+	Double r=Integer.parseInt(mhex.substring(iZ,i2),i16)/255.0D
+	Double g=Integer.parseInt(mhex.substring(i2,i4),i16)/255.0D
+	Double b=Integer.parseInt(mhex.substring(i4,i6),i16)/255.0D
 
 	Double max=Math.max(Math.max(r,g),b)
 	Double min=Math.min(Math.min(r,g),b)
@@ -12144,13 +12146,13 @@ private static List<Integer> hexToHsl(String hex){
 	if(max==min){
 		h=s=dZ // achromatic
 	}else{
-		Double d6=6.0D
+		Double d6=d3*d2
 		Double d=max-min
 		s= (l>0.5D ? d/(d2-max-min):d/(max+min)).toDouble()
 		switch(max){
 			case r: h= ((g-b)/d+(g<b ? d6:dZ)).toDouble(); break
 			case g: h= ((b-r)/d+d2).toDouble(); break
-			case b: h= ((r-g)/d+4.0D).toDouble(); break
+			case b: h= ((r-g)/d+d2*d2).toDouble(); break
 		}
 		h /= d6
 	}
@@ -13204,7 +13206,7 @@ private void wpauseExecution(Long t){ pauseExecution(t) }
 private void wrunInMillis(Long t,String m,Map d){ runInMillis(t,m,d) }
 
 private Date wtimeToday(String str,TimeZone tz){ return (Date)timeToday(str,tz) }
-private Date wtimeTodayAfter(String astr,String tstr,TimeZone tz){ return (Date)timeTodayAfter(astr,tstr,tz) }
+private Date wtimeTodayAfter(String astr,String tstr,TimeZone tz=null){ return (Date)timeTodayAfter(astr,tstr,tz) }
 private Long wnow(){ return (Long)now() }
 private Date wtoDateTime(String s){ return (Date)toDateTime(s) }
 
