@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update January 9, 2023 for Hubitat
+ * Last update January 10, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -3261,6 +3261,7 @@ Map getDevDetails(dev, Boolean addtransform=false){
 	if(eric()) error("DEVICE $dnm")
 	if(eric()) warn("COMMANDS $cmdL")
 	cmdL=cmdL.unique{ (String)it.getName() }
+	Boolean b
 	for(cmd in cmdL){
 		Map mycmd=[:]
 		String cnm=(String)cmd.getName()
@@ -3282,31 +3283,31 @@ Map getDevDetails(dev, Boolean addtransform=false){
 						if(nm1){
 							if(nm1[-1]=='*'){
 								nm1=nm1[0..-2]
-								myD.m=i1
+								myD[sM]=i1 // mandatory
 							}
 							myD[sN]= nm1
 						}
-						if(prms[i].type) myD.t= ((String)prms[i].type).toUpperCase()
-						if(prms[i].description) myD.h=prms[i].description
-						if(prms[i].constraints) myD.c=prms[i].constraints
-						myL.push([:]+myD)
+						if(prms[i].type) myD[sT]= ((String)prms[i].type).toUpperCase()
+						if(prms[i].description) myD[sH]=prms[i].description
+						if(prms[i].constraints) myD[sC]=prms[i].constraints
+						b=myL.push([:]+myD)
 					} else ok=false
 				}
 			}
 			mycmd[sP]= ok && myL ? myL : myargs
 		}
-		newCL.push(mycmd)
+		b=newCL.push(mycmd)
 		if(addtransform){
 			String an=transformCommand(cmd,overrides,dnm)
 			if(an){
 				mycmd[sN]=an
-				newCL.push(mycmd)
+				b=newCL.push(mycmd)
 			}
 		}
 	}
 	if(eric()) warn("PROCESSED COMMANDS $newCL")
 
-	newCL= newCL.unique{ (String)it.n }
+	newCL= newCL.unique{ (String)it[sN] }
 
 	Map allCmds= gtAllCommands()
 
@@ -3319,19 +3320,20 @@ Map getDevDetails(dev, Boolean addtransform=false){
 				trace("found in device $cmd")
 			}
 		}else{
-			cmd.cm=true
+			cmd.cm=true // custom
 			if((List)cmd[sP]){
 				List typs; typs=[]
 				Integer i; i=0
 				for(item in (List)cmd[sP]){
 					Boolean bad; bad=false
 					if(item instanceof String){
-						if(item) typs.push(item.toUpperCase())
+						if(item) b=typs.push(item.toUpperCase())
 						else bad=true
 					} else {
 						Map mitem=(Map)item
-						if(mitem && (String)mitem.t){
-							mitem.t= ((String)mitem.t).toUpperCase()
+						String t= mitem ? ((String)mitem[sT] ?: sNL) : sNL
+						if(t){
+							mitem[sT]= t.toUpperCase()
 							typs[i]=mitem
 						} else bad=true
 					}
@@ -4248,15 +4250,16 @@ private List<Map> getIncidents(){
 	rules=[:]
 	String intrusion='intrusion'
 
+	Boolean b
 	for(Map myE in newAlerts) {
 		String evNm = (String)myE[sNM]
 		String v= (String)myE[sV]
 		String desc=(String)myE.des
 		if(evNm=='hsmAlert'){
 			if( locStat!=sDISARMD && v.contains(intrusion) ){
-				new2Alerts.push(myE)
+				b=new2Alerts.push(myE)
 			} else if( v in ['water','smoke','arming'] ){
-				new2Alerts.push(myE)
+				b=new2Alerts.push(myE)
 			} else if(v == sCANCEL){
 				new2Alerts=[]
 				rules= [:]
@@ -4264,7 +4267,7 @@ private List<Map> getIncidents(){
 				String ruleKey=desc
 				if(ruleKey){
 					List<Map> trule= rules[ruleKey] ?: []
-					trule.push(myE)
+					b=trule.push(myE)
 					rules[ruleKey]=trule
 				}
 			} else log.warn "unknown $evNm $v"
@@ -5754,9 +5757,10 @@ Map fixHeGType(Boolean toHubV,String typ,v,String dtyp){
 				List<String> dvL=[]
 				Boolean ok; ok=true
 				String[] t1=((String)v).split(sSPC)
+				Boolean b
 				for(String t in t1){
 					// sDEV is a string in hub need to detect if it is really devices :xxxxx:
-					if(ok && isWcDev(t))dvL.push(t)
+					if(ok && isWcDev(t))b=dvL.push(t)
 					else ok=false
 				}
 				if(ok) ret=[(sDEV):dvL]
