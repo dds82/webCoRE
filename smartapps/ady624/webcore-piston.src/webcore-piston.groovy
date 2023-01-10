@@ -4999,11 +4999,19 @@ private Long vcmd_setAlarmSystemStatus(Map r9,device,List prms){
 	Map<String,String> options=(Map<String,String>)vd?.ac
 	List<Map<String,String>> status=options?.find{ it.key==sIdOrNm || it.value==sIdOrNm }?.collect{ [(sID):it.key,(sNM):it.value] }
 
-	// for armAway, the number of seconds of exit delay placed in the event [(sDATA): [seconds:n]]
-	if(status && status.size()!=iZ) sendLocationEvent((sNM):sHSMSARM,(sVAL):status[iZ][sID])
-	else error "Error setting HSM status. Status '$sIdOrNm' does not exist.",r9
+	if(status && status.size()!=iZ){
+		String v= status[iZ][sID]
+		if(v in ['armAway','armHome','armNight']){ // optional - the number of seconds of delay
+			Integer psz= prms.size()
+			Integer del= psz>i1 ? iLi(prms,i1) : iZ
+			Map data= del>iZ ? [seconds: del] : [:]
+			sendLocationEvent((sNM):sHSMSARM,(sVAL):v,(sDATA):data)
+		}else sendLocationEvent((sNM):sHSMSARM,(sVAL):v)
+	} else error "Error setting HSM status. Status '$sIdOrNm' does not exist.",r9
 	return lZ
 }
+
+// todo: need commands to arm / disarm monitoring rules
 
 private Long vcmd_sendEmail(Map r9,device,List prms){
 	Map<String,String> data=[
@@ -13232,7 +13240,6 @@ private String gtLzip(){ return (String)location.zipCode }
 private String gtLlat(){ return ((BigDecimal)location.latitude).toString() }
 private String gtLlong(){ return ((BigDecimal)location.longitude).toString() }
 private String gtLhsmStatus(){ return (String)location.hsmStatus }
-//error "object: ${describeObject(e)}",r9
 
 private String gtLbl(d){ return "${d?.label ?: d?.name ?: gtLname()}".toString() }
 //hubitat device ids can be the same as the location id

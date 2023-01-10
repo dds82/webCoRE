@@ -154,10 +154,6 @@ private static Boolean graphsOn(){ return true }
 @Field static final String sVAL='value'
 @Field static final String sNOW='now'
 @Field static final String sVARIABLE='variable'
-@Field static final String sDISARMD='disarmed'
-@Field static final String sCANCEL='cancel'
-@Field static final String sALLDISARM='allDisarmed'
-@Field static final String sCANRULEA='cancelRuleAlerts'
 @Field static final String sRGB='rgb'
 @Field static final String sUTF8='UTF-8'
 @Field static final String sID='id'
@@ -1640,26 +1636,6 @@ private Map<String,Map> getFuelStreamUrls(String iid){
 
 Boolean useLocalFuelStreams(){
 	return (Boolean)settings.localFuelStreams!=null ? (Boolean)settings.localFuelStreams : true
-}
-
-@CompileStatic
-private static String transformHsmStatus(String status){
-	if(status==sNL) return "unconfigured"
-	switch(status){
-		case sDISARMD:
-		case sALLDISARM:
-			return sOFF
-			break
-		case "armedHome":
-		case "armedNight":
-			return "stay"
-			break
-		case "armedAway":
-			return "away"
-			break
-		default:
-			return "Unknown"
-	}
 }
 
 
@@ -4295,6 +4271,9 @@ private List<Map> getIncidents(){
 		} else if(evNm=='hsmRule' && v==sCANRULEA){
 			String ruleKey=desc
 			if(ruleKey) rules[ruleKey]=[]
+		} else if(evNm=='hsmRules' && v=='disarmedRule'){
+			String ruleKey=desc
+			if(ruleKey) rules[ruleKey]=[]
 		} else log.warn "unknown $evNm $v"
 	}
 	new3Alerts= []+new2Alerts
@@ -5087,7 +5066,7 @@ private static Map<String,Map> virtualCommands(){
 		appendFile				: [ (sN): "Append to file...",		(sA): true,					(sD): "Append to file {0}",					(sP): [[(sN): "File name", (sT):sSTR ], [(sN):"Data", (sT):sSTR, ],[(sN):"Username", (sT):'email', (sD):", username {v}"], [(sN): "Password", (sT):"uri", (sD):", password {v}"] ],					],
 		deleteFile				: [ (sN): "Delete file...",			(sA): true,					(sD): "Delete file {0}",					(sP): [[(sN): "File name", (sT):sSTR ]  ],				],
 
-		setAlarmSystemStatus	: [ (sN): "Set Hubitat Safety Monitor status...",	(sA): true, (sI): sBLK,				(sD): "Set Hubitat Safety Monitor status to {0}",							(sP): [[(sN):"Status", (sT):sENUM, (sO): getAlarmSystemStatusActions().collect {[(sN): it.value, (sV): it.key]}]],																										],
+		setAlarmSystemStatus	: [ (sN): "Set Hubitat Safety Monitor status...",	(sA): true, (sI): sBLK,				(sD): "Set Hubitat Safety Monitor status to {0}",							(sP): [ [(sN):"Status", (sT):sENUM, (sO): getAlarmSystemStatusActions().collect {[(sN): it.value, (sV): it.key]}], [(sN):"Arm delay", (sT):sINT,(sD):" with an arm delay of {v} seconds"]	],					],
 		//keep emulated flash to not break old pistons
 		emulatedFlash			: [ (sN): "(Old do not use) Emulated Flash",	(sR): [sON, sOFF],			(sI): sTOGON,				(sD): "(Old do not use)Flash on {0} / off {1} for {2} times{3}",							(sP): [[(sN):"On duration", (sT):sDUR],[(sN):"Off duration", (sT):sDUR],[(sN):sNUMFLASH, (sT):sINT], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],																], //add back emulated flash with "o" option so that it overrides the native flash command
 		flash					: [ (sN): "Flash...",	(sR): [sON, sOFF],		(sI): sTOGON,				(sD): "Flash on {0} / off {1} for {2} times{3}",							(sP): [[(sN):"On duration", (sT):sDUR],[(sN):"Off duration", (sT):sDUR],[(sN):sNUMFLASH, (sT):sINT], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],		(sO): true /*override physical command*/													]
@@ -5382,14 +5361,14 @@ private Map getLocationModeOptions(){
 }
 private static Map<String,String> getAlarmSystemStatusActions(){
 	return [
-		armAway:		"Arm Away",
-		armHome:		"Arm Home",
-		armNight:		"Arm Night",
-		disarm:			"Disarm",
+		armAway:		"Arm Away", // intrusion
+		armHome:		"Arm Home", // intrusion
+		armNight:		"Arm Night", // intrusion
+		disarm:			"Disarm", // intrusion
 		armRules:		"Arm Monitor Rules",
 		disarmRules:	"Disarm Monitor Rules",
 		disarmAll:		"Disarm All",
-		armAll:			"Arm All",
+		armAll:			"Arm All", // intrusion, smoke, water and HSM monitoring rules
 		cancelAlerts:	"Cancel Alerts"
 	]
 }
@@ -5404,6 +5383,31 @@ private static Map getAlarmSystemStatusOptions(){
 }
 */
 
+@Field static final String sDISARMD='disarmed'
+@Field static final String sCANCEL='cancel'
+@Field static final String sALLDISARM='allDisarmed'
+@Field static final String sCANRULEA='cancelRuleAlerts'
+
+@CompileStatic
+private static String transformHsmStatus(String status){
+	if(status==sNL) return "unconfigured"
+	switch(status){
+		case sDISARMD:
+		case sALLDISARM:
+			return sOFF
+			break
+		case "armedHome":
+		case "armedNight":
+			return "stay"
+			break
+		case "armedAway":
+			return "away"
+			break
+		default:
+			return "Unknown"
+	}
+}
+
 private static Map getHubitatAlarmSystemStatusOptions(){
 	return [
 		armedAway:		"Armed Away",
@@ -5413,7 +5417,7 @@ private static Map getHubitatAlarmSystemStatusOptions(){
 		armedNight:		"Armed Night",
 		armingNight:	"Arming Night pending exit delay",
 		(sDISARMD):		"Disarmed",
-		allDisarmed:	"All Disarmed"
+		(sALLDISARM):	"All Disarmed"
 	]
 }
 
