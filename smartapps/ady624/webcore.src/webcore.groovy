@@ -701,7 +701,7 @@ private pageSectionAcctId(Boolean ins=false){
 					msg=sNL
 					if(!ins){
 						noteshown=true
-						paragraph span("NOTE changing these settings will require all pistons to be backed up again.  It may affect accessing apps like Homebridge V2 or Echo Speaks)",sCLRORG)
+						paragraph span("NOTE changing these settings will require all pistons to be backed up again.  It may affect pistons calling each other and accessing apps like Homebridge V2 or Echo Speaks)",sCLRORG)
 					}
 					input "acctUpdate", sBOOL, (sTIT): "Update to hub account hash?", (sDESC): "Tap to change", defaultValue: false, submitOnChange: true, (sREQ): false
 					if((Boolean)settings.acctUpdate){
@@ -733,7 +733,7 @@ private pageSectionAcctId(Boolean ins=false){
 			paragraph "Advanced - Custom account identifier"
 			if(!noteshown && !ins){
 				noteshown=true
-				paragraph span("NOTE changing these settings will require all pistons to be backed up again.  It may affect accessing apps like Homebridge V2 or Echo Speaks)",sCLRORG)
+				paragraph span("NOTE changing these settings will require all pistons to be backed up again.  It may affect pistons calling each other and accessing apps like Homebridge V2 or Echo Speaks)",sCLRORG)
 			}
 			input "setACCT", sBOOL, (sTIT): "Set custom account identifier?", (sDESC): "Tap to change", defaultValue: ins, submitOnChange: true, (sREQ): false
 			if(setA){
@@ -753,7 +753,7 @@ private pageSectionAcctId(Boolean ins=false){
 			if(!noteshown && !ins){
 				noteshown=true
 				paragraph "<br>"
-				paragraph span("NOTE changing these settings will require all pistons to be backed up again.  It may affect accessing apps like Homebridge V2 or Echo Speaks)",sCLRORG)
+				paragraph span("NOTE changing these settings will require all pistons to be backed up again.  It may affect pistons calling each other and accessing apps like Homebridge V2 or Echo Speaks)",sCLRORG)
 			}
 			input 'locID', sTXT, (sTIT): 'Location identifier - no imbedded spaces', (sREQ): true
 		}

@@ -561,10 +561,10 @@ private static Boolean badParams(Map r9,List prms,Integer minParams){ return (pr
 
 /** Returns t:t,v:v  */
 @CompileStatic
-private static Map rtnMap(String t,v){ return [(sT):t,(sV):v] }
+private static Map<String,Object> rtnMap(String t,v){ return [(sT):t,(sV):v] }
 /** Returns t:duration,v:m.v,vt:m.vt  */
 @CompileStatic
-private static Map rtnMap1(Map m){ return [(sT):sDURATION,(sV):oMv(m),(sVT):sMvt(m)] }
+private static Map<String,Object> rtnMap1(Map m){ return [(sT):sDURATION,(sV):oMv(m),(sVT):sMvt(m)] }
 @CompileStatic
 private static Map rtnMapS(String v){ return [(sT):sSTR,(sV):v] as LinkedHashMap }
 @CompileStatic
@@ -4465,7 +4465,7 @@ private static Long pushTimeAhead(Long pastTime,Long curTime){
 	TimeZone mtz=mTZ()
 	while(retTime<curTime){
 		t0=Math.round(retTime+dMSDAY)
-		t1=Math.round(t0+(mtz.getOffset(retTime)-mtz.getOffset(t0))*d1)
+		t1=Math.round( (t0+(mtz.getOffset(retTime)-mtz.getOffset(t0))) *d1)
 		retTime=t1
 	}
 	return retTime
@@ -5091,7 +5091,7 @@ private Long vcmd_toggle(Map r9,device,List prms){
 private Long vcmd_toggleRandom(Map r9,device,List prms){
 	Integer probability; probability=matchCastI(r9,prms.size()==i1 ? prms[iZ]:i50)
 	if(probability<=iZ)probability=i50
-	smart_toggle(r9,device, (Integer)Math.round(d100*Math.random()).toInteger()<=probability)
+	smart_toggle(r9,device, Math.round(d100*Math.random()).toInteger()<=probability)
 	return lZ
 }
 
@@ -5546,7 +5546,7 @@ private Long vcmd_executePiston(Map r9,device,List prms){
 	String desc="webCoRE: Piston ${gtAppN()} requested execution of piston $pistonId".toString()
 	Map data=[:]
 	for(String argument in arguments) if(argument)data[argument]=oMv(getVariable(r9,argument))
-	if(wait) wait=wexecutePiston(pistonId,data,selfId)
+	if(wait) if(!wexecutePiston(pistonId,data,selfId)) error desc+" Piston not found",r9
 	if(!wait) sendExecuteEvt(pistonId,selfId,desc,data)
 	return lZ
 }
@@ -6879,7 +6879,7 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 		case sC: //constant
 			switch(ovt){
 				case sTIME:
-					Long offset=(operand[sC] instanceof Integer)? (iMs(operand,sC)).toLong():lcast(r9,operand[sC])
+					Long offset= operand[sC] instanceof Integer ? iMs(operand,sC).toLong():lcast(r9,operand[sC])
 					mv=rtnMap(ovt,(offset%1440L)*60000L)	//convert mins to time
 					break
 				case sDATE:
@@ -8655,6 +8655,8 @@ private static String fixAttr(String attr){
 
 private static Map fixVector(String s1){
 	String s; s=s1
+	s=s.trim()
+	s=s.replace(sSPC,sBLK)
 	Map xyz; xyz=[:]
 	if(stJson1(s)){
 		s=s.replace(sLB,sOB)
@@ -8662,8 +8664,8 @@ private static Map fixVector(String s1){
 		s=s.replace('x:','"x":')
 		s=s.replace('y:','"y":')
 		s=s.replace('z:','"z":')
-		xyz=(Map)new JsonSlurper().parseText(s)
 	}
+	if(stJson(s))xyz= (Map)new JsonSlurper().parseText(s)
 	return xyz
 }
 
@@ -8858,7 +8860,7 @@ private Map getDeviceAttribute(Map r9,String deviceId,String attr,subDeviceIndex
 }
 
 @CompileStatic
-private Map getJsonData(Map r9,data,String name,String feature=sNL){
+private Map<String,Object> getJsonData(Map r9,data,String name,String feature=sNL){
 	if(data){
 		String mpart; mpart=sNL
 		try{
@@ -8969,18 +8971,18 @@ private Map getJsonData(Map r9,data,String name,String feature=sNL){
 	rtnMap(sDYN,sBLK)
 }
 
-private Map getArgument(Map r9,String name){
+private Map<String,Object> getArgument(Map r9,String name){
 	def ttt=gtSysVarVal(r9,sDARGS)
 	return getJsonData(r9,ttt,name)
 }
 
-private Map getJson(Map r9,String name){ return getJsonData(r9,r9[sJSON],name) }
+private Map<String,Object> getJson(Map r9,String name){ return getJsonData(r9,r9[sJSON],name) }
 
-private Map getPlaces(Map r9,String name){ return getJsonData(r9,((Map)r9[sSETTINGS])?.places,name) }
+private Map<String,Object> getPlaces(Map r9,String name){ return getJsonData(r9,((Map)r9[sSETTINGS])?.places,name) }
 
-private Map getResponse(Map r9,String name){ return getJsonData(r9,r9[sRESP],name) }
+private Map<String,Object> getResponse(Map r9,String name){ return getJsonData(r9,r9[sRESP],name) }
 
-private Map getWeather(Map r9,String name){
+private Map<String,Object> getWeather(Map r9,String name){
 	String s='weather'
 	if(r9[s]==null){
 		Map t0=wgetWData()
@@ -9019,7 +9021,7 @@ private Map getNFL(Map r9,String name){
 	return getJsonData(r9,r9[s],name,'NFL')
 }
 
-private Map getIncidents(Map r9,String name){
+private Map<String,Object> getIncidents(Map r9,String name){
 	return getJsonData(r9,r9[sINCIDENTS],name)
 }
 
@@ -9071,7 +9073,7 @@ private static String sanitizeVariableName(String name){
 }
 
 @CompileStatic
-private Map getVariable(Map r9,String name, Boolean rtnL=false){
+private Map<String,Object> getVariable(Map r9,String name, Boolean rtnL=false){
 	Map<String,String> var=parseVariableName(name)
 	String tn,mySt,rt
 	tn=sanitizeVariableName(var[sNM])
@@ -9082,7 +9084,7 @@ private Map getVariable(Map r9,String name, Boolean rtnL=false){
 		mySt="getVariable ${tn} ${var} ${name} "
 		myDetail r9,mySt,i1
 	}
-	Map res
+	Map<String,Object> res
 	if(tn==sNL){
 		res=rtnMapE('Invalid empty variable name')
 		if(lg)myDetail r9,mySt+"result:$res"
@@ -9277,9 +9279,10 @@ private Map setVariable(Map r9,String name,value){
 				Map variable=globalVarsVFLD[wName][tn]
 				variable.v=cast(r9,value,sMt(variable))
 				globalVarsVFLD=globalVarsVFLD
-				Map<String,Map> cache=r9.gvCache!=null ? (Map<String,Map>)r9.gvCache:[:]
+				String s='gvCache'
+				Map<String,Map> cache=r9[s]!=null ? (Map<String,Map>)r9[s]:[:]
 				cache[tn]=variable
-				r9.gvCache=cache
+				r9[s]=cache
 				releaseTheLock(semName)
 				waddInUseGlobalVar(r9,tn,false)
 				return variable
@@ -9668,7 +9671,7 @@ private Map evaluateExpression(Map r9,Map express,String rtndataType=sNL){
 			operand=iN1
 			lastOperand=iN1
 			Boolean a
-			if(expression.i){
+			if(expression[sI]){
 				for(Map item in liMs(expression,sI)){
 					if(sMt(item)==sOPER){
 						String ito=sMs(item,sO)
@@ -10060,7 +10063,7 @@ private doExprMath(Map r9,String o,String t,v1,v2){
 			v=(v2!=dZ ? v1/v2:dZ)
 			break
 		case sMOD1:
-			v=(Integer)Math.floor(v2!=iZ ? v1/v2:iZ)
+			v=Math.floor(v2!=iZ ? v1/v2:dZ).toInteger()
 			break
 		case sMOD:
 			v=(Integer)(v2!=iZ ? v1%v2:iZ)
@@ -11407,7 +11410,7 @@ private Map func_random(Map r9,List<Map> prms){
 			return rtnMapD(Math.random())
 		case i1:
 			Double range=dblEvalExpr(r9,prms[iZ])
-			return rtnMapI((Integer)Math.round(range*Math.random()))
+			return rtnMapI(Math.round(range*Math.random()).toInteger())
 		case i2:
 			List<String> n=[sINT,sDEC]
 			if((sMt(prms[iZ]) in n) && (sMt(prms[i1]) in n)){
@@ -11419,11 +11422,11 @@ private Map func_random(Map r9,List<Map> prms){
 					min=max
 					max=swap
 				}
-				return rtnMapI((Integer)Math.round(min+(max-min)*Math.random()))
+				return rtnMapI(Math.round(min+(max-min)*Math.random()).toInteger())
 			}
 	}
 	Integer choice
-	choice=(Integer)Math.round((sz-i1)*Math.random())
+	choice=Math.round((sz-i1)*Math.random()).toInteger()
 	if(choice>=sz)choice=sz-i1
 	return prms[choice]
 }
@@ -11573,7 +11576,7 @@ private Long gtWCTimeToday(Long time){
 	Long result=time+t0
 	//we need to adjust for time overlapping during DST changes
 	TimeZone mtz=mTZ()
-	return Math.round(result+(mtz.getOffset(t0)-mtz.getOffset(result))*d1)
+	return Math.round( (result+(mtz.getOffset(t0)-mtz.getOffset(result)) ) *d1)
 }
 
 @Field static final List<String> trueStrings= [ '1','true', "on", "open",  "locked",  "active",  "wet",           "detected",    "present",    "occupied",    "muted",  "sleeping"]
@@ -11738,7 +11741,7 @@ private static com_cast(Map r9,ival,String dataType,String srcDt){
 	return value
 }
 
-private cast(Map r9,ival,String dataTT,String isrcDT=sNL){
+private Object cast(Map r9,ival,String dataTT,String isrcDT=sNL){
 	if(dataTT==sDYN)return ival
 
 	String dataType,srcDt
@@ -11790,7 +11793,7 @@ private cast(Map r9,ival,String dataTT,String isrcDT=sNL){
 			return (Double)com_cast(r9,value,dataType,srcDt)
 		case sTIME:
 			Long d
-			d=srcDt==sSTR ? stringToTime(value):value.toLong()
+			d=srcDt==sSTR ? stringToTime(value):((Number)value).toLong()
 			if(d<lMSDAY)return d
 			Date t1=new Date(d)
 			d=Math.round((t1.hours*dSECHR+t1.minutes*d60+t1.seconds)*d1000)
@@ -11799,19 +11802,22 @@ private cast(Map r9,ival,String dataTT,String isrcDT=sNL){
 		case sDTIME:
 			Long d
 			if(srcDt in [sTIME,sLONG,sINT,sDEC]){
-				d=value.toLong()
+				d=((Number)value).toLong()
 				if(d<lMSDAY) value=gtWCTimeToday(d)
 				else value=d
 			}
 			d=srcDt==sSTR ? stringToTime(value):(Long)value
 			if(dataType==sDATE){
 				Date t1= new Date(d)
-				// take ms off and first guess at midnight (could be earlier/later depending if DST change day
-				d=Math.round((Math.floor(d/d1000)*d1000) - ((t1.hours*dSECHR+t1.minutes*d60+t1.seconds)*d1000) )
+				TimeZone mtz=mTZ()
+				// take ms off and first guess at midnight
+				Long td= Math.round( (Math.floor(d/d1000)*d1000)-((t1.hours*dSECHR+t1.minutes*d60+t1.seconds)*d1000))
+				// could be earlier/later depending if DST change day
+				d=Math.round( (td-(mtz.getOffset(td)-mtz.getOffset(d)) ) *d1)
 			}
 			return d
 		case sVEC:
-			if(value instanceof String) value= fixVector(value)
+			if(srcDt==sSTR) value= fixVector(value)
 			return value instanceof Map && value!=null && value[sX]!=null && value[sY]!=null && value[sZ]!=null ? value:[(sX):iZ,(sY):iZ,(sZ):iZ]
 		case sORIENT:
 			return value instanceof Map ? getThreeAxisOrientation(value):value
@@ -11827,7 +11833,7 @@ private cast(Map r9,ival,String dataTT,String isrcDT=sNL){
 			switch(srcDt){
 				case sINT:
 				case sLONG:
-					t1=value.toLong(); break
+					t1=((Number)value).toLong(); break
 				default:
 					t1=lcast(r9,value)
 			}
@@ -12458,7 +12464,7 @@ Long getSkew(Long t4,String ttyp){
 	else{
 		Integer t2=Math.abs(lat).toInteger()
 		Integer t3=curMon%i6
-		Integer t5=(Integer)Math.round(t3*(365.0D/12.0D)+day).toInteger() // days into period
+		Integer t5=Math.round(t3*(365.0D/12.0D)+day).toInteger() // days into period
 		addr=Math.round((t5>37 && t5<(182-37) ? t2*2.8D:t2*1.9D)*d1000).toInteger()
 	}
 	return addr.toLong()
@@ -12498,7 +12504,7 @@ private Map<String,LinkedHashMap> getSystemVariablesAndValues(Map r9){
 	def res
 	for(variable in result){
 		String k=(String)variable.key
-		// special handle $fuel $file
+		// todo special handle $fuel $file
 		res=null
 		if(/*variable.value.d!=null &&*/ bIs(variable.value,sD)) res=gtSysVarVal(r9,k,true)
 		if(res==null && c[k]!=null)res=oMv(c[k])
