@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update January 10, 2023 for Hubitat
+ * Last update January 11, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -517,7 +517,7 @@ private static List<String> liMd(Map m){ (List<String>)m.get(sD) }
 @CompileStatic
 private static List<Map> liMs(Map m,String s){ (List)m.get(s) }
 
-/** returns l.integer */
+/** returns l[i] */
 @CompileStatic
 private static Integer iLi(List l,Integer i){ (Integer)l.get(i) }
 
@@ -559,6 +559,7 @@ private static Boolean isEric(Map r9){ eric1() && isDbg(r9) }
 @CompileStatic
 private static Boolean badParams(Map r9,List prms,Integer minParams){ return (prms==null || prms.size()<minParams) }
 
+/** Returns t:t,v:v  */
 @CompileStatic
 private static Map rtnMap(String t,v){ return [(sT):t,(sV):v] }
 /** Returns t:duration,v:m.v,vt:m.vt  */
@@ -1383,7 +1384,7 @@ private void cleanCode(Map i,Boolean inMem){
 		if(sMs(item,sF)==sL)a=item.remove(sF) // timeValue.f
 		if(sMs(item,'sm')=='auto')a=item.remove('sm') // subscription method
 		if(sMs(item,'ctp')==sI)a=item.remove('ctp') // case traversal switch stmt
-		if(item[sN] && ty && sMa(item)==sD)a=item.remove(sA) // variable.a sS -> constant  sD-> dynamic
+		if(item[sN] && ty && sMa(item)==sD)a=item.remove(sA) // variable.a sS -> const  sD-> dynamic
 
 		/*
 			statement.t = null; //type
@@ -3991,7 +3992,7 @@ private Boolean executeTask(Map r9,List devices,Map statement,Map task,Boolean a
 				Map v=mevaluateOperand(r9,prm)
 				String tt1=vt.replace(sLRB,sBLK)
 				emptyIndex= tt1!=vt &&
-						command=='setVariable' &&
+						command==sSTVAR &&
 						prms[iZ] instanceof String && !( sLi(prms,iZ).contains(sRB) )
 				def t0=oMv(v)
 				//if not selected, return the null to fill in parameter
@@ -8286,10 +8287,11 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 				curStatement=node
 				node.remove(sW) // modifies the code
 				lastlvl=lvl[sV]
-				if(!inMem){
+				if(!inMem && lastlvl>i1){
+					String m= ' are designed to be top-level statements and should not be used inside other statements.'
 					switch(t){
-						case sEVERY: if(lastlvl>i1) addWarning(node,'Timers are designed to be top-level statements and should not be used inside other statements. If you need a conditional timer, please look into using a while loop instead.'); break
-						case sON: if(lastlvl>i1) addWarning(node,'On event statements are designed to be top-level statements and should not be used inside other statements.'); break
+						case sEVERY: addWarning(node,'Every timers'+m+' If you need a conditional timer, please look into using a while loop instead.'); break
+						case sON:  addWarning(node,'On event statements'+m); break
 					}
 				}
 				//doLog(sWARN,"found statement $t level ${lvl.v}")
@@ -8311,6 +8313,19 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 								if(lge)myDetail r9,"Found location command $kc",iN2
 								incrementDevices(LID,sNL,kc)
 							}
+
+							List<Map> prms= liMs(k,sP)
+							if(kc==sSTVAR && prms && prms.size()==i2){
+								Map v=prms[iZ]
+								String vn=sMs(v,sX)
+								if(sMt(v)==sX && vn){
+									//get variable {t:type,v:value, ic: isConst, fx: isFixed}
+									Map a=getVariable(r9,vn,true)
+									String m= bIs(a,'ic') ? 'const' : ( bIs(a,'fx') ? 'pre initialized' : sNL)
+									if(m) addWarning(node,'Found Set variable to a '+m+" variable: $vn num: ${stmtNum(k)}")
+								}
+							}
+
 							traverseStatements(k[sP] ?: [],statementTraverser,k,data,lvl)
 						}
 					}
@@ -8353,8 +8368,11 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 		}
 
 		Map r9p=mMs(r9,sPIS)
+
 		if(r9p[sR])traverseRestrictions(liMs(r9p,sR),restrictionTraverser,null,stmtData)
+
 		if(r9p[sS])traverseStatements(liMs(r9p,sS),statementTraverser,null,stmtData,stmtLvl)
+
 		//device variables could be device type variable, or another type using device attributes to fill in
 		for(Map variable in ((List<Map>)oMv(r9p)).findAll{ Map it -> /*(String)it.t==sDEV && */ it.v!=null && mMv(it).d!=null && mMv(it).d instanceof List }){
 			//if(eric())doLog(sDBG,s+"checking variable ${variable}")
@@ -9053,7 +9071,7 @@ private static String sanitizeVariableName(String name){
 }
 
 @CompileStatic
-private Map getVariable(Map r9,String name){
+private Map getVariable(Map r9,String name, Boolean rtnL=false){
 	Map<String,String> var=parseVariableName(name)
 	String tn,mySt,rt
 	tn=sanitizeVariableName(var[sNM])
@@ -9071,10 +9089,16 @@ private Map getVariable(Map r9,String name){
 		return res
 	}
 	Map err=rtnMapE("Variable '$tn' not found".toString())
-	Boolean rtnVarN; rtnVarN=false
+
+	Boolean rtnVarN,rtnLCL,isConst,isFixed
+	rtnVarN=false // return variable name
+	rtnLCL=false  // return LCL markers
+	isFixed=false // fixed (pre-assigned)value
+	isConst=false // const
+
 	if(tn.startsWith(sAT)){
 		if(tn.startsWith(sAT2)){
-			tn=var[sNM] // allow spaces
+			tn=var[sNM] // allow spaces todo
 			String vn=tn.substring(i2)
 			//get a variable
 			Map hg=wgetGlobalVar(vn)
@@ -9141,10 +9165,14 @@ private Map getVariable(Map r9,String name){
 				}
 			}
 		}else{
+
 //			if(eric())doLog(sDBG,"getVariable ${r9.localVars}")
 			Map tlocV=mMs(mMs(r9,sLOCALV),tn)
 			if(!tlocV)res=err
 			else{
+				rtnLCL= rtnL
+				isConst=sMs(tlocV,sA)==sS
+				isFixed=bIs(tlocV,sF)
 				res=rtnMap(sMt(tlocV),oMv(tlocV))
 				def tmp=oMv(res)
 				if(tmp instanceof List)
@@ -9158,6 +9186,7 @@ private Map getVariable(Map r9,String name){
 	}
 	rt= res!=null ? sMt(res):sNL
 	if(rt.endsWith(sRB)){
+		rtnLCL=false
 		String sindx=sMs(var,sINDX)
 		if( (oMv(res) instanceof List || oMv(res) instanceof Map) && sindx!=sNL && sindx!=sBLK){
 			if(!sindx.isNumber()){
@@ -9184,6 +9213,7 @@ private Map getVariable(Map r9,String name){
 	rt=sMt(res)
 	if(rt==sDEC && v instanceof BigDecimal)v=v.toDouble()
 	res=rtnMap(rt,v) + ((rtnVarN ? [vn: tn] : [:]) as Map<String, Object>)
+	res= res + ((rtnLCL ? [ic: isConst, fx: isFixed] : [:]) as Map<String, Object>)
 	if(lg)myDetail r9,mySt+"result:$res (${myObj(v)})"
 	res
 }
@@ -9270,7 +9300,7 @@ private Map setVariable(Map r9,String name,value){
 				//dealing with a list
 				variable[sV]= oMv(variable) instanceof Map || oMv(variable) instanceof List ? oMv(variable):[:]
 				String sindx=var[sINDX]
-				if(sindx=='*CLEAR') variable[sV]=[:] //((Map)variable.v).clear()
+				if(sindx=='*CLEAR') variable[sV]=[:] //((Map)variable.v).clear() // this modifies r9[sLOCALV]
 				else{
 					if(sindx!=null){
 						if(!sindx.isNumber()){
@@ -9282,7 +9312,7 @@ private Map setVariable(Map r9,String name,value){
 							}
 						}
 						String at=t.replace(sLRB,sBLK)
-						variable[sV][var[sINDX]]= matchCast(r9,value,at)?value:cast(r9,value,at)
+						variable[sV][var[sINDX]]= matchCast(r9,value,at)?value:cast(r9,value,at) // this modifies r9[sLOCALV]
 					}else{
 						//list of numbers, spread into multiple prms
 						def nvalue
@@ -9298,22 +9328,21 @@ private Map setVariable(Map r9,String name,value){
 						}
 						if(nvalue instanceof List){
 							if(lg)myDetail r9,"setVariable list found ${variable} value: ${nvalue}",iN2
-							variable[sV]= nvalue
+							variable[sV]= nvalue // this modifies r9[sLOCALV]
 						}else return err
 					}
 				}
 			}else{
 				def v=(value instanceof GString)? "$value".toString():value
-				if(!variable[sA]) // cannot change constants
-					variable[sV]=matchCast(r9,v,t) ? v:cast(r9,v,t)
+				if(!(String)variable[sA]) // cannot change const; sNL means dynamic, sS means static/const
+					variable[sV]=matchCast(r9,v,t) ? v:cast(r9,v,t) // this modifies r9[sLOCALV]
 			}
-			if(!variable[sF]){ // don't save fixed; (includes constants)
+			if(!(Boolean)variable[sF]){ // don't save across runs changes to preset variables (fixed); (includes const)
 				Map vars
 				Map t0=getCachedMaps(sSTVAR)
 				if(t0!=null)vars=mMs(t0,sVARS)
 				else vars=isPep(r9) ? (Map)gtAS(sVARS):(Map)gtSt(sVARS)
 
-				((Map)r9[sLOCALV])[tn]=variable
 				vars[tn]=oMv(variable)
 				mb()
 
@@ -9348,7 +9377,7 @@ private static Boolean matchCast(Map r9,v,String t){
 	if(!mL){
 		if(!LS) LS=fill_LS()
 		mL1=[sDYN]+LS
-		mL=mL1+[sLONG,sDEC,sINT,sBOOLN,sDEV]
+		mL=mL1+[sLONG,sDEC,sINT,sBOOLN,sDEV,sVEC]
 	}
 	Boolean match= v!=null && t in mL && (
 		(v instanceof String && t in mL1)||
@@ -9547,7 +9576,7 @@ private Map evaluateExpression(Map r9,Map express,String rtndataType=sNL){
 			else result=rtnMap(sLONG,(Long)cast(r9,exprV,t0!=sNL ? t0:sLONG,sINT))
 			break
 		case sVARIABLE:
-			//get variable {n:name,t:type,v:value}
+			//get variable {t:type,v:value}
 			result=getVariable(r9,sMs(expression,sX)+(sMs(expression,sXI)!=sNL ? sLB+sMs(expression,sXI)+sRB:sBLK))
 			break
 		case sDEV:
@@ -9559,7 +9588,7 @@ private Map evaluateExpression(Map r9,Map express,String rtndataType=sNL){
 				def eid=expression[sID]
 				List deviceIds; deviceIds= eid instanceof List ? (List)eid : (eid ? [eid] : [])
 				if(deviceIds.size()==iZ){
-					//get variable {n:name,t:type,v:value}
+					//get variable {t:type,v:value}
 					Map var=getVariable(r9,sMs(expression,sX))
 					if(!isErr(var)){
 						if(sMt(var)==sDEV) //noinspection GroovyAssignabilityCheck
@@ -12450,10 +12479,10 @@ private void getLocalVariables(Map r9,Map aS){
 		def tmp= oMv(var)
 		Map variable=[
 			(sT):t,
-			(sV): tmp!=null ? tmp: (t.endsWith(sRB) ? (v instanceof Map || v instanceof List ? v:[:]) : (matchCast(r9,v,t) ? v:cast(r9,v,t))),
+			(sV): tmp!=null ? tmp : (t.endsWith(sRB) ? (v instanceof Map || v instanceof List ? v:[:]) : (matchCast(r9,v,t) ? v:cast(r9,v,t))),
 			(sF): !!tmp //f means fixed value; do not save to state
 		]
-		if(tmp!=null && sMa(var)==sS && !t.endsWith(sRB)){ // variable.a sS -> constant  sD-> dynamic
+		if(tmp!=null && sMa(var)==sS && !t.endsWith(sRB)){ // variable.a sS -> const  sD-> dynamic
 			variable[sV]=oMv(evaluateExpression(r9,mevaluateOperand(r9,mMv(var)),t))
 			variable[sA]=sS
 		}

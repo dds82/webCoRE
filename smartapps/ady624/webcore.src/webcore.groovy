@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update January 10, 2023 for Hubitat
+ * Last update January 11, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -4163,62 +4163,17 @@ def hsmHandler(evt){ // hsmStatus event
 	state.hsmStatus=evt.value
 	addHsmEvent(evt)
 	// gets allDisarmed value
-	//@Field static final String sALLDISARM='allDisarmed'
 	// gets disarmed value (leave rule alone?)
-/*	def a=getIncidents() // cause trimming
-	clearParentPistonCache("hsmHandler")
-	clearBaseResult('hsmHandler')*/
 }
 
-def hsmAlertHandler(evt){ // hsmAlert event
+def hsmAlertHandler(evt) { // hsmAlert event
 	// get value of rule to say rule fired?
 	// get value of water, temperature
-//push incidents
 	addHsmEvent(evt)
-
-/*
-	String evV=evt.value.toString()
-	String title='HSM Alert: '+ evV + (evV=='rule' ? ',  '+(String)evt.descriptionText : sBLK)
-	String src='HSM Alert:'+ evV
-	String msg='HSM '+evV+' Alert'
-
-	Map alert=[
-		date:evt.date.getTime(),
-		(sTIT): title,
-		message: msg,
-		args: evt.data,
-		sourceType: src,
-		(sV):evt.value,
-		des:evt.descriptionText,
-		//d: evt.data
-	] */
-	//incidents: isHubitat() ? [] : location.activeIncidents.collect{[date: it.date.time, (sTIT): it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
-
-// this should search the db from hsmAlert events?
-/*
-List t1=getLocationEventsSince('hsmAlert', new Date() - 10)
-		def t2
-		if(t1.size()){
-			t2=t1[0] // newest is first
-		}
-		if(t2 && t2.value){ return stringToTime(t2.value) + 1000 }
-*/
-	/*
-	String locStat=(String)location.hsmStatus
-
-	def a; a=gtAS(sHSMALRTS)
-	List<Map> alerts; alerts= a? (List<Map>)a : []
-	Boolean aa=alerts.push(alert)
-	if(locStat==sALLDISARM) alerts=[]
-	if(locStat==sALLDISARM || evV in [sCANCEL, sCANRULEA]) alerts=[]
-	assignAS(sHSMALRTS,alerts)
-
-	if(alerts) a=getIncidents() // cause trimming
-	clearParentPistonCache("hsmAlerts changed")
-	clearBaseResult('hsmAlertHandler')
-
-	info 'HSM Alert: '+title */
 }
+
+//incidents: isHubitat() ? [] : location.activeIncidents.collect{[date: it.date.time, (sTIT): it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
+// this should search the db from hsmAlert events? - they are not there
 
 private List<Map> getIncidents(){
 
