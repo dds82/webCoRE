@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update January 11, 2023 for Hubitat
+ * Last update January 13, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 //file:noinspection GroovyAssignabilityCheck
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230109_HE'
+@Field static final String sHVER='v0.3.114.20230113_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -2090,7 +2090,7 @@ private LinkedHashMap getDSCache(String meth,Boolean Upd=true){
 		]
 		Map t1
 		t1=te1+[
-			(sID): hashPID(appStr),
+			(sID): hashPID(appStr), // TODO this is not unique across accounts, locations, webCoRE instances
 			(sNM): ttt,
 			(sSVLBL): ttt,
 			(sCTGRY): mst[sCTGRY] ?: iZ,
@@ -4243,15 +4243,13 @@ private static void pcmd(device,String cmd,List nprms=[]){
 @CompileStatic
 private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 	Boolean lg=isEric(r9)
-	String mySt,mySt1; mySt=sNL; mySt1=sNL
+	String mySt,mySt1; mySt=sNL; mySt1= isDbg(r9) ? "scheduleTimer ": sNL
 	Integer iTD=stmtNum(timer)
 	Map tlo=mMs(timer,sLO)
 	Map tlo2=mMs(timer,sLO2)
 	Map tlo3=mMs(timer,sLO3)
-	if(lg){
-		mySt1="scheduleTimer "
+	if(lg)
 		mySt="stmt: ${iTD} lo:${tlo} lo2: ${tlo2} lo3: ${tlo3} lastRun: $lastRun "
-	}
 
 	//if already scheduled once during run, don't do it again
 	Boolean fnd; fnd=false
@@ -4790,17 +4788,17 @@ private Long do_setLevel(Map r9,device,List prms,String cmd,Integer val=null){
 	Boolean a
 	List larg=[arg]
 	if(cmd==sSTLVL){ // setLevel takes seconds duration argument (optional)
-		delay=psz>i2 ? icast(r9,prms[i2]):iZ
+		delay=psz>i2 ? icast(r9,prms[i2]):iN1
 	}else if(cmd==sSTCLRTEMP){ // setColorTemp takes level and seconds duration arguments (optional)
 		if(psz>i2){
 			Integer lvl=prms[i2]!=null ? icast(r9,prms[i2]):null
 			a=larg.push(lvl)
-			delay=psz>i3 ? icast(r9,prms[i3]):iZ
+			delay=psz>i3 ? icast(r9,prms[i3]):iN1
 		}
 	}
-	if(delay>iZ)a=larg.push(delay)
+	if(delay>=iZ)a=larg.push(delay)
 	executePhysicalCommand(r9,device,cmd,larg)
-	if(delay>=iZ)return Math.round(delay*d1000)
+	if(delay>iZ)return Math.round(delay*d1000)
 	return lZ
 }
 

@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update January 11, 2023 for Hubitat
+ * Last update January 13, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -31,8 +31,8 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230109_HE'
-@Field static final String sHVERSTR='v0.3.114.20230109_HE - January 9, 2023'
+@Field static final String sHVER='v0.3.114.20230113_HE'
+@Field static final String sHVERSTR='v0.3.114.20230113_HE - January 13, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -3559,6 +3559,7 @@ private String locationSid(){
 	String wName=sAppId()
 	String t; t=locFLD[wName]
 	if(t==sNL){
+		//todo this is ambiguious
 		if(acctANDloc()) t= (String)gtSetting('acctID') + (String)gtSetting('locID') + sML
 		else{
 			Boolean stprp= (Boolean)gtSt('properSID')
@@ -5794,7 +5795,7 @@ static void clearHashMap(String wName){
 private String sAppId(){ return ((Long)app.id).toString() }
 
 private String hashPID(id){
-	if(acctANDloc()) return hashId(locationSid()+id.toString())
+	if(acctANDloc()) return hashId(locationSid()+id.toString()) //todo still not unique
 	return hashId(id)
 }
 
