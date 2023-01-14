@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update January 13, 2023 for Hubitat
+ * Last update January 14, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20230113_HE'
-@Field static final String sHVERSTR='v0.3.114.20230113_HE - January 13, 2023'
+@Field static final String sHVERSTR='v0.3.114.20230113_HE - January 14, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -4207,33 +4207,33 @@ private List<Map> getIncidents(){
 	String intrusion='intrusion'
 
 	Boolean b
-	for(Map myE in newAlerts) {
+	for(Map myE in newAlerts){
 		String evNm = (String)myE[sNM]
 		String v= (String)myE[sV]
-		String desc=(String)myE.des
+		String desc= (String)myE.des
 		if(evNm=='hsmAlert'){
-			if( locStat!=sDISARMD && v.contains(intrusion) ){
+			if(v.contains(intrusion)){
+				if(locStat!=sDISARMD) b= new2Alerts.push(myE)
+			}else if(v in ['water','smoke','arming']){
 				b=new2Alerts.push(myE)
-			} else if( v in ['water','smoke','arming'] ){
-				b=new2Alerts.push(myE)
-			} else if(v == sCANCEL){
+			}else if(v == sCANCEL){
 				new2Alerts=[]
 				rules= [:]
-			} else if(v == 'rule'){
-				String ruleKey=desc
+			}else if(v=='rule'){
+				String ruleKey= desc
 				if(ruleKey){
 					List<Map> trule= rules[ruleKey] ?: []
-					b=trule.push(myE)
-					rules[ruleKey]=trule
+					b= trule.push(myE)
+					rules[ruleKey]= trule
 				}
-			} else log.warn "unknown $evNm $v"
-		} else if(evNm=='hsmRule' && v==sCANRULEA){
+			}else log.warn "unknown $evNm $v"
+		}else if(evNm=='hsmRule' && v==sCANRULEA){
 			String ruleKey=desc
 			if(ruleKey) rules[ruleKey]=[]
-		} else if(evNm=='hsmRules' && v=='disarmedRule'){
+		}else if(evNm=='hsmRules' && v=='disarmedRule'){
 			String ruleKey=desc
 			if(ruleKey) rules[ruleKey]=[]
-		} else log.warn "unknown $evNm $v"
+		}else log.warn "unknown $evNm $v"
 	}
 	new3Alerts= []+new2Alerts
 	for(l in rules.keySet()){
