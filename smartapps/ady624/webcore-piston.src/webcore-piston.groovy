@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update January 13, 2023 for Hubitat
+ * Last update January 15, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
