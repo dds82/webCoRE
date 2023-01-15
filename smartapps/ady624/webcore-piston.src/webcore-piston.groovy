@@ -4788,15 +4788,15 @@ private Long do_setLevel(Map r9,device,List prms,String cmd,Integer val=null){
 	Boolean a
 	List larg=[arg]
 	if(cmd==sSTLVL){ // setLevel takes seconds duration argument (optional)
-		delay=psz>i2 ? icast(r9,prms[i2]):iN1
+		delay=psz>i2 ? icast(r9,prms[i2]):iZ
 	}else if(cmd==sSTCLRTEMP){ // setColorTemp takes level and seconds duration arguments (optional)
 		if(psz>i2){
 			Integer lvl=prms[i2]!=null ? icast(r9,prms[i2]):null
 			a=larg.push(lvl)
-			delay=psz>i3 ? icast(r9,prms[i3]):iN1
+			delay=psz>i3 ? icast(r9,prms[i3]):iZ
 		}
 	}
-	if(delay>=iZ)a=larg.push(delay)
+	if(delay>iZ)a=larg.push(delay)
 	executePhysicalCommand(r9,device,cmd,larg)
 	if(delay>iZ)return Math.round(delay*d1000)
 	return lZ
