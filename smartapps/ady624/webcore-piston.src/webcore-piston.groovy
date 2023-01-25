@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update January 15, 2023 for Hubitat
+ * Last update January 24, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -1379,6 +1379,7 @@ private void cleanCode(Map i,Boolean inMem){
 
 	if(item[sDATA] instanceof Map && !mMs(item,sDATA))a=item.remove(sDATA)
 
+	if(!ListStmt)ListStmt=fill_STMT()
 	if(inMem){
 		// defaults
 		if(sMs(item,sF)==sL)a=item.remove(sF) // timeValue.f
@@ -1434,7 +1435,6 @@ private void cleanCode(Map i,Boolean inMem){
 		 */
 		// from IDE: cancel on c- condition state change (def), p- piston state change, b- condition or piston state change, ""- never cancel
 		// makes 'c' the default empty for the groovy code
-		if(!ListStmt)ListStmt=fill_STMT()
 		if(ty in ListStmt){
 			if(!sMs(item,sTCP))item[sTCP]=sN
 			else if(sMs(item,sTCP)==sC)a=item.remove(sTCP)
@@ -2852,7 +2852,7 @@ private Boolean executeEvent(Map r9,Map event){
 		r9[sRESP]=[:]
 
 		Map es=(Map)event[sSCH]
-		if(es!=null && evntName==sTIME){
+		if(es!=null && evntName==sTIME){ // this is a resume timer, try to put back original event
 			targs=es[sARGS]!=null && es[sARGS] instanceof Map ? mMs(es,sARGS):targs
 			srcEvent=mMs(es,'evt')
 			Map tMap=mMs(es,sSTACK)
@@ -2917,10 +2917,6 @@ private Boolean executeEvent(Map r9,Map event){
 		mEvt=cleanEvt(mEvt)
 		r9[sCUREVT]=mEvt
 		assignSt(sLEVT,mEvt)
-
-		if(theFinalDevice && evntName) {
-			updTrkVal(r9,theFinalDevice,evntName, lMt(mEvt) ?: wnow()) // always save tracking triggers value
-		}
 
 		r9[sCNDTNSTC]=false
 		r9[sPSTNSTC]=false
@@ -2996,13 +2992,18 @@ private Boolean executeEvent(Map r9,Map event){
 						break
 
 					default:
-						if(executeStatements(r9,liMs(pis,sS)))
+						if(executeStatements(r9,liMs(pis,sS))){
 							ended=true
-		/*				List<List<Map>> fc=(List<List<Map>>)r9[sFOLLOWC]
-						if(fc)
-							for(List<Map> ttcndtns in fc)
-								runFBupdates(r9,iZ,ttcndtns.size(),ttcndtns,false)
-						r9.remove(sFOLLOWC) */
+							// if we ran to end, ensure we saved this event value if it is tracking
+							if(theFinalDevice && evntName && !srcEvent)
+								updTrkVal(r9,theFinalDevice,evntName, lMt(mEvt) ?: wnow())
+						}
+
+						/*				List<List<Map>> fc=(List<List<Map>>)r9[sFOLLOWC]
+										if(fc)
+											for(List<Map> ttcndtns in fc)
+												runFBupdates(r9,iZ,ttcndtns.size(),ttcndtns,false)
+										r9.remove(sFOLLOWC) */
 				}
 
 			}else{
@@ -3615,23 +3616,29 @@ private Boolean executeStatement(Map r9,Map statement,Boolean asynch=false){
 						Map ce=mMs(r9,sCUREVT)
 						String deviceId= sMs(ce,sDEV) ?: sNL
 						evntName=sMs(ce,sNM)
-						for(Map event in liMs(statement,sC)){
-							Map operand=(Map)event?.lo
-							if(operand!=null && sMt(operand)){
-								switch(sMt(operand)){
-									case sP:
-										if(deviceId!=sNL && evntName==sMa(operand) && liMd(operand) && deviceId in expandDeviceList(r9,liMd(operand),true))perform=true
-										break
-									case sV:
-										if(evntName==sMv(operand))perform=true
-										break
-									case sX:
-										String operX=sMs(operand,sX)
-										if(ce[sVAL]==operX && evntName==sMs(r9,sINSTID)+sDOT+operX)perform=true
-										break
+						List<Map>evts= liMs(statement,sC)
+						if(evts){
+							for(Map event in evts){
+								Map operand=(Map)event?.lo
+								if(operand!=null && sMt(operand)){
+									switch(sMt(operand)){
+										case sP:
+											if(deviceId!=sNL && evntName==sMa(operand) && liMd(operand) && deviceId in expandDeviceList(r9,liMd(operand),true))
+												perform=true
+											break
+										case sV:
+											if(evntName==sMv(operand))
+												perform=true
+											break
+										case sX:
+											String operX=sMs(operand,sX)
+											if(ce[sVAL]==operX && evntName==sMs(r9,sINSTID)+sDOT+operX)
+												perform=true
+											break
+									}
 								}
+								if(perform)break
 							}
-							if(perform)break
 						}
 					}
 					value=ffwd(r9) || perform ? executeStatements(r9,liMs(statement,sS),async):true
@@ -4690,7 +4697,9 @@ private static Long pRes(Map r9, Long result){
 	return res
 }
 
-//return the number of occurrences of same day of week up until the date or from the end of the month if backwards,i.e. last Sunday is -1, second-last Sunday is -2
+/**
+ * return the number of occurrences of same day of week up until the date or from the end of the month if backwards,i.e. last Sunday is -1, second-last Sunday is -2
+ */
 @CompileStatic
 private static Integer getWeekOfMonth(Date date,Boolean backwards=false){
 	Integer day=date.date
@@ -4702,6 +4711,9 @@ private static Integer getWeekOfMonth(Date date,Boolean backwards=false){
 	}else return i1+Math.floor(((day-i1)/i7).toDouble()) //1 based
 }
 
+/**
+ * setup a wakeup at task.$; toResume saves state to put back when timer fires
+ */
 @CompileStatic
 private void requestWakeUp(Map r9,Map statement,Map task,Long timeOrDelay,String data=sNL,Boolean toResume=true, String reason=sNL,String msg=sNL,String tmsg=sNL){
 	Long time=timeOrDelay>9999999999L ? timeOrDelay:wnow()+timeOrDelay
@@ -4784,21 +4796,21 @@ private Long do_setLevel(Map r9,device,List prms,String cmd,Integer val=null){
 	Integer psz=prms.size()
 	String mat=psz>i1 ? sLi(prms,i1):sNL
 	if(ntMatSw(r9,mat,device,cmd))return lZ
-	Integer delay; delay=iZ
+	Integer delay; delay=iN1
 	Boolean a
 	List larg=[arg]
 	if(cmd==sSTLVL){ // setLevel takes seconds duration argument (optional)
-		delay=psz>i2 ? icast(r9,prms[i2]):iZ
+		delay=psz>i2 ? icast(r9,prms[i2]):iN1
 	}else if(cmd==sSTCLRTEMP){ // setColorTemp takes level and seconds duration arguments (optional)
 		if(psz>i2){
 			Integer lvl=prms[i2]!=null ? icast(r9,prms[i2]):null
 			a=larg.push(lvl)
-			delay=psz>i3 ? icast(r9,prms[i3]):iZ
+			delay=psz>i3 ? icast(r9,prms[i3]):iN1
 		}
 	}
-	if(delay>iZ)a=larg.push(delay)
+	if(delay>=iZ)a=larg.push(delay)
 	executePhysicalCommand(r9,device,cmd,larg)
-	if(delay>iZ)return Math.round(delay*d1000)
+	//if(delay>=iZ)return Math.round(delay*d1000)
 	return lZ
 }
 
@@ -6368,7 +6380,7 @@ private Long vcmd_saveStateLocally(Map r9,device,List prms,Boolean global=false)
 		}
 		if(overwrite || (global ? (r9.globalStore[n]==null):(r9[sSTORE][n]==null))){
 			def value; value=getDeviceAttributeValue(r9,device,attr)
-			if(attr==sHUE)value=devHue2WcHue(value as Integer)
+			if(attr==sHUE && value!=null && value!=sBLK) value=devHue2WcHue(value as Integer)
 			if(global){
 				r9.globalStore[n]=value
 				LinkedHashMap cache= (LinkedHashMap)r9.gvStoreCache ?: [:] as LinkedHashMap
@@ -6410,7 +6422,7 @@ private Long vcmd_loadStateLocally(Map r9,device,List prms,Boolean global=false)
 		}
 		if(value==null)continue
 
-		if(attr==sHUE)value= wcHue2DevHue(value as Integer)
+		if(attr==sHUE && value!=sBLK) value=devHue2WcHue(value as Integer)
 		if(attr in [sSWITCH,sLVL,sSATUR,sHUE,sCLRTEMP]) svd[attr]=value
 		else{
 			newattrs.push(attr)
@@ -7407,6 +7419,12 @@ private List<Map> listPreviousStates(device,String attr,Long threshold,Boolean e
 }
 
 @CompileStatic
+private static Boolean isEntryInCache(Map r9, Map value){
+	String n=sMs(value,sI)
+	return ((Map<String,Map>)r9[sNWCACHE])[n]!=null
+}
+
+@CompileStatic
 private static void updateCache(Map r9,Map value,Long t){
 	String n=sMs(value,sI)
 	Map oldValue=mMs(mMs(r9,sCACHE),n)
@@ -7846,12 +7864,15 @@ Boolean fndTrk(String dev, String attr){
 	return (chk in trk)
 }
 
+/**
+ * save tracking trigger value if cache does not have an entry
+ */
 @CompileStatic
 void updTrkVal(Map r9,String dev, String attr,Long t){
 	Boolean isVar= attr.contains(sVARIABLE+sCLN) || attr.contains(sAT)
 	String tdev; tdev=dev
 	if(isVar && dev==sMs(r9,sLOCID)) tdev=sBLK
-	if(fndTrk(tdev,attr)){ // always save tracking triggers value for dev:attr or @, @@ variables
+	if(fndTrk(tdev,attr)){ // always save tracking trigger value for dev:attr or @, @@ variables
 		// this is matching what evaluateOperand/evaluateComparison is doing
 		String i= (!isVar ? dev+sCLN+attr : attr)
 		Map val
@@ -7860,7 +7881,7 @@ void updTrkVal(Map r9,String dev, String attr,Long t){
 			String vn= attr.contains(sVARIABLE+sCLN) ? sAT2+(attr.split(sCLN as String)[i1]) : sAT+(attr.split(sAT)[i1])
 			val= [(sI):i, (sV): getVariable(r9,vn)]
 		}
-		updateCache(r9,val,t)
+		if(!isEntryInCache(r9,val)) updateCache(r9,val,t)
 		if(isEric(r9))
 			myDetail r9,"found ${isVar ? sVARIABLE:sDEV} ${tdev}${attr}, updating cache with value $val  ${t}",iN2
 	}
@@ -8343,7 +8364,9 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 					traverseConditions(node[sC],conditionTraverser,node,data)
 					break
 				case sON:
-					traverseEvents(node[sC]?:[],eventTraverser)
+					List<Map>evts= liMs(node,sC)
+					if(evts) traverseEvents(evts, eventTraverser)
+					else if(!inMem) addWarning(node,'On event statement without events')
 					break
 				case sSWITCH:
 					operandTraverser(node,mMs(node,sLO),null,sCONDITION,false)
@@ -8722,8 +8745,8 @@ private getDeviceAttributeValue(Map r9,device,String attr,Boolean skipCurEvt=fal
 
 	String s; s=sBLK
 	if(isEric(r9)){
-		s= "getDeviceAttributeValue device: $device attr: $attr skipCurEvt: $skipCurEvt ce: ${ce}"
-		myDetail r9,s,iN2
+		s= "getDeviceAttributeValue device: $device attr: $attr skipCurEvt: $skipCurEvt"
+		myDetail r9,s+" ce: ${ce}",i1
 	}
 	def result; result=null
 	if(!skipCurEvt && r9EvN==attr && r9EdID){
@@ -8762,7 +8785,7 @@ private getDeviceAttributeValue(Map r9,device,String attr,Boolean skipCurEvt=fal
 		}
 	}
 
-	if(isEric(r9))myDetail r9,s+" result $result (${myObj(result)})",iN2
+	if(isEric(r9))myDetail r9,s+" result $result (${myObj(result)})"
 	return result!=null ? result:sBLK
 }
 
@@ -8827,7 +8850,7 @@ private Map getDeviceAttribute(Map r9,String deviceId,String attr,subDeviceIndex
 		if(attr!=sNL){
 			def t0
 			t0=getDeviceAttributeValue(r9,device,attr)//,!trigger)
-			if(attr==sHUE) t0=devHue2WcHue(t0 as Integer)
+			if(attr==sHUE && t0!=null && t0!=sBLK) t0=devHue2WcHue(t0 as Integer)
 			if(t0 instanceof BigDecimal){
 				if(atT==sINT) t0=t0 as Integer
 				else if(atT==sDEC) t0=t0 as Double
@@ -13119,6 +13142,7 @@ private Map<String,Map> VirtualCommandsF(){
 //uses c and r
 // the command r: is replaced with command c.
 // If the VirtualCommand c exists and has o: true we will use that virtual command; otherwise it will be replaced with a device command (if one exists)
+// the command r: is replaced with command c.
 @Field static final Map<String,Map> CommandsOverrides=[
 		push:[c:"push",	s:null,r:"pushMomentary"],
 		flash:[c:"flash",	s:null,r:"flashNative"] //flash native command conflicts with flash emulated command. Also needs "o" option on command described later

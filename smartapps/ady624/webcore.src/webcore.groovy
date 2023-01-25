@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update January 15, 2023 for Hubitat
+ * Last update January 25, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20230113_HE'
-@Field static final String sHVERSTR='v0.3.114.20230113_HE - January 15, 2023'
+@Field static final String sHVERSTR='v0.3.114.20230113_HE - January 25, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -584,7 +584,7 @@ private pageGraphs(){
 	dynamicPage((sNM): "pageGraphs", uninstall: false, install: false){
 		section(){
 			List graphApps = getGraphApps()
-			app([(sTIT): 'List of streams and graphs', multiple: true, install: true, uninstall: false], 'fuelStreams', 'ady624', handleFuelS())
+			app([(sTIT): 'List of streams and graphs / create a new graph', multiple: true, install: true, uninstall: false], 'fuelStreams', 'ady624', handleFuelS())
 			if(graphApps?.size()) {
 				input "graphDuplicateSelect", sENUM, title: "Duplicate Existing Graph", description: 'Tap to select...', options: graphApps.collectEntries { [(it?.id):it?.getLabel()] }, required: false, multiple: false, submitOnChange: true
 				if(settings.graphDuplicateSelect) {
@@ -2557,7 +2557,7 @@ def findCreateFuel(Map req){
 				result.createStream([(sID): id, (sNM): req[sN], canister: req[sC] ?: sBLK])
 			}
 			catch(ignored){
-				error "Please install the webCoRE Fuel Streams app for local Fuel Streams"
+				error "Please install the webCoRE Fuel Stream app for local Fuel Streams"
 				return null
 			}
 		}

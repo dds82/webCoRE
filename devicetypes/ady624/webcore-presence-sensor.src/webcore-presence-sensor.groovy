@@ -16,7 +16,13 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
 */
-public static String version() { return "v0.2.102.20180201" }
+
+//file:noinspection SpellCheckingInspection
+//file:noinspection unused
+
+import java.text.SimpleDateFormat
+
+public static String version() { return "v0.2.103.20230125" }
 /*
  *	02/01/2018 >>> v0.2.102.20180201 - BETA M2 - Fixed SmartThings app crash, thanks to @JohnHoke
  *	10/11/2017 >>> v0.2.0fa.20171010 - BETA M2 - Various bug fixes and improvements - fixed the mid() and random() functions
@@ -137,14 +143,14 @@ metadata {
 
 
 private updated() {
-	updateData(state.places, device.currentValue('presence'), device.currentValue('sleeping'), device.currentValue('currentPlace'), device.currentValue('closestPlace'), device.currentValue('arrivingAtPlace'), device.currentValue('leavingPlace'))
+	updateData((List<Map>)state.places, (String)device.currentValue('presence'), (String)device.currentValue('sleeping'), (String)device.currentValue('currentPlace'), (String)device.currentValue('closestPlace'), (String)device.currentValue('arrivingAtPlace'), (String)device.currentValue('leavingPlace'))
 }
 
-private List getPlaces(List places) {
-	places = places ?: []
-    String list = ""
-    List existingPlaces = state.places ?: []
-    Map homePlace = null
+private List<Map> getPlaces(List iplaces) {
+	List<Map> places = (List<Map>)iplaces ?: []
+	String list; list = ""
+    List<Map> existingPlaces = (List<Map>)state.places ?: []
+	Map homePlace; homePlace = null
     for (place in places) {
     	place.meta = existingPlaces.find{ place.id == it.id }?.meta ?: [:]
         if (place.h) homePlace = place
@@ -159,15 +165,15 @@ private List getPlaces(List places) {
 }
 
 
-def doSendEvent(name, value) {
+void doSendEvent(String name, value) {
 	if (value != device.currentValue(name)) sendEvent( name: name, value: value, displayed: false )    
 }
 
-def getOrdinalSuffix(value) {
-	if (!("$value".isNumber())) return ''    
-    value = "$value".toInteger()
-	def value100 = value % 100;
-	def value10 = value % 10;
+static String getOrdinalSuffix(ivalue) {
+	if (!("$ivalue".isNumber())) return ''
+	Integer value= "$ivalue".toInteger()
+	Integer value100 = value % 100
+	Integer value10 = value % 10
     if (((value100 > 3) && (value100 < 21)) || (value10 == 0) || (value10 > 3)) return 'th'
     switch (value10) {
         case 1: return 'st'
@@ -179,9 +185,9 @@ def getOrdinalSuffix(value) {
 
 def processEvent(Map event) {
 	//log.error "GOT EVENT $event"
-	def places = getPlaces(event?.places)
-    def timestamp = (event.location?.timestamp ?: event.timestamp) ?: 0
-   	def delay = now() - timestamp
+	List<Map> places = getPlaces((List)event?.places)
+    Long timestamp = ((Long)event.location?.timestamp ?: (Long)event.timestamp) ?: 0
+   	Long delay = now() - timestamp
     if ((event.name == 'updated') && !!event.location && !event.location.error) {
         if (delay > 30000) {
             if (debugging) {
@@ -193,7 +199,7 @@ def processEvent(Map event) {
         }
         if (timestamp < state.lastTimestamp) {
             if (debugging) {
-                def info = "Received location update that is older than the last update"
+                String info = "Received location update that is older than the last update"
                 log.debug info
                 sendEvent( name: "debug", value: info, descriptionText: info, isStateChange: true, displayed: true )
             }
@@ -213,43 +219,45 @@ def processEvent(Map event) {
     	doSendEvent("verticalAccuracy", event.location.verticalAccuracy / 0.3048)
     	doSendEvent("verticalAccuracyMetric", event.location.verticalAccuracy)
     	doSendEvent("speed", (event.location.speed ?: 0) / 0.3048)
-        float speed = event.location.speed ?: 0
-        float bearing = event.location.bearing ?: (event.location.course ?: 0)
+        Float speed = event.location.speed ?: 0
+        Double bearing = event.location.bearing ?: (event.location.course ?: 0.0D)
         doSendEvent("speedMetric", speed)
         doSendEvent("bearing", bearing)
         doSendEvent("speedDisplay", advanced == "No" ? '' : (speed < 0 ? 'Unknown speed' : (speed == 0 ? 'Stationary' : (sprintf('%.1f', (scale == 'Metric' ? speed * 3.6 : speed * 3.6 / 1.609344)) + (scale == 'Metric' ? ' km/h' : ' mph') + (bearing >= 0 ? ' to ' + getBearingName(bearing) : '')))))
-        processLocation(event.location.latitude, event.location.longitude, places, event.location.horizontalAccuracy)
+        processLocation((Float)event.location.latitude, (Float)event.location.longitude, places, event.location.horizontalAccuracy)
     } else {
         state.lastTimestamp = timestamp > state.lastTimestamp ? timestamp : state.lastTimestamp
-    	if (event?.place && (event?.place.size() == 71)) {
-        	List parts = event.place.tokenize('|')
+    	if (event?.place && ((String)event.place).size() == 71) {
+        	List<String> parts = ((String)event.place).tokenize('|')
             if (parts.size() == 3) {
-                def place = places.find{ it.id == parts[1] }
+                Map place = places.find{ it.id == parts[1] }
                 if (place) {
-                	processPlace(place, event.name, parts[2], places, event.location)
+                	processPlace(place, (String)event.name, parts[2], places, (Map)event.location)
                 }
 			}
         }    
     }
 }
 
-private void processLocation(float lat, float lng, List places, horizontalAccuracy) {
+private void processLocation(Float lat, Float lng, List<Map> places, horizontalAccuracy) {
 	doSendEvent("lastLocationUpdate", "Last location update on\r\n${formatLocalTime("MM/dd/yyyy @ h:mm:ss a")}")
-    String presence = device.currentValue('presence')
-	String closestPlace = device.currentValue('closestPlace')
-    String currentPlace = device.currentValue('currentPlace')
-    String arrivingAtPlace = ""
-    String leavingPlace = ""
-    float homeDistance = -1
-    String bearing = '?'
-    float closestDistance = -1
-    int circles = 0
-    String info = ''
+	String presence, closestPlace, currentPlace, arrivingAtPlace, leavingPlace, bearing
+    presence = (String)device.currentValue('presence')
+	closestPlace = (String)device.currentValue('closestPlace')
+    currentPlace = (String)device.currentValue('currentPlace')
+    arrivingAtPlace = ""
+    leavingPlace = ""
+	bearing = '?'
+	Float homeDistance, closestDistance
+    homeDistance = -1
+    closestDistance = -1
+	Integer circles; circles = 0
+	String info; info = ''
     if (horizontalAccuracy > 100) {
     	info = " Low accuracy of ${horizontalAccuracy}m prevented updates to presence."
     } else {
         for (place in places) {
-            float distance = getDistance(lat, lng, place.p[0], place.p[1])
+            Float distance = getDistance(lat, lng, (Float)((List)place.p)[0], (Float)((List)place.p)[1])
             if ((closestDistance < 0) || (distance < closestDistance)) {
                 closestDistance = distance
                 closestPlace = place.n
@@ -282,8 +290,8 @@ private void processLocation(float lat, float lng, List places, horizontalAccura
             }
             place.meta.d = distance
             if (place.h) {
-                homeDistance = distance / 1000.0
-                bearing = getBearing(place.p[0], place.p[1], lat, lng)
+                homeDistance = distance / 1000.0D
+                bearing = getBearing((Float)((List)place.p)[0], (Float)((List)place.p)[1], lat, lng)
             }
         }
         if (!circles) {
@@ -291,19 +299,19 @@ private void processLocation(float lat, float lng, List places, horizontalAccura
             info += " Location is outside of all circles."
             currentPlace = ""
         }   
-        if ((homeDistance >= 0) && homeDistance != device.currentValue('distanceMetric')) {
+        if ((homeDistance >= 0.0) && homeDistance != device.currentValue('distanceMetric')) {
             sendEvent( name: "distanceMetric", value: homeDistance, isStateChange: true, displayed: false )
             sendEvent( name: "distance", value: homeDistance / 1.609344, isStateChange: true, displayed: false )
             sendEvent( name: "distanceDisplay", value: advanced == "No" ? '' : (scale == 'Metric' ? sprintf('%.1f', homeDistance) + ' km @ ' + bearing : sprintf('%.1f', homeDistance / 1.609344) + ' mi @ ' + bearing), isStateChange: true, displayed: false )
         }        	
 
-        closestDistance = closestDistance / 1000.0
-        if ((closestDistance >= 0) && closestDistance != device.currentValue('closestPlaceDistanceMetric')) {
+        closestDistance = closestDistance / 1000.0D
+        if ((closestDistance >= 0.0) && closestDistance != device.currentValue('closestPlaceDistanceMetric')) {
             sendEvent( name: "closestPlaceDistanceMetric", value: closestDistance, isStateChange: true, displayed: false )
             sendEvent( name: "closestPlaceDistance", value: closestDistance / 1.609344, isStateChange: true, displayed: false )
         }        	   
         state.places = places
-        updateData(places, presence, device.currentValue('sleeping'), currentPlace, closestPlace, arrivingAtPlace, leavingPlace)    
+        updateData(places, presence, (String)device.currentValue('sleeping'), currentPlace, closestPlace, arrivingAtPlace, leavingPlace)
     }
     if (debugging) {
     	info = "Received location update with horizontal accuracy of ${horizontalAccuracy} meters.$info"
@@ -312,7 +320,7 @@ private void processLocation(float lat, float lng, List places, horizontalAccura
     }
 }
 
-private void processPlace(Map place, String action, String circle, List places, Map location) {
+private void processPlace(Map place, String action, String circle, List<Map> places, Map location) {
 	doSendEvent("lastGeofenceUpdate", "Last geofence update on\r\n${formatLocalTime("MM/dd/yyyy @ h:mm:ss a")}")
 	def horizontalAccuracy = location?.horizontalAccuracy ?: 0
     if (horizontalAccuracy > 100) {
@@ -324,12 +332,13 @@ private void processPlace(Map place, String action, String circle, List places, 
                 p.meta.p = false
             }
         }
-        String presence = device.currentValue('presence')
-        String closestPlace = place.n
-        String currentPlace = device.currentValue('currentPlace')
-        String arrivingAtPlace = ""
-        String leavingPlace = ""
-        String info = ''
+		String presence, closestPlace, currentPlace, arrivingAtPlace, leavingPlace, info
+        presence = (String)device.currentValue('presence')
+        closestPlace = (String)place.n
+        currentPlace = (String)device.currentValue('currentPlace')
+        arrivingAtPlace = ""
+        leavingPlace = ""
+        info = ''
         switch (action) {
             case "entered":
                 switch (circle) {
@@ -370,7 +379,7 @@ private void processPlace(Map place, String action, String circle, List places, 
                 break
         }
         state.places = places    
-        updateData(places, presence, device.currentValue('sleeping'), currentPlace, closestPlace, arrivingAtPlace, leavingPlace)
+        updateData(places, presence, (String)device.currentValue('sleeping'), currentPlace, closestPlace, arrivingAtPlace, leavingPlace)
         if (debugging) {
             info = "Received geofence update for ${circle == 'i' ? 'inner' : 'outer'} circle of ${place.n}.$info"
             log.debug info
@@ -379,26 +388,28 @@ private void processPlace(Map place, String action, String circle, List places, 
     }
 }
 
-private void updateData(places, presence, sleeping, currentPlace, closestPlace, arrivingAtPlace, leavingPlace) {
-    def prevPlace = device.currentValue('currentPlace')
+private void updateData(List<Map>places, String ipresence, String isleeping, String currentPlace, String closestPlace, String arrivingAtPlace, String leavingPlace) {
+	String presence; presence=ipresence
+	String sleeping; sleeping=isleeping
+    String prevPlace = (String)device.currentValue('currentPlace')
     if (currentPlace != prevPlace) {    
     	sendEvent( name: "previousPlace", value: prevPlace, isStateChange: true, displayed: false)   
     	sendEvent( name: "currentPlace", value: currentPlace, isStateChange: true, displayed: advanced != 'No', descriptionText: currentPlace == '' ? "Left $prevPlace" : "Arrived at $currentPlace" )
     }
    	doSendEvent("currentPlaceDisplay", advanced == "No" ? '' : (currentPlace ?: 'Away'))
-	if (closestPlace != device.currentValue('closestPlace')) {
+	if (closestPlace != (String)device.currentValue('closestPlace')) {
     	sendEvent( name: "closestPlace", value: closestPlace, displayed: false )
     }
-	if (arrivingAtPlace != device.currentValue('arrivingAtPlace')) {
+	if (arrivingAtPlace != (String)device.currentValue('arrivingAtPlace')) {
     	sendEvent( name: "arrivingAtPlace", value: arrivingAtPlace, isStateChange: true, displayed: false )
     }
-	if (leavingPlace != device.currentValue('leavingPlace')) {
+	if (leavingPlace != (String)device.currentValue('leavingPlace')) {
     	sendEvent( name: "leavingPlace", value: leavingPlace, isStateChange: true, displayed: false )
     }
-    
-    def status = ''
+
+	String status; status = ''
     if (advanced != "No") {
-        def count = 0
+		Integer count; count = 0
         for (place in places.sort{ it.meta?.d }) {
             def line = ( place.n == arrivingAtPlace ? "Arriving at $arrivingAtPlace" : ( leavingPlace == place.n ? "Leaving $leavingPlace" : ( currentPlace == place.n ? "Currently at $currentPlace" : (place.meta?.d == null ? '' : "~${scale == "Metric" ? sprintf("%.2f", place.meta.d / 1000) + " km" : sprintf("%.2f", place.meta.d / 1609.344) + " miles"} from ${place.n}"))))    
             if (line) {
@@ -435,43 +446,43 @@ private void updateData(places, presence, sleeping, currentPlace, closestPlace, 
     }
 }
 
-private static float getDistance(float lat1, float lng1, float lat2, float lng2) {
-    double earthRadius = 6371000; //meters
-    double dLat = Math.toRadians(lat2-lat1);
-    double dLng = Math.toRadians(lng2-lng1);
-    double a = Math.sin(dLat/2) * Math.sin(dLat/2) +
+private static Float getDistance(Float lat1, Float lng1, Float lat2, Float lng2) {
+    Double earthRadius = 6371000 //meters
+    Double dLat = Math.toRadians(lat2-lat1)
+    Double dLng = Math.toRadians(lng2-lng1)
+    Double a = Math.sin(dLat/2) * Math.sin(dLat/2) +
                Math.cos(Math.toRadians(lat1)) * Math.cos(Math.toRadians(lat2)) *
-               Math.sin(dLng/2) * Math.sin(dLng/2);
-    double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a));
-    float dist = (float) (earthRadius * c);
-    return dist; //meters
+               Math.sin(dLng/2) * Math.sin(dLng/2)
+    Double c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1-a))
+    Float dist = (Float)(earthRadius * c)
+    return dist //meters
 }
 
-private String getBearingName(float degrees) {
-  def bearings = ['N', 'N-NE', 'NE', 'E-NE', 'E', 'E-SE', 'SE', 'S-SE', 'S', 'S-SW', 'SW', 'W-SW', 'W', 'W-NW', 'NW', 'N-NW']
-  int bearing = Math.floor(((degrees + 360 + 11.25)%360) / 22.5).toInteger()
+private static String getBearingName(Double degrees) {
+  List<String> bearings = ['N', 'N-NE', 'NE', 'E-NE', 'E', 'E-SE', 'SE', 'S-SE', 'S', 'S-SW', 'SW', 'W-SW', 'W', 'W-NW', 'NW', 'N-NW']
+  Integer bearing = Math.floor( ( (degrees + 360.0D + 11.25D).toInteger() % 360 ).toDouble() / 22.5D).toInteger()
   return bearings[bearing]
 }
 
-private String getBearing(float lat1, float lon1, float lat2, float lon2){
-	double longitude1 = lon1;
-	double longitude2 = lon2;
-	double latitude1 = Math.toRadians(lat1);
-	double latitude2 = Math.toRadians(lat2);
-	double longDiff= Math.toRadians(longitude2-longitude1);
-	double y= Math.sin(longDiff)*Math.cos(latitude2);
-	double x=Math.cos(latitude1)*Math.sin(latitude2)-Math.sin(latitude1)*Math.cos(latitude2)*Math.cos(longDiff);
+private static String getBearing(Float lat1, Float lon1, Float lat2, Float lon2){
+	Double longitude1 = lon1
+	Double longitude2 = lon2
+	Double latitude1 = Math.toRadians(lat1)
+	Double latitude2 = Math.toRadians(lat2)
+	Double longDiff= Math.toRadians(longitude2-longitude1)
+	Double y= Math.sin(longDiff)*Math.cos(latitude2)
+	Double x=Math.cos(latitude1)*Math.sin(latitude2)-Math.sin(latitude1)*Math.cos(latitude2)*Math.cos(longDiff)
 
-	return getBearingName((float) Math.toDegrees(Math.atan2(y, x)))
+	return getBearingName(Math.toDegrees(Math.atan2(y, x)))
 }
 
 def parse(String description) {
 	//not used
 }
 
-private toggleSleeping(sleeping = null) {
-	sleeping = sleeping ?: (device.currentValue('sleeping') == 'not sleeping' ? 'sleeping' : 'not sleeping')
-   	updateData(state.places, device.currentValue('presence'), sleeping, device.currentValue('currentPlace'), device.currentValue('closestPlace'), device.currentValue('arrivingAtPlace'), device.currentValue('leavingPlace'))
+private toggleSleeping(String isleeping = (String)null) {
+	String sleeping = isleeping ?: ((String)device.currentValue('sleeping') == 'not sleeping' ? 'sleeping' : 'not sleeping')
+   	updateData((List<Map>)state.places, (String)device.currentValue('presence'), sleeping, (String)device.currentValue('currentPlace'), (String)device.currentValue('closestPlace'), (String)device.currentValue('arrivingAtPlace'), (String)device.currentValue('leavingPlace'))
 }
 
 def asleep() {
@@ -482,9 +493,10 @@ def awake() {
 	toggleSleeping('not sleeping')
 }
 
-private formatLocalTime(format = "EEE, MMM d yyyy @ h:mm:ss a z", time = now()) {
-	def formatter = new java.text.SimpleDateFormat(format)
-	formatter.setTimeZone(location.timeZone)
+private static TimeZone mTZ(){ return TimeZone.getDefault() }
+
+private static String formatLocalTime(String format = "EEE, MMM d yyyy @ h:mm:ss a z", Date time = new Date()) {
+	SimpleDateFormat formatter = new SimpleDateFormat(format)
+	formatter.setTimeZone(mTZ())
 	return formatter.format(time)
 }
-

@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update January 7, 2023 for Hubitat
+ *  Last update January 25, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230103_HE'
+@Field static final String sHVER='v0.3.114.20230113_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -82,6 +82,40 @@ definition(
 @Field static final String sDT='date'
 @Field static final String sGRAPHT='graphType'
 @Field static final String sLONGTS='longtermstorage'
+@Field static final String sBACKGRND='background'
+@Field static final String sTRANSPRNT='transparent'
+@Field static final String sDEFLT='default'
+@Field static final String sUNITS='units'
+@Field static final String sUNIT='unit'
+@Field static final String sVAR='var'
+@Field static final String sWHT='#FFFFFF'
+@Field static final String sBLACK='#000000'
+@Field static final String sSILVER='#C0C0C0'
+@Field static final String sLGHTGRN='#18BC9C'
+@Field static final String sDRKBLUE='#2C3E50'
+@Field static final String sTRUE='true'
+@Field static final String sFALSE='false'
+@Field static final String s100='100'
+@Field static final String s400='400'
+@Field static final String sRIGHT='right'
+@Field static final String sLEFT='left'
+@Field static final String sBLCOL='baseline_column'
+@Field static final String sBLROW='baseline_row'
+@Field static final String sALIGNMENT='alignment'
+@Field static final String sIMPERIAL='imperial'
+@Field static final String sMETRIC='metric'
+@Field static final String sMETERSPS='meters_per_second'
+@Field static final String sMILESPH='miles_per_hour'
+@Field static final String sKILOSPH='kilometers_per_hour'
+@Field static final String sCENTER='center'
+@Field static final String sJUSTIFICATION='justification'
+@Field static final String sMIN='min'
+@Field static final String sMAX='max'
+@Field static final String sSUBONCHG='submit_on_change'
+@Field static final String sDECIMALS='decimals'
+@Field static final String sMULTP='multiple'
+@Field static final String sSUBOC='submitOnChange'
+@Field static final String sDEFV='defaultValue'
 
 preferences{
 	page(name: "mainPage", install: true, uninstall: true)
@@ -105,37 +139,39 @@ def installed(){
 	log.debug "Installed with settings: ${settings}"
 	state[sDBGLVL]=iZ
 	state[sLOGNG]=iZ
-	if((Boolean)settings.duplicateFlag && !(Boolean)state.dupPendingSetup){
+	if(gtSetB('duplicateFlag') && !(Boolean)state.dupPendingSetup){
 		Boolean maybeDup= ((String)app?.getLabel())?.contains(' (Dup)')
 		state.dupPendingSetup= true
 		runIn(2, "processDuplication")
-		if(maybeDup) info "installed found maybe a dup... ${(Boolean)settings.duplicateFlag}",null
+		if(maybeDup) info "installed found maybe a dup... ${gtSetB('duplicateFlag')}",null
 	}else if(!(Boolean)state.dupPendingSetup){
-		if(app_name) app.updateLabel(app_name)
+		if(gtSetStr('app_name')) app.updateLabel(gtSetStr('app_name'))
 	}
 }
 
 private void processDuplication(){
 	String al= (String)app?.getLabel()
-	String newLbl= "${al}${al?.contains(' (Dup)') ? "" : ' (Dup)'}"
+	String newLbl= "${al}${al?.contains(' (Dup)') ? sBLK : ' (Dup)'}"
 	app?.updateLabel(newLbl)
 	state.dupPendingSetup= true
 
-	String dupSrcId= settings.duplicateSrcId ? sMs(settings,'duplicateSrcId') : sNL
+	String dupSrcId= settings.duplicateSrcId ? gtSetStr('duplicateSrcId') : sNL
 	Map dupData= parent?.getChildDupeData("graphs", dupSrcId)
 	if(eric()) log.debug "dupData: ${dupData}"
-	Map dd
-	dd= dupData?.state
-	if(dupData && dd?.size()){
-		dd.each{ String k,v-> state[k]= v }
-	}
+	if(dupData){
+		Map<String,Object> dd
+		dd= (Map<String,Object>)dupData?.state
+		if(dd?.size()){
+			dd.each{ String k,v-> state[k]= v }
+		}
 
-	dd= dupData?.settings
-	if(dupData && dd?.size()){
-		dd.each{ String k, Map v->
-			if(sMs(v,sTYPE) in [sENUM, 'mode']){
-				wremoveSetting(k)
-				settingUpdate(k, (v[sVAL] != null ? v[sVAL] : null), sMs(v,sTYPE))
+		Map<String,Map> dd1= (Map<String,Map>)dupData?.settings
+		if(dd1?.size()){
+			dd1.each{ String k, Map v->
+				if(sMs(v,sTYPE) in [sENUM, 'mode']){
+					wremoveSetting(k)
+					settingUpdate(k, (v[sVAL] != null ? v[sVAL] : null), sMs(v,sTYPE))
+				}
 			}
 		}
 	}
@@ -173,8 +209,8 @@ def updated(){
 	log.debug "updated() with settings: ${settings}"
 
 	Boolean maybeDup= ((String)app?.getLabel())?.contains(' (Dup)')
-	if(maybeDup) info "updated found maybe a dup... ${(Boolean)settings.duplicateFlag}",null
-	if((Boolean)settings.duplicateFlag){
+	if(maybeDup) info "updated found maybe a dup... ${gtSetB('duplicateFlag')}",null
+	if(gtSetB('duplicateFlag')){
 		if((Boolean)state.dupOpenedByUser){ state.dupPendingSetup= false }
 		if((Boolean)state.dupPendingSetup){
 			info dupMSGFLD,null
@@ -190,8 +226,8 @@ def updated(){
 
 	Map fs=state.fuelStream
 	String typ
-	typ= fs ? 'fuelstream' : sMs(settings,sGRAPHT)
-	if(typ && typ!='fuelstream' && (!app_name || typ==sLONGTS)){
+	typ= fs ? 'fuelstream' : gtSetStr(sGRAPHT)
+	if(typ && typ!='fuelstream' && (!gtSetStr('app_name') || typ==sLONGTS)){
 		app.updateSetting('app_name', 'webCoRE '+tDesc()) // cannot rename LTS
 	}
 
@@ -200,11 +236,11 @@ def updated(){
 		fuelFLD=null // clear list of fuel streams cache
 	}
 
-	if(app_name) app.updateLabel(app_name)
+	if(gtSetStr('app_name')) app.updateLabel(gtSetStr('app_name'))
 
 	state[sDBGLVL]=iZ
-	String tt1=(String)gtSetting(sLOGNG)
-	Integer tt2=iMs(state,sLOGNG)
+	String tt1=gtSetStr(sLOGNG)
+	Integer tt2=iMs((Map)state,sLOGNG)
 	String tt3=tt2.toString()
 	if(tt1==sNL)setLoggingLevel(tt2 ? tt3:s0)
 	else if(tt1!=tt3)setLoggingLevel(tt1)
@@ -212,7 +248,7 @@ def updated(){
 	state.remove('saveC')
 	state.remove('devInstruct')
 
-	if(install_device== true){
+	if(gtSetB('install_device')){
 		hubiTool_create_tile()
 	}
 
@@ -390,14 +426,14 @@ void setLoggingLevel(String level){
 ]
 
 String tDesc(){
-	String typ=sMs(settings,sGRAPHT)
+	String typ=gtSetStr(sGRAPHT)
 	if(typ) return sMs(jumpFLD[typ],'desc')
 	return sNL
 }
 
 
 def checkDup(){
-	Boolean dup= ((Boolean)settings.duplicateFlag && (Boolean)state.dupPendingSetup)
+	Boolean dup= (gtSetB('duplicateFlag') && (Boolean)state.dupPendingSetup)
 	if(dup){
 		state.dupOpenedByUser= true
 		section(){ paragraph "This Graph was created from an existing graph.<br><br>Please review the settings and save to activate...<br>${state.badMode ?: sBLK}" }
@@ -408,14 +444,16 @@ def mainPage(){
 	Map fs=(Map)state?.fuelStream
 	String typ
 	// fuel stream does not have graphType set
-	typ= fs ? 'fuelstream' : sMs(settings,sGRAPHT)
+	typ= fs ? 'fuelstream' : gtSetStr(sGRAPHT)
 	if(typ){
 		String s= sMs(jumpFLD[typ],'main')
-		if(isEric())myDetail null,"${s}:",iN2
-		"${s}"()
+		if(isEric())myDetail null,"${s}",i1
+		def a="${s}"()
+		if(isEric())myDetail null,"${s}"
+		a
 	}
 	else{
-		Map stuff
+		Map<String,String> stuff
 		stuff=[:]
 
 		for(par in jumpFLD){
@@ -428,17 +466,19 @@ def mainPage(){
 		}
 		dynamicPage(name: "mainPage"){
 			section(){
-				input sGRAPHT,sENUM,(sTIT):'Graph Type',options:stuff,required:true,submitOnChange:true
+				input sGRAPHT,sENUM,(sTIT):'Graph Type',options:stuff,(sREQ):true,(sSUBOC):true
 			}
 		}
 	}
 }
 
 def doJump(String meth){
-	String typ=sMs(settings,sGRAPHT)
+	String typ=gtSetStr(sGRAPHT)
 	String s= sMs(jumpFLD[typ],meth)
-	if(isEric())myDetail null,"${s}:",iN2
-	"${s}"()
+	if(isEric())myDetail null,"${s}",i1
+	def a="${s}"()
+	if(isEric())myDetail null,"${s}"
+	a
 }
 
 
@@ -458,31 +498,35 @@ def graphSetupPage(){
 
 //oauth endpoints
 def getGraph(){
-	String typ=sMs(settings,sGRAPHT)
+	String typ=gtSetStr(sGRAPHT)
+	if(isEric())myDetail null,"getGraph_${typ}",i1
 	String s= (String)"${sMs(jumpFLD[typ],'getGraph')}"()
 	String ss= sBLK // s.replaceAll('<', '&lt;').replaceAll('>','&gt;')
-	if(isEric())myDetail null,"getGraph_${typ}: $ss",iN2
+	if(isEric())myDetail null,"getGraph_${typ}: $ss"
 	return wrender(contentType: "text/html", data: s)
 }
 
 def getData(){
-	String typ=sMs(settings,sGRAPHT)
+	String typ=gtSetStr(sGRAPHT)
+	if(isEric())myDetail null,"getData_${typ}",i1
 	String s= (String)"${sMs(jumpFLD[typ],'getData')}"()
-	if(isEric())myDetail null,"getData_${typ}: $s",iN2
+	if(isEric())myDetail null,"getData_${typ}: $s"
 	return wrender(contentType: "text/json", data: s)
 }
 
 def getOptions(){
-	String typ=sMs(settings,sGRAPHT)
+	String typ=gtSetStr(sGRAPHT)
+	if(isEric())myDetail null,"getOptions_${typ}",i1
 	String s= JsonOutput.toJson( (Map)"${sMs(jumpFLD[typ],'getOptions')}"() )
-	if(isEric())myDetail null,"getOptions_${typ}: $s",iN2
+	if(isEric())myDetail null,"getOptions_${typ}: $s"
 	return wrender(contentType: "text/json", data: s)
 }
 
 def getSubscriptions(){
-	String typ=sMs(settings,sGRAPHT)
+	String typ=gtSetStr(sGRAPHT)
+	if(isEric())myDetail null,"getSubscriptions_${typ}",i1
 	String s= JsonOutput.toJson( (Map)"${sMs(jumpFLD[typ],'getSubscriptions')}"() )
-	if(isEric())myDetail null,"getSubscriptions_${typ}: $s",iN2
+	if(isEric())myDetail null,"getSubscriptions_${typ}: $s"
 	return wrender(contentType: "text/json", data: s)
 }
 
@@ -522,7 +566,7 @@ void initializeAppEndpoint(Boolean disableRetry=false){
 			enableOauth()
 			initializeAppEndpoint(true)
 		}else {
-			error "Could not get access token"
+			error "Could not get access token",null
 			revokeAccessToken()
 		}
 	}
@@ -584,7 +628,7 @@ private static Integer iMs(Map m,String v){ (Integer)m[v] }
 
 @Field static final String sFuelDelim='-'
 /**
- * Encode a stream identifier Map to settings String
+ * Encode a fuel stream identifier Map to settings String
  * @param stream [i:app.id, c: 'LTS', n:sid+'_'+attribute,w:1,t: getFormattedDate(new Date())]
  * @return id-canister||name
  */
@@ -599,7 +643,7 @@ static String encodeStreamN(Map stream){
 }
 
 /**
- * Decode a settings string to a search map for the stream
+ * Decode a settings string to a search map for the fuel stream
  * @param stream id-canister||name
  * @return [i:id, c: canister, n:name]
  */
@@ -627,7 +671,7 @@ List<Map> gtFuelList(){
 }
 
 /**
- * Return stream identifier for settings-encoded stream name
+ * Return stream identifier for settings-encoded fuel stream name
  * @param name - settings encoded stream name
  * @return Map [i:, c: , n: ,w:1, t: getFormattedDate(new Date())]
  */
@@ -667,7 +711,7 @@ void clearFvarn(String fvarn, Boolean multiple){
 	//String fvarn=multiple ? 'fstreams' : 'fstream_'
 	def fl= gtSetting(fvarn)
 	if(fl){
-		List<String> ifstreams=multiple ? fl : [fl]
+		List<String> ifstreams=multiple ? (List<String>)fl : [(String)fl]
 		Map stream
 		for(String stream_nm in ifstreams){
 			stream= findStream(stream_nm)
@@ -695,13 +739,13 @@ void clearVarn(Boolean multiple){
 	attrn= multiple ? sNL : 'attribute_'
 	def sl= gtSetting(varn)
 	if(sl){
-		List items= multiple ? sl : [sl]
+		List items= multiple ? (List)sl : [sl]
 		for(sensor in items){
 			String sid='d'+gtSensorId(sensor)
 			attrn=multiple ? "attributes_${sid}".toString() : "attribute_"
 			def al= gtSetting(attrn)
 			if(al){
-				List<String> attrs= multiple ? al : [al]
+				List<String> attrs= multiple ? (List<String>)al : [(String)al]
 				for(String attr in attrs){
 					Map ent=makeSensorDataEntry(sensor,sid,attr)
 					quantRmInput(sid,attr)
@@ -740,7 +784,7 @@ Boolean hasQuants(){
 	for(i=0; i<10; i++){
 		s= i.toString()
 		String sid= 'q'+s
-		String typ=(String)gtSetting(sid+'_type')
+		String typ=gtSetStr(sid+'_type')
 		if(typ in ['Fuel Stream','Sensor']) return true
 	}
 	return false
@@ -784,11 +828,10 @@ Map makeFuelDataEntry(String stream, String attr='stream'){
  */
 void stToPoll(){
 	assignSt('hasFuel',true)
-	def ii= gtSetting('graph_update_rate')
-	Integer i= ii!=null ? "${ii}".toInteger() : -1
-	if(i>=0 && i<60000){// remove invalid
+	String ii= gtSetStr('graph_update_rate')
+	Integer i= ii!=sNL ? ii.toInteger() : -1
+	if(i>=0 && i<60000) // remove invalid
 		wremoveSetting('graph_update_rate')
-	}
 }
 
 /**
@@ -853,7 +896,7 @@ Map makeQuantDataEntry(String typ,String sid,String attrn){
 	nent=[(sT): 'quant', (sID): sid, ent: ent, rid: ent.rid, (sDISPNM): sMs(ent,sDISPNM)+' quant', (sA): attribute]
 
 	// if to return data quantized, add to ent
-	Map params= quantParams(nent.id,nent.a)
+	Map params= quantParams(nent.id,sMs(nent,sA))
 	if(params){
 		nent+=[q: params]
 		stToPoll()
@@ -918,7 +961,7 @@ List<Map> createDataSources(Boolean multiple){
 
 		if(fl){
 			if(isEric())myDetail null,s+"processing fuel streams ${fl}",iN2
-			List<String> ifstreams=multiple ? fl : [fl]
+			List<String> ifstreams=multiple ? (List<String>)fl : [(String)fl]
 			for(String stream in ifstreams){
 				Map ent=makeFuelDataEntry(stream)
 				if(ent)dataSources << ent
@@ -927,14 +970,14 @@ List<Map> createDataSources(Boolean multiple){
 
 		if(sl){
 			if(isEric())myDetail null,s+"processing sensors ${sl}",iN2
-			List items= multiple ? sl : [sl]
+			List items= multiple ? (List)sl : [sl]
 			for(sensor in items){
 				String sid='d'+gtSensorId(sensor)
 				attrn=multiple ? "attributes_${sid}".toString() : "attribute_"
 
 				def al= gtSetting(attrn)
 				if(al){
-					List<String> attrs=multiple ? al : [al]
+					List<String> attrs=multiple ? (List<String>)al : [(String)al]
 					for(String attr in attrs){
 						Map ent=makeSensorDataEntry(sensor,sid,attr)
 						if(ent) dataSources << ent
@@ -953,7 +996,7 @@ List<Map> createDataSources(Boolean multiple){
 				sb= i.toString()
 				String sid= 'q'+sb
 				String attribute= sid+'attr'
-				String typ=(String)gtSetting(sid+'_type')
+				String typ=gtSetStr(sid+'_type')
 				if(!(typ in ['Fuel Stream','Sensor'])){
 					quantRmInput(sid, attribute)
 					rmAllowLastInput(sid,attribute)
@@ -981,14 +1024,14 @@ def addAllowLastActivity(Map ent){
 	String name= sMs(ent,sDISPNM)
 	String attribute= sMs(ent,sA)
 	input( (sTYPE): sBOOL, (sNM): s,(sTIT): "Use last modified time for stream $name attribute $attribute as value?",
-			required: false, multiple: false, submitOnChange: false, defaultValue: false)
+			(sREQ): false, (sMULTP): false, (sSUBOC): false, (sDEFV): false)
 
 }
 
 // deal with fuel selection lastupdate - which means last time this stream value was updated
 Map checkLastUpd(Map ent){
 	String sn= "lstUpd_${ent.id}_${ent.a}".toString()
-	if((Boolean)gtSetting(sn)) return [aa:'lastupdate']
+	if(gtSetB(sn)) return [aa:'lastupdate']
 	return [:]
 }
 
@@ -1016,7 +1059,7 @@ def gatherFuelSource(String fvarn,String ftit,Boolean multiple,Boolean allowLast
 	// fuel streams
 
 	List<Map> final_streams
-	List container
+	List<String> container
 	container=[]
 
 	List<Map>fstreams= gtFuelList()
@@ -1053,7 +1096,7 @@ def gatherFuelSource(String fvarn,String ftit,Boolean multiple,Boolean allowLast
 //			container << hubiForm_sub_section('Select Fuel Stream')
 //			hubiForm_container(container, 1)
 
-			input( (sTYPE): sENUM, (sNM): fvarn,(sTIT): ftit, required: false, multiple: multiple, options: final_streams, defaultValue: deflt, submitOnChange: true )
+			input( (sTYPE): sENUM, (sNM): fvarn,(sTIT): ftit, (sREQ): false, (sMULTP): multiple, options: final_streams, (sDEFV): deflt, (sSUBOC): true )
 		}
 	}else{
 		// no fuel streams
@@ -1062,7 +1105,7 @@ def gatherFuelSource(String fvarn,String ftit,Boolean multiple,Boolean allowLast
 	}
 
 	def fl= gtSetting(fvarn)
-	List<String> ifstreams=multiple ? fl : [fl]
+	List<String> ifstreams=multiple ? (List<String>)fl : [(String)fl]
 	for(String stream in ifstreams){
 		Map ent=makeFuelDataEntry(stream)
 		//ent=[(sT): 'fuel', id: 'f'+i.toString(), rid: i, sn: stream, displayName: 'Fuel Stream '+i.toString(), n: n, c: c, a: attr]
@@ -1088,12 +1131,12 @@ def gatherSensorSource(String varn, String attrStr, String tit, String cap, Stri
 
 	List<Map> final_attrs
 	String attrn
-	List container
+	List<String> container
 
-	input (type: cap, (sNM): varn,(sTIT): tit, multiple: multiple, submitOnChange: true)
+	input (type: cap, (sNM): varn,(sTIT): tit, (sMULTP): multiple, (sSUBOC): true)
 
 	if(settings[varn]){
-		List items= multiple ? settings[varn] : [settings[varn]]
+		List items= multiple ? (List)settings[varn] : [settings[varn]]
 		for(sensor in items){
 			container=[]
 			String sid='d'+gtSensorId(sensor)
@@ -1124,13 +1167,13 @@ def gatherSensorSource(String varn, String attrStr, String tit, String cap, Stri
 				container << hubiForm_sub_section("${sensor.displayName}")
 				hubiForm_container(container, 1)
 
-				input( (sTYPE): sENUM, (sNM): attrn,(sTIT): atit, required: false, multiple: multiple, options: final_attrs, defaultValue: deflt, submitOnChange: true )
+				input( (sTYPE): sENUM, (sNM): attrn,(sTIT): atit, (sREQ): false, (sMULTP): multiple, options: final_attrs, (sDEFV): deflt, (sSUBOC): true )
 
 			}
 
 			def al= gtSetting(attrn)
 			if(al){
-				List<String> attrs=multiple ? al : [al]
+				List<String> attrs=multiple ? (List<String>)al : [(String)al]
 				for(String attr in attrs){
 					Map ent=makeSensorDataEntry(sensor,sid,attr)
 					if(ent){
@@ -1150,7 +1193,7 @@ def gatherSensorSource(String varn, String attrStr, String tit, String cap, Stri
 def gatherQuantSource(Boolean multiple,Boolean allowLastActivity){
 	if(isEric())myDetail null,"gatherQuantSource $multiple",i1
 
-	List container
+	List<String> container
 	container=[]
 
 	Integer i
@@ -1163,7 +1206,7 @@ def gatherQuantSource(Boolean multiple,Boolean allowLastActivity){
 		s= i.toString()
 		String sid= 'q'+s
 		//String attribute= sid+'attr'
-		String typ=(String)gtSetting(sid+'_type')
+		String typ=gtSetStr(sid+'_type')
 		if(typ in ['Fuel Stream','Sensor']){
 			displayQuant(sid,allowLastActivity,false)
 		}else if(saveS==sNL){ saveS=s; fndf=true}
@@ -1179,7 +1222,7 @@ def gatherQuantSource(Boolean multiple,Boolean allowLastActivity){
 }
 
 def displayQuant(String sid, Boolean allowLastActivity, Boolean create=false){
-	List container
+	List<String> container
 	container=[]
 
 	String attribute= sid+'attr'
@@ -1190,15 +1233,15 @@ def displayQuant(String sid, Boolean allowLastActivity, Boolean create=false){
 	opts= ['None','Fuel Stream','Sensor']
 
 	if(!create){
-		String typ=(String)gtSetting(sid+'_type')
+		String typ=gtSetStr(sid+'_type')
 		container << hubiForm_sub_section("Quantized source $sid")
 
 		opts= ['None',typ] // allow to turn off
 		container << hubiForm_enum ((sTIT):	"Source type",
 				(sNM):	sid+'_type',
 				list:	opts,
-				default: typ,
-				submit_on_change: true)
+				(sDEFLT): typ,
+				(sSUBONCHG): true)
 
 	}else{
 		container << hubiForm_sub_section("Create new quantized source $sid")
@@ -1206,13 +1249,13 @@ def displayQuant(String sid, Boolean allowLastActivity, Boolean create=false){
 		container << hubiForm_enum ((sTIT):	"Source type",
 				(sNM):	sid+'_type',
 				list:	opts,
-				default: 'None',
-				submit_on_change: true)
+				(sDEFLT): 'None',
+				(sSUBONCHG): true)
 
 	}
 	hubiForm_container(container, 1)
 
-	String typ=(String)gtSetting(sid+'_type')
+	String typ=gtSetStr(sid+'_type')
 	if(typ=='Fuel Stream'){
 		gatherFuelSource(sid,'Source Fuel Stream',false,allowLastActivity)
 		attrOk=true
@@ -1253,22 +1296,22 @@ def quantInput(String sid, String attribute){
 	String sq=s+'_quantization'
 	if(isEric())myDetail null,"quantInput $sid $attribute ${sq}  ${gtSetting(sq)}",iN2
 	input( (sTYPE): sENUM, (sNM): sq,(sTIT): "Data Quantization Timeframe (None means disabled)",
-			required: false, multiple: false, options: quantizationEnum, submitOnChange: true, defaultValue: s0)
+			(sREQ): false, (sMULTP): false, options: quantizationEnum, (sSUBOC): true, (sDEFV): s0)
 
 	String sqv= gtSetting(sq)
 	if(sqv && !(sqv in ['0']) ){
 		String sf= s+'_quantization_function'
 		input( (sTYPE): sENUM, (sNM): sf,(sTIT): "Quantization Function",
-				required: false, multiple: false, options: quantizationFunctionEnum, submitOnChange: true, defaultValue: "average")
+				(sREQ): false, (sMULTP): false, options: quantizationFunctionEnum, (sSUBOC): true, (sDEFV): "average")
 
 		String sfv= gtSetting(sf)
 		if(sfv && sfv != sNONE){
 			input( (sTYPE): sBOOL, (sNM): s+"_boundary",(sTIT): "Quantize Data to Hour/Day Boundary (true changes reading time)?",
-					required: false, multiple: false, submitOnChange: true, defaultValue: false)
+					(sREQ): false, (sMULTP): false, (sSUBOC): true, (sDEFV): false)
 
 			input( (sTYPE): sENUM, (sNM): s+"_quantization_decimals",(sTIT): "Quantization Decimals to Maintain",
-					required: false, multiple: false, options: [[0: "Zero"], [1: "One"], [2: "Two"], [3: "Three"], [4: "Four"]],
-					submitOnChange: true, defaultValue: s1)
+					(sREQ): false, (sMULTP): false, options: [[0: "Zero"], [1: "One"], [2: "Two"], [3: "Three"], [4: "Four"]],
+					(sSUBOC): true, (sDEFV): s1)
 
 		}else{
 			remove=true
@@ -1391,7 +1434,7 @@ def mainShare1(String instruct, String okSet,Boolean multiple=true){
 			}
 		}else{
 			hubiForm_section(tDesc()+" Graph Options", 1, "tune", sBLK){
-				List container
+				List<String> container
 				container=[]
 				container << hubiForm_page_button("Select Data Source(s)", "deviceSelectionPage", "100%", "vibration")
 				container << hubiForm_page_button("Configure Graph", "graphSetupPage", "100%", "poll")
@@ -1423,7 +1466,7 @@ def deviceShare1(Boolean multiple=true, Boolean ordered=false,Boolean allowLastA
 	if(isEric())myDetail null,"deviceShare1: $ordered",iN2
 	dynamicPage(name: "deviceSelectionPage", nextPage:"attributeConfigurationPage"){
 		if(state.devInstruct){
-			List container
+			List<String> container
 			hubiForm_section("Directions", 1, "directions", sBLK){
 				container=[]
 				container << hubiForm_text((String)state.devInstruct)
@@ -1439,7 +1482,7 @@ def deviceShare1(Boolean multiple=true, Boolean ordered=false,Boolean allowLastA
 //def attributeTimegraph(){
 //def attributeHeatmap(){
 //def attributeLinegraph(){
-def attributeShare1(Boolean ordered=false, String var_color="background"){
+def attributeShare1(Boolean ordered=false, String var_color=sBACKGRND){
 	if(isEric())myDetail null,"attributeShare1: $ordered $var_color",iN2
 
 	List<Map> dataSources= createDataSources(true)
@@ -1447,11 +1490,11 @@ def attributeShare1(Boolean ordered=false, String var_color="background"){
 	dynamicPage(name: "attributeConfigurationPage", nextPage:"graphSetupPage"){
 
 		if(ordered){
-			hubiForm_section("Graph Order", 1, "directions", sBLK, sBLK){
-				hubiForm_list_reorder("graph_order", var_color)
+			hubiForm_section("Graph Order", 1, "directions", sBLK){
+				hubiForm_list_reorder('graph_order', var_color)
 			}
 		}
-		List container
+		List<String> container
 
 		for(Map ent in dataSources){
 
@@ -1465,7 +1508,7 @@ def attributeShare1(Boolean ordered=false, String var_color="background"){
 
 			container=[]
 
-			hubiForm_section("${sLblTyp(ent[sT])}${dn} - ${attribute}${hint}", 1, "directions", sid+attribute){
+			hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}${hint}", 1, "directions", sid+attribute){
 				if(typ=='Sensor'){
 					String tvar="var_"+sa+"_lts"
 					if((Boolean)parent.ltsAvailable(rid, attribute)){
@@ -1489,7 +1532,7 @@ def attributeShare1(Boolean ordered=false, String var_color="background"){
 }
 
 def local_graph_url(){
-	List container
+	List<String> container
 	container=[]
 	hubiForm_section("Local Graph URL", 1, "link", sBLK){
 		String s= "${state.localEndpointURL}graph/?access_token=${state.endpointSecret}"
@@ -1500,8 +1543,8 @@ def local_graph_url(){
 }
 
 def preview_tile(){
-	List container
-	String typ=sMs(settings,sGRAPHT)
+	List<String> container
+	String typ=gtSetStr(sGRAPHT)
 	hubiForm_section("Preview of graph (sTYPE): ${typ}", 10, "show_chart", sBLK){
 		container=[]
 		container << hubiForm_graph_preview()
@@ -1513,14 +1556,14 @@ def preview_tile(){
 }
 
 def install_tile(){
-	List container
-	String s=app_name ?: tDesc()
+	List<String> container
+	String s=gtSetStr('app_name') ?: tDesc()
 	hubiForm_section(s+" Tile Installation", 2, "apps", sBLK){
 		container=[]
 
-		container << hubiForm_switch([(sTIT): "Install ${s} Tile Device?", (sNM): "install_device", default: false, submit_on_change: true])
-		if(install_device==true){
-			container << hubiForm_text_input("Name for ${s} Tile Device", "device_name", "${s} Tile", true)
+		container << hubiForm_switch([(sTIT): "Install ${s} Tile Device?", (sNM): 'install_device', (sDEFLT): false, (sSUBONCHG): true])
+		if(gtSetB('install_device')){
+			container << hubiForm_text_input("Name for ${s} Tile Device", 'device_name', "${s} Tile", true)
 		}
 		hubiForm_container(container, 1)
 	}
@@ -1529,19 +1572,19 @@ def install_tile(){
 def put_settings(Boolean needOauth=true){
 	if(!needOauth || state.endpoint){
 		String typ=tDesc()
-		List container
+		List<String> container
 		container=[]
 		hubiForm_section("webCoRE ${typ} Application Settings", 1, "settings", sBLK){
 			container << hubiForm_sub_section("Application Name")
-			if( sMs(settings,sGRAPHT)!=sLONGTS){
-				container << hubiForm_text_input("Rename the Application?", "app_name", "webCoRE ${typ}", true)
+			if(gtSetStr(sGRAPHT)!=sLONGTS){
+				container << hubiForm_text_input("Rename the Application?", 'app_name', "webCoRE ${typ}", true)
 			}else app.updateSetting('app_name', "webCoRE ${typ}") // cannot rename LTS
 			container << hubiForm_sub_section("Debugging")
 
 			container << hubiForm_enum((sTIT):	"Logging Level",
 					(sNM):	sLOGNG,
 					list:	[s0,s1,s2,"3"],
-					default: state[sLOGNG] ? state[sLOGNG].toString():s0 )
+					(sDEFLT): state[sLOGNG] ? state[sLOGNG].toString():s0 )
 
 			if(needOauth && state.endpoint){
 				container << hubiForm_sub_section("Disable Oauth Authorization")
@@ -1562,7 +1605,9 @@ Map findDataSourceEntry(String sid, String attribute){
 	ent= null
 	List<Map> dataSources=gtDataSources()
 	if(dataSources){
-		ent= dataSources.find{ Map it -> it.id==sid && sMs(it,sA)==attribute }
+		String sa=sA
+		String sd=sID
+		ent= dataSources.find{ Map it -> sMs(it,sd)==sid && sMs(it,sa)==attribute }
 	}
 	if(isEric())myDetail null,"findDataSourceEntry: $sid $attribute $ent",iN2
 	return ent
@@ -1573,14 +1618,11 @@ Map findDataSourceEntry(String sid, String attribute){
  * @return [date: (Date)date, (sVAL): v, t: (Long)t]
  */
 Map gtLastData(Map ent, Boolean multiple=true){
-	Map lst
-	lst=null
+	Map lst; lst=null
 	List<Map> fdata= gtDataSourceData(ent,multiple)
-	Integer sz
-	sz= fdata.size()
-	if(sz){
+	Integer sz= fdata.size()
+	if(sz)
 		lst= fdata[sz-1]
-	}
 	return lst
 }
 
@@ -1645,8 +1687,9 @@ Double getLatestVal(Map ent, Boolean multiple=true){
 private Double getValue(String id, String attr, val){
 	Double ret
 	String s
-	if(settings["attribute_${id}_${attr}_${val}"]!=null){
-		s= settings["attribute_${id}_${attr}_${val}"].toString()
+	def v= settings["attribute_${id}_${attr}_${val}"]
+	if(v!=null){
+		s= "${v}".toString()
 	}else{
 		s= "${val}".toString()
 	}
@@ -1673,7 +1716,8 @@ List<Map> CgetData(Map ent, Date time, Boolean multiple=true){
 	return_data= gtDataSourceData(ent,multiple)
 
 	List<Map> data2
-	data2=return_data.findAll{ Map it -> (Long)it.t > end }
+	String t=sT
+	data2=return_data.findAll{ Map it -> (Long)it[t] > end }
 
 	if(!data2) data2= return_data ? [return_data[-1]] : data2
 
@@ -1697,7 +1741,7 @@ List<Map> gtDataSourceData(Map ent, Boolean multiple=true, String sensorV=sNL){
 	res=[]
 
 	if(typ=='Fuel'){
-		Map stream= findStream(ent.sn)
+		Map stream= findStream(sMs(ent,'sn'))
 		if(stream)
 			res=parent.readFuelStream(stream)
 		else warn 'gtDataSourceData: stream not found',null
@@ -1706,7 +1750,7 @@ List<Map> gtDataSourceData(Map ent, Boolean multiple=true, String sensorV=sNL){
 	if(typ=='Sensor'){
 		String varn= sensorV ?: (multiple ? 'sensors' : 'sensor_') // have to get devices from settings
 		def a=gtSetting(varn)
-		List devs= multiple ? a : [a]
+		List devs= multiple ? (List)a : [a]
 
 		String rid=ent.rid.toString()
 		if(isEric())myDetail null,"varn: $varn devs ${devs} a: ${a}  rid: ${myObj(ent.rid)}",iN2
@@ -1724,7 +1768,7 @@ List<Map> gtDataSourceData(Map ent, Boolean multiple=true, String sensorV=sNL){
 	}
 
 	if(typ=='Quant'){
-		res=gtDataSourceData(ent.ent,false, (String)ent.id)
+		res=gtDataSourceData((Map)ent.ent,false, sMs(ent,sID))
 
 		// if to return data quantized
 		Map params= quantParams(ent.id,attribute)
@@ -1732,7 +1776,7 @@ List<Map> gtDataSourceData(Map ent, Boolean multiple=true, String sensorV=sNL){
 			res= quantizeData(res, params.qm , params.qf, params.qd, params.qb, false)
 	}
 
-	if(isEric())myDetail null,"gtDataSourceData ${ent} ${res.size()}"
+	if(isEric())myDetail null,"gtDataSourceData ${ent} ${multiple} ${res.size()}"
 	return res
 }
 
@@ -1750,7 +1794,7 @@ static String scriptIncludes(){
 	return html
 }
 
-static String scriptIncludes1(){
+String scriptIncludes1(){
 	String html="""
 ${scriptIncludes()}
 		<script src="/local/${isSystemType() ? 'webcore/' : ''}a930f16d-d5f4-4f37-b874-6b0dcfd47ace-HubiGraph.js"></script>
@@ -1779,7 +1823,7 @@ def attributeGauge(){
 	List<Map> dataSources= createDataSources(false)
 
 	dynamicPage(name: "attributeConfigurationPage", nextPage:"graphSetupPage"){
-		List container
+		List<String> container
 		def val
 		String dn
 		dn='unknown'
@@ -1793,7 +1837,7 @@ def attributeGauge(){
 				Integer sz
 				sz=fdata.size()
 				if(sz){ val="${fdata[sz-1][sVAL]}" }
-				typ=((String)ent[sT]).capitalize()
+				typ=sMs(ent,sT).capitalize()
 				dn= sMs(ent,sDISPNM)
 
 				String hint= typ=='Fuel' ? " (Canister ${ent.c} Name ${ent.n})" : sBLK
@@ -1802,12 +1846,12 @@ def attributeGauge(){
 				String attribute=sMs(ent,sA)
 				String sa="${sid}_${attribute}".toString()
 
-				hubiForm_section("${sLblTyp(ent[sT])}${dn} - ${attribute}${hint}", 1, "directions", sid+attribute){
+				hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}${hint}", 1, "directions", sid+attribute){
 
 					if(typ=='Sensor'){
 						String tvar="var_"+sa+"_lts"
 						if((Boolean)parent.ltsAvailable(rid, attribute)){
-							hubiForm_section("${sLblTyp(ent[sT])}${dn} - ${attribute}", 1, "directions", sid+attribute){
+							hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}", 1, "directions", sid+attribute){
 								container=[]
 								container << hubiForm_sub_section("Long Term Storage in use")
 								hubiForm_container(container, 1)
@@ -1825,8 +1869,8 @@ def attributeGauge(){
 				hubiForm_section("Min Max Value", 1, sBLK, sBLK){
 					container=[]
 					container<< hubiForm_text("<b>Current ${typ} Value=</b>$val")
-					container << hubiForm_text_input ("Minimum Value for Gauge", "minValue_", s0, false)
-					container << hubiForm_text_input ("Maximum Value for Gauge", "maxValue_", "100", false)
+					container << hubiForm_text_input("Minimum Value for Gauge", "minValue_", s0, false)
+					container << hubiForm_text_input("Maximum Value for Gauge", "maxValue_", s100, false)
 					hubiForm_container(container, 1)
 				}
 			}else{
@@ -1845,7 +1889,7 @@ def graphGauge(){
 	Integer num_
 
 	dynamicPage(name: "graphSetupPage"){
-		List container
+		List<String> container
 		hubiForm_section("General Options", 1, sBLK, sBLK){
 			container=[]
 			if((Boolean)state.hasFuel)
@@ -1853,21 +1897,21 @@ def graphGauge(){
 			else
 				app.updateSetting("graph_update_rate", '0')
 
-			container << hubiForm_text_input ("Gauge Title", "gauge_title", "Gauge Title", false)
-			container << hubiForm_text_input ("Gauge Units", "gauge_units", "Units", false)
-			container << hubiForm_text_input ("Gauge Number Formatting<br><small>Example</small>", "gauge_number_format", "##.#", false)
+			container << hubiForm_text_input("Gauge Title", "gauge_title", "Gauge Title", false)
+			container << hubiForm_text_input("Gauge Units", "gauge_units", "Units", false)
+			container << hubiForm_text_input("Gauge Number Formatting<br><small>Example</small>", "gauge_number_format", "##.#", false)
 
-			container << hubiForm_slider ((sTIT): "Select Number of Highlight Areas on Gauge", (sNM): "num_highlights", default: 3, min: 0, max: 3, units: " highlights", submit_on_change: true)
+			container << hubiForm_slider ((sTIT): "Select Number of Highlight Areas on Gauge", (sNM): "num_highlights", (sDEFLT): 3, (sMIN): 0, (sMAX): 3, (sUNITS): " highlights", (sSUBONCHG): true)
 
 			hubiForm_container(container, 1)
 		}
 
 		if(num_highlights == null){
-			settings["num_highlights"]=3
-			app.updateSetting("num_highlights", 3)
+			settings['num_highlights']=3
+			app.updateSetting('num_highlights', 3)
 			num_=3
 		}else{
-			num_=num_highlights.toInteger()
+			num_=gtSetI('num_highlights')
 		}
 
 		if(num_ > 0){
@@ -1882,28 +1926,29 @@ def graphGauge(){
 						case 1 : color_="#a9a67e"; break
 						case 2 : color_="#FF0000"; break
 					}
-					container << hubiForm_color	("Highlight $i", "highlight${i}", color_, false)
-					container << hubiForm_text_input ("Select Highlight Start Region Value ${i}", "highlight${i}_start", sBLK, false)
+					container << hubiForm_color("Highlight $i", "highlight${i}", color_, false)
+					container << hubiForm_text_input("Select Highlight Start Region Value ${i}", "highlight${i}_start", sBLK, false)
 				}
-				container << hubiForm_text_input ("Select Highlight End Region Value ${i-1}", "highlight_end", sBLK, false)
+				container << hubiForm_text_input("Select Highlight End Region Value ${i-1}", "highlight_end", sBLK, false)
 				hubiForm_container(container, 1)
 			}
 		}
 
 		hubiForm_section("Major and Minor Tics", 1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_slider ((sTIT): "Number Minor Tics", (sNM): "gauge_minor_tics", default: 3, min: 0, max: 10, units: " tics")
+			container << hubiForm_slider ((sTIT): "Number Minor Tics", (sNM): "gauge_minor_tics", (sDEFLT): 3, (sMIN): 0, (sMAX): 10, (sUNITS): " tics")
 
-			container << hubiForm_switch ([(sTIT): "Use Custom Tics/Labels", (sNM): "default_major_ticks", default: false, submit_on_change: true])
-			if(default_major_ticks == true){
-				if(gauge_major_tics == null){
-					settings["gauge_major_tics"]=3
-					app.updateSetting("gauge_major_tics", 3)
+			container << hubiForm_switch ([(sTIT): "Use Custom Tics/Labels", (sNM): "default_major_ticks", (sDEFLT): false, (sSUBONCHG): true])
+			if(gtSetB('default_major_ticks')){
+				String vn='gauge_major_tics'
+				if(settings[vn] == null){
+					settings[vn]=3
+					app.updateSetting(vn, 3)
 				}
-				container << hubiForm_slider ((sTIT): "Number Major Tics", (sNM): "gauge_major_tics", default: 3, min: 0, max: 20, units: " tics")
+				container << hubiForm_slider ((sTIT): "Number Major Tics", (sNM): vn, (sDEFLT): 3, (sMIN): 0, (sMAX): 20, (sUNITS): " tics")
 				Integer tic
-				for(tic=0; tic<gauge_major_tics.toInteger(); tic++){
-					container << hubiForm_text_input ("Input the Label for Tick ${tic+1}", "tic_title${tic}", "Label", false)
+				for(tic=0; tic<gtSetI(vn); tic++){
+					container << hubiForm_text_input("Input the Label for Tick ${tic+1}", "tic_title${tic}", "Label", false)
 				}
 			}
 			hubiForm_container(container, 1)
@@ -1931,66 +1976,66 @@ Map getOptions_gauge(){
 
 	List tic_labels
 	tic_labels=[]
-	if(default_major_ticks == true){
+	if(gtSetB('default_major_ticks')){
 		Integer tic
-		for(tic=0; tic<gauge_major_tics.toInteger(); tic++){
-			tic_labels += (String)settings["tic_title${tic}"]
+		for(tic=0; tic<gtSetI('gauge_major_tics'); tic++){
+			tic_labels += gtSetStr("tic_title${tic}")
 		}
 	}
 
 	String redColor, redFrom, redTo, yellowColor, yellowFrom, yellowTo, greenColor, greenFrom, greenTo
-	redColor=""
-	redFrom=""
-	redTo=""
-	yellowColor=""
-	yellowFrom=""
-	yellowTo=""
-	greenColor=""
-	greenFrom=""
-	greenTo=""
+	redColor=sBLK
+	redFrom=sBLK
+	redTo=sBLK
+	yellowColor=sBLK
+	yellowFrom=sBLK
+	yellowTo=sBLK
+	greenColor=sBLK
+	greenFrom=sBLK
+	greenTo=sBLK
 
-	switch (num_highlights.toInteger()){
+	switch (gtSetI('num_highlights')){
 
 		case 3:
-			redColor=highlight2_color_transparent ? "transparent" : highlight2_color
-			redFrom=highlight2_start
-			redTo=highlight_end
+			redColor=gtSetB('highlight2_color_transparent') ? sTRANSPRNT : gtSetStr('highlight2_color')
+			redFrom=gtSetStr('highlight2_start')
+			redTo=gtSetStr('highlight_end')
 
-			yellowColor=highlight1_color_transparent ? "transparent" : highlight1_color
-			yellowFrom=highlight1_start
-			yellowTo=highlight2_start
+			yellowColor=gtSetB('highlight1_color_transparent') ? sTRANSPRNT : gtSetStr('highlight1_color')
+			yellowFrom=gtSetStr('highlight1_start')
+			yellowTo=gtSetStr('highlight2_start')
 
-			greenColor=highlight0_color_transparent ? "transparent" : highlight0_color
-			greenFrom=highlight0_start
-			greenTo	= highlight1_start
+			greenColor=gtSetB('highlight0_color_transparent') ? sTRANSPRNT : gtSetStr('highlight0_color')
+			greenFrom=gtSetStr('highlight0_start')
+			greenTo	= gtSetStr('highlight1_start')
 
 			break
 
 		case 2:
 
-			yellowColor=highlight1_color_transparent ? "transparent" : highlight1_color
-			yellowFrom=highlight1_start
-			yellowTo=highlight_end
+			yellowColor=gtSetB('highlight1_color_transparent') ? sTRANSPRNT : gtSetStr('highlight1_color')
+			yellowFrom=gtSetStr('highlight1_start')
+			yellowTo=gtSetStr('highlight_end')
 
-			greenColor=highlight0_color_transparent ? "transparent" : highlight0_color
-			greenFrom=highlight0_start
-			greenTo	= highlight1_start
+			greenColor=gtSetB('highlight0_color_transparent') ? sTRANSPRNT : gtSetStr('highlight0_color')
+			greenFrom=gtSetStr('highlight0_start')
+			greenTo	= gtSetStr('highlight1_start')
 
 			break
 
 		case 1:
 
-			greenColor=highlight0_color_transparent ? "transparent" : highlight0_color
-			greenFrom=highlight0_start
-			greenTo	= highlight_end
+			greenColor=gtSetB('highlight0_color_transparent') ? sTRANSPRNT : gtSetStr('highlight0_color')
+			greenFrom=gtSetStr('highlight0_start')
+			greenTo	= gtSetStr('highlight_end')
 
 			break
 	}
 	Map options=[
-		"graphUpdateRate": Integer.parseInt(graph_update_rate),
+		"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
 		"graphOptions": [
-			"width": graph_static_size ? graph_h_size : "100%",
-			"height": graph_static_size ? graph_v_size: "100%",
+			"width": gtSetB('graph_static_size') ? graph_h_size : "100%",
+			"height": gtSetB('graph_static_size') ? graph_v_size: "100%",
 			"min": minValue_,
 			"max": maxValue_,
 			"greenFrom": greenFrom,
@@ -2002,8 +2047,8 @@ Map getOptions_gauge(){
 			"redFrom": redFrom,
 			"redTo": redTo,
 			"redColor": redColor,
-			"backgroundColor": graph_background_color_transparency ? "transparent": graph_background_color,
-			"majorTicks" : default_major_ticks == true ? tic_labels : sBLK,
+			"backgroundColor": gtSetB('graph_background_color_transparency') ? sTRANSPRNT: gtSetStr('graph_background_color'),
+			"majorTicks" : gtSetB('default_major_ticks') ? tic_labels : sBLK,
 			"minorTicks" : gauge_minor_tics
 		]
 	]
@@ -2184,7 +2229,7 @@ Map getSubscriptions_gauge(){
 	if(dataSources){
 
 		Map ent= dataSources[0]
-		String typ=((String)ent[sT]).capitalize()
+		String typ=sMs(ent,sT).capitalize()
 
 		if(typ=='Sensor'){
 			subscriptions=[
@@ -2221,19 +2266,19 @@ def inputGraphUpdateRate(){
 		opt=rateEnumF
 	}
 
-	input( (sTYPE): sENUM, (sNM): "graph_update_rate",(sTIT): "<b>Select graph update rate</b>", multiple: false, required: false, options: opt, defaultValue: defl)
+	input( (sTYPE): sENUM, (sNM): "graph_update_rate",(sTIT): "<b>Select graph update rate</b>", (sMULTP): false, (sREQ): false, options: opt, (sDEFV): defl)
 }
 
 
 /** refresh rate for graphs with fuel streams */
-@Field static List<Map> rateEnumF=[
+@Field static List<Map<String,String>> rateEnumF=[
 		["-1":"Never"], // ["0":"Real Time"],
 //		["10":"10 Milliseconds"], ["1000":"1 Second"], ["5000":"5 Seconds"],
 		["60000":"1 Minute"], ["300000":"5 Minutes"], ["600000":"10 Minutes"], ["1800000":"Half Hour"], ["3600000":"1 Hour"]
 ]
 
 /** refresh rate for graphs with only sensors */
-@Field static List<Map> rateEnum=[
+@Field static List<Map<String,String>> rateEnum=[
 		["-1":"Never"], ["0":"Real Time"],
 		["10":"10 Milliseconds"], ["1000":"1 Second"], ["5000":"5 Seconds"],
 		["60000":"1 Minute"], ["300000":"5 Minutes"], ["600000":"10 Minutes"], ["1800000":"Half Hour"], ["3600000":"1 Hour"]
@@ -2242,7 +2287,7 @@ def inputGraphUpdateRate(){
 
 // shared by bar, timeline, heatmap, rangebar
 Map gtSensorFmt(Boolean curStates=false,Boolean multiple=true){
-	if(isEric())myDetail null,"gtSensorFmt curStates: $curStates, multiple: $multiple",i1
+	if(isEric())myDetail null,"gtSensorFmt curStates: $curStates, (sMULTP): $multiple",i1
 	Map sensors_fmt
 	sensors_fmt=[:]
 
@@ -2305,10 +2350,10 @@ def attributeBar(){
 	List<Map> dataSources= createDataSources(true)
 
 	dynamicPage(name: "attributeConfigurationPage", nextPage:"graphSetupPage"){
-		List container
+		List<String> container
 
 		hubiForm_section("Graph Order", 1, "directions", sBLK){
-			hubiForm_list_reorder("graph_order", "background")
+			hubiForm_list_reorder('graph_order', sBACKGRND)
 		}
 
 		List<Map> decimalsEnum=[ [0:"None (123)"], [1: "One (123.1)"], [2: "Two (123.12)"], [3: "Three (123.123)"], [4: "Four (123.1234)"] ]
@@ -2322,12 +2367,12 @@ def attributeBar(){
 				String attribute=sMs(ent,sA)
 				String rid=ent.rid.toString()
 				String dn=sMs(ent,sDISPNM)
-				String typ=((String)ent[sT]).capitalize()
+				String typ=sMs(ent,sT).capitalize()
 				String hint= typ=='Fuel' ? " (Canister ${ent.c} Name ${ent.n})" : sBLK
 				String sa="${sid}_${attribute}".toString()
 
 				container=[]
-				hubiForm_section("${sLblTyp(ent[sT])}${dn} - ${attribute}${hint}", 1, "directions", sid+attribute){
+				hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}${hint}", 1, "directions", sid+attribute){
 
 					if(typ=='Sensor'){
 						String tvar="var_"+sa+"_lts"
@@ -2344,8 +2389,8 @@ def attributeBar(){
 
 					input( (sTYPE): sENUM, (sNM): "attribute_"+sa+"_decimals",
 							(sTIT): "<b>Number of Decimal Places to Display</b>",
-							multiple: false, required: false, options: decimalsEnum,
-							defaultValue: 1)
+							(sMULTP): false, (sREQ): false, options: decimalsEnum,
+							(sDEFV): 1)
 
 					container << hubiForm_text_input("<b>Scale Factor for Values</b><br><small>Example: To scale down by 10X, input 0.1<br>Leave as <b>1</b> for unchanged</small>",
 							"attribute_"+sa+"_scale",
@@ -2355,22 +2400,22 @@ def attributeBar(){
 							"graph_name_override_"+sa,
 							"%deviceName%: %attributeName%", false)
 					container << hubiForm_color	("Bar Background",		"attribute_"+sa+"_background", "#3e4475", false, true)
-					container << hubiForm_color	("Bar Border",			"attribute_"+sa+"_current_border", "#FFFFFF", false)
+					container << hubiForm_color	("Bar Border",			"attribute_"+sa+"_current_border", sWHT, false)
 
 					container << hubiForm_slider	((sTIT): "Bar Opacity",
 							(sNM): "attribute_"+sa+"_opacity",
-							default: 100, min: 1, max: 100, units: "%")
+							(sDEFLT): 100, (sMIN): 1, (sMAX): 100, (sUNITS): "%")
 
 					container << hubiForm_line_size ((sTIT): "Bar Border",
 							(sNM): "attribute_"+sa+"_current_border",
-							default: 2, min: 1, max: 10)
+							(sDEFLT): 2, (sMIN): 1, (sMAX): 10)
 
 					container << hubiForm_switch ([(sTIT): "Show Current Value on Bar",
 							(sNM): "attribute_"+sa+"_show_value",
-							default: false,
-							submit_on_change: true])
+							(sDEFLT): false,
+							(sSUBONCHG): true])
 
-					if(settings["attribute_"+sa+"_show_value"]==true){
+					if(gtSetB("attribute_"+sa+"_show_value")){
 						container<< hubiForm_text_input("Units", "attribute_"+sa+"_annotation_units", sBLK, false)
 					}
 					hubiForm_container(container, 1)
@@ -2383,15 +2428,15 @@ def attributeBar(){
 def graphBar(){
 
 	dynamicPage(name: "graphSetupPage"){
-		List container
+		List<String> container
 		hubiForm_section("General Options", 1, sBLK, sBLK){
 			container=[]
-			input( (sTYPE): sENUM, (sNM): "graph_type",(sTIT): "<b>Select graph type</b>", multiple: false, required: false, options: [["1": "Bar Chart"],["2": "Column Chart"]], defaultValue: s1)
+			input( (sTYPE): sENUM, (sNM): "graph_type",(sTIT): "<b>Select graph type</b>", (sMULTP): false, (sREQ): false, options: [["1": "Bar Chart"],["2": "Column Chart"]], (sDEFV): s1)
 
 			inputGraphUpdateRate()
 
-			container << hubiForm_color ("Graph Background", "graph_background", "#FFFFFF", false)
-			container << hubiForm_slider ((sTIT): "Graph Bar Width (1%-100%)", (sNM): "graph_bar_percent", default: 90, min: 1, max: 100, units: "%")
+			container << hubiForm_color ("Graph Background", "graph_background", sWHT, false)
+			container << hubiForm_slider ((sTIT): "Graph Bar Width (1%-100%)", (sNM): "graph_bar_percent", (sDEFLT): 90, (sMIN): 1, (sMAX): 100, (sUNITS): "%")
 			container << hubiForm_text_input("Graph Max", "graph_max", sBLK, false)
 			container << hubiForm_text_input("Graph Min", "graph_min", sBLK, false)
 
@@ -2400,37 +2445,37 @@ def graphBar(){
 
 		hubiForm_section("Axes", 1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_color ("Axis", "haxis", "#000000", false)
-			container << hubiForm_font_size ((sTIT): "Axis", (sNM): "haxis", default: 9, min: 2, max: 20)
-			container << hubiForm_slider ((sTIT): "Number of Pixels for Axis", (sNM): "graph_h_buffer", default: 40, min: 10, max: 500, units: " pixels")
+			container << hubiForm_color ("Axis", "haxis", sBLACK, false)
+			container << hubiForm_font_size ((sTIT): "Axis", (sNM): "haxis", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
+			container << hubiForm_slider ((sTIT): "Number of Pixels for Axis", (sNM): "graph_h_buffer", (sDEFLT): 40, (sMIN): 10, (sMAX): 500, (sUNITS): " pixels")
 			hubiForm_container(container, 1)
 		}
 		hubiForm_section("Device Names", 1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_font_size ((sTIT): "Device Name", (sNM): "graph_axis", default: 9, min: 2, max: 20)
-			container << hubiForm_color ("Device Name","graph_axis", "#000000", false)
-			container << hubiForm_slider ((sTIT): "Number of Pixels for Device Name Area", (sNM): "graph_v_buffer", default: 100, min: 10, max: 500, units: " pixels")
+			container << hubiForm_font_size ((sTIT): "Device Name", (sNM): "graph_axis", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
+			container << hubiForm_color ("Device Name","graph_axis", sBLACK, false)
+			container << hubiForm_slider ((sTIT): "Number of Pixels for Device Name Area", (sNM): "graph_v_buffer", (sDEFLT): 100, (sMIN): 10, (sMAX): 500, (sUNITS): " pixels")
 
 			hubiForm_container(container, 1)
 		}
 		hubiForm_section("Graph Size", 1, sBLK, sBLK){
 			container=[]
-			input( (sTYPE): sBOOL, (sNM): "graph_static_size",(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", defaultValue: false, submitOnChange: true)
-			if((Boolean)settings.graph_static_size){
-				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", default: 800, min: 100, max: 3000, units: " pixels")
-				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", default: 600, min: 100, max: 3000, units: " pixels")
+			input( (sTYPE): sBOOL, (sNM): "graph_static_size",(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sDEFV): false, (sSUBOC): true)
+			if(gtSetB('graph_static_size')){
+				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): 800, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels")
+				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): 600, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels")
 			}
 
 			hubiForm_container(container, 1)
 		}
 		hubiForm_section("Annotations", 1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_font_size ((sTIT): "Annotation", (sNM): "annotation", default: 16, min: 2, max: 40)
-			container << hubiForm_switch	([(sTIT): "Show Annotation Outside (true) or Inside (false) of Bars", (sNM): "annotation_inside", default:false])
-			container << hubiForm_color	("Annotation", "annotation", "#FFFFFF", false)
-			container << hubiForm_color	("Annotation Aura", "annotation_aura", "#000000", false)
-			container << hubiForm_switch	([(sTIT): "Bold Annotation", (sNM): "annotation_bold", default:false])
-			container << hubiForm_switch	([(sTIT): "Italic Annotation", (sNM): "annotation_italic", default:false])
+			container << hubiForm_font_size ((sTIT): "Annotation", (sNM): "annotation", (sDEFLT): 16, (sMIN): 2, (sMAX): 40)
+			container << hubiForm_switch	([(sTIT): "Show Annotation Outside (true) or Inside (false) of Bars", (sNM): "annotation_inside", (sDEFLT):false])
+			container << hubiForm_color	("Annotation", "annotation", sWHT, false)
+			container << hubiForm_color	("Annotation Aura", "annotation_aura", sBLACK, false)
+			container << hubiForm_switch	([(sTIT): "Bold Annotation", (sNM): "annotation_bold", (sDEFLT):false])
+			container << hubiForm_switch	([(sTIT): "Italic Annotation", (sNM): "annotation_italic", (sDEFLT):false])
 
 			hubiForm_container(container, 1)
 		}
@@ -2474,31 +2519,31 @@ Map getOptions_bar(){
 
 			String attrib_string="attribute_"+sa+"_color"
 			String transparent_attrib_string="attribute_"+sa+"_color_transparent"
-			colors << (settings[transparent_attrib_string] ? "transparent" : settings[attrib_string])
+			colors << (gtSetB(transparent_attrib_string) ? sTRANSPRNT : settings[attrib_string])
 		}
 	}
 
 	String axis1,axis2
-	Boolean gt1= (graph_type==s1)
+	Boolean gt1= (gtSetStr('graph_type')==s1)
 	axis1= gt1 ? "hAxis" : "vAxis"
 	axis2= gt1 ? "vAxis" : "hAxis"
 
 	Map options=[
-		"graphUpdateRate": Integer.parseInt(graph_update_rate),
-		(sGRAPHT): Integer.parseInt(graph_type),
+		"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
+		(sGRAPHT): Integer.parseInt(gtSetStr('graph_type')),
 		"graphOptions": [
 			"bar" : [ "groupWidth" : "${graph_bar_percent}%", ],
-			"width": graph_static_size ? graph_h_size : "100%",
-			"height": graph_static_size ? graph_v_size: "90%",
+			"width": gtSetB('graph_static_size') ? graph_h_size : "100%",
+			"height": gtSetB('graph_static_size') ? graph_v_size: "90%",
 			"timeline": [
-				"rowLabelStyle": ["fontSize": graph_axis_font, "color": graph_axis_color_transparent ? "transparent" : graph_axis_color],
+				"rowLabelStyle": ["fontSize": graph_axis_font, "color": gtSetB('graph_axis_color_transparent') ? sTRANSPRNT : graph_axis_color],
 				"barLabelStyle": ["fontSize": graph_axis_font]
 			],
-			"backgroundColor": graph_background_color_transparent ? "transparent" : graph_background_color,
+			"backgroundColor": gtSetB('graph_background_color_transparent') ? sTRANSPRNT : gtSetStr('graph_background_color'),
 			"isStacked": false,
 			"chartArea": [
-				"left": gt1 ? graph_v_buffer : graph_h_buffer,
-				"right" : 10,
+				(sLEFT): gt1 ? graph_v_buffer : graph_h_buffer,
+				(sRIGHT): 10,
 				"top": 10,
 				"bottom": gt1 ? graph_h_buffer : graph_v_buffer ],
 			"legend" : [ "position" : sNONE ],
@@ -2507,10 +2552,10 @@ Map getOptions_bar(){
 								"min" : graph_min],
 						"minValue" : graph_min,
 						"maxValue" : graph_max,
-						"textStyle" : ["color": haxis_color_transparent ? "transparent" : haxis_color, "fontSize": haxis_font]
+						"textStyle" : ["color": gtSetB('haxis_color_transparent') ? sTRANSPRNT : haxis_color, "fontSize": haxis_font]
 			],
 			(axis2): [ "textStyle" :
-						["color": graph_axis_color_transparent ? "transparent" : graph_axis_color, "fontSize": graph_axis_font]
+						["color": gtSetB('graph_axis_color_transparent') ? sTRANSPRNT : graph_axis_color, "fontSize": graph_axis_font]
 			],
 			"annotations" : [
 					"alwaysOutside": annotation_inside,
@@ -2518,11 +2563,11 @@ Map getOptions_bar(){
 								"fontSize": annotation_font,
 								"bold":	annotation_bold,
 								"italic": annotation_italic,
-								"color":	annotation_color_transparent ? "transparent" : annotation_color,
-								"auraColor":annotation_aura_color_transparent ? "transparent" : annotation_aura_color,
+								"color":	gtSetB('annotation_color_transparent') ? sTRANSPRNT : annotation_color,
+								"auraColor":gtSetB('annotation_aura_color_transparent') ? sTRANSPRNT : annotation_aura_color,
 					],
-					"stem": [ "color": "transparent" ],
-					"highContrast": "false"
+					"stem": [ "color": sTRANSPRNT ],
+					"highContrast": sFALSE
 				],
 
 			],
@@ -2886,7 +2931,7 @@ Map getSubscriptions_bar(){
 
 	Map sensors_fmt=gtSensorFmt()
 
-	List order=graph_order ? parseJson(graph_order) : []
+	List order=gtSetStr('graph_order') ? parseJson(gtSetStr('graph_order')) : []
 
 	Map subscriptions=[
 			(sID): isPoll ? 'poll' : 'sensor',
@@ -2896,7 +2941,7 @@ Map getSubscriptions_bar(){
 			"labels": labels,
 			"colors": colors,
 			"order": order,
-			"graphUpdateRate": Integer.parseInt(graph_update_rate),
+			"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
 	]
 
 	return subscriptions
@@ -2975,7 +3020,7 @@ Map gtStartEndTypes(Map ent, String attribute){
 
 
 /**  Timespans as MS */
-@Field static List<Map> timespanEnum=[
+@Field static List<Map<String,String>> timespanEnum=[
 		["60000":"1 Minute"], ["3600000":"1 Hour"], ["43200000":"12 Hours"],
 		["86400000":"1 Day"], ["259200000":"3 Days"], ["604800000":"1 Week"]
 ]
@@ -3006,7 +3051,7 @@ def attributeTimeline(){
 
 	//state.count_=0
 	dynamicPage(name: "attributeConfigurationPage", nextPage:"graphSetupPage"){
-		List container
+		List<String> container
 		hubiForm_section("Directions", 1, "directions", sBLK){
 			container=[]
 			container << hubiForm_text("""Configure what counts as a 'start' or 'end' event for each attribute on the timeline.
@@ -3020,7 +3065,7 @@ def attributeTimeline(){
 
 		}
 		hubiForm_section("Graph Order", 1, "directions", sBLK){
-			hubiForm_list_reorder("graph_order", "line")
+			hubiForm_list_reorder('graph_order', "line")
 		}
 
 //	TODO
@@ -3034,11 +3079,11 @@ def attributeTimeline(){
 				String attribute=sMs(ent,sA)
 				String rid=ent.rid.toString()
 				String dn=sMs(ent,sDISPNM)
-				String typ=((String)ent[sT]).capitalize()
+				String typ=sMs(ent,sT).capitalize()
 				String hint= typ=='Fuel' ? " (Canister ${ent.c} Name ${ent.n})" : sBLK
 				String sa="${sid}_${attribute}".toString()
 
-				hubiForm_section("${sLblTyp(ent[sT])}${dn} - ${attribute}${hint}", 1, "directions", sid+attribute){
+				hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}${hint}", 1, "directions", sid+attribute){
 					container=[]
 
 					if(typ=='Sensor'){
@@ -3065,9 +3110,9 @@ def attributeTimeline(){
 						defltE=a.end ?: sBLK
 					}
 
-					container << hubiForm_color	("Line",	"attribute_"+sa+"_line", hubiTools_rotating_colors(cnt), false, false)
-					container << hubiForm_text_input ("Start event value",	"attribute_"+sa+"_start", defltS, false)
-					container << hubiForm_text_input ("End event value",	"attribute_"+sa+"_end", defltE, false)
+					container << hubiForm_color("Line",	"attribute_"+sa+"_line", hubiTools_rotating_colors(cnt), false, false)
+					container << hubiForm_text_input("Start event value",	"attribute_"+sa+"_start", defltS, false)
+					container << hubiForm_text_input("End event value",	"attribute_"+sa+"_end", defltE, false)
 					hubiForm_container(container, 1)
 				}
 				cnt += 1
@@ -3078,34 +3123,34 @@ def attributeTimeline(){
 
 def graphTimeline(){
 
-	List<Map> lOpts= [["0":"Never"], ["10000":"10 Seconds"], ["30000":"30 seconds"], ["60000":"1 Minute"], ["120000":"2 Minutes"], ["180000":"3 Minutes"], ["240000":"4 Minutes"], ["300000":"5 Minutes"], ["600000":"10 Minutes"],
+	List<Map<String,String>> lOpts= [["0":"Never"], ["10000":"10 Seconds"], ["30000":"30 seconds"], ["60000":"1 Minute"], ["120000":"2 Minutes"], ["180000":"3 Minutes"], ["240000":"4 Minutes"], ["300000":"5 Minutes"], ["600000":"10 Minutes"],
 			 ["1200000":"20 Minutes"], ["1800000":"30 Minutes"], ["3600000":"1 Hour"], ["6400000":"2 Hours"], ["9600000":"3 Hours"], ["13200000":"4 Hours"], ["16800000":"5 Hours"], ["20400000":"6 Hours"]]
 
 	dynamicPage(name: "graphSetupPage"){
-		List container
+		List<String> container
 		hubiForm_section("General Options", 1, "directions", sBLK){
 			inputGraphUpdateRate()
-			input( (sTYPE): sENUM, (sNM): "graph_timespan",(sTIT): "<b>Select Time span to Graph</b>", multiple: false, required: false, options: timespanEnum, defaultValue: "43200000")
-			input( (sTYPE): sENUM, (sNM): "graph_combine_rate",(sTIT): "<b>Combine events with events less than ? apart</b>", multiple: false, required: false, options: lOpts, defaultValue: s0)
+			input( (sTYPE): sENUM, (sNM): "graph_timespan",(sTIT): "<b>Select Time span to Graph</b>", (sMULTP): false, (sREQ): false, options: timespanEnum, (sDEFV): "43200000")
+			input( (sTYPE): sENUM, (sNM): "graph_combine_rate",(sTIT): "<b>Combine events with events less than ? apart</b>", (sMULTP): false, (sREQ): false, options: lOpts, (sDEFV): s0)
 
 			container=[]
-			container << hubiForm_color ("Background", "graph_background", "#FFFFFF", false)
+			container << hubiForm_color ("Background", "graph_background", sWHT, false)
 
 		}
 		hubiForm_section("Graph Size", 1, sBLK, sBLK){
 			container=[]
-			input( (sTYPE): sBOOL, (sNM): "graph_static_size",(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", defaultValue: false, submitOnChange: true)
-			if((Boolean)settings.graph_static_size){
-				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", default: 800, min: 100, max: 3000, units: " pixels", submit_on_change: false)
-				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", default: 600, min: 100, max: 3000, units: " pixels", submit_on_change: false)
+			input( (sTYPE): sBOOL, (sNM): "graph_static_size",(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sDEFV): false, (sSUBOC): true)
+			if(gtSetB('graph_static_size')){
+				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): 800, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels", (sSUBONCHG): false)
+				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): 600, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels", (sSUBONCHG): false)
 			}
 
 			hubiForm_container(container, 1)
 		}
 		hubiForm_section("Device Name Display", 1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_color ("Device Text", "graph_axis", "#FFFFFF", false)
-			container << hubiForm_font_size ((sTIT): "Device", (sNM): "graph_axis", default: 9, min: 2, max: 20)
+			container << hubiForm_color ("Device Text", "graph_axis", sWHT, false)
+			container << hubiForm_font_size ((sTIT): "Device", (sNM): "graph_axis", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
 			hubiForm_container(container, 1)
 		}
 	}
@@ -3119,7 +3164,7 @@ String getData_timeline(){
 
 	Long graph_time
 	use (TimeCategory){
-		Double val=Double.parseDouble("${graph_timespan}")/1000.0
+		Double val=Double.parseDouble(gtSetStr('graph_timespan'))/1000.0
 		then -= (val.toInteger()).seconds
 		graph_time=then.getTime()
 	}
@@ -3131,7 +3176,7 @@ String getData_timeline(){
 
 			String sid=sMs(ent,sID)
 			String attribute=sMs(ent,sA)
-			//String typ=((String)ent[sT]).capitalize()
+			//String typ=sMs(ent,sT).capitalize()
 
 			resp[sid]= resp[sid] ?: [:]
 
@@ -3158,27 +3203,27 @@ Map getOptions_timeline(){
 
 	if(isEric())myDetail null,"getChartOptions_timeline",i1
 	List colors=[]
-	List<Map> order=hubiTools_get_order(graph_order)
+	List<Map> order=hubiTools_get_order(gtSetStr('graph_order'))
 	for(Map device in order){
 		//String sa="${sid}_${attribute}".toString()
 		String attrib_string="attribute_${device[sID]}_${device[sATTR]}_line_color"
 		String transparent_attrib_string="attribute_${device[sID]}_${device[sATTR]}_line_color_transparent"
-		colors << (settings[transparent_attrib_string] ? "transparent" : settings[attrib_string])
+		colors << (gtSetB(transparent_attrib_string) ? sTRANSPRNT : settings[attrib_string])
 	}
 
 	Map options=[
-		"graphTimespan": Integer.parseInt(graph_timespan),
-		"graphUpdateRate": Integer.parseInt(graph_update_rate),
-		"graphCombine_msecs": Integer.parseInt(graph_combine_rate),
+		"graphTimespan": Integer.parseInt(gtSetStr('graph_timespan')),
+		"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
+		"graphCombine_msecs": Integer.parseInt(gtSetStr('graph_combine_rate')),
 		"graphOptions": [
-			"width": graph_static_size ? graph_h_size : "100%",
-			"height": graph_static_size ? graph_v_size: "100%",
+			"width": gtSetB('graph_static_size') ? graph_h_size : "100%",
+			"height": gtSetB('graph_static_size') ? graph_v_size: "100%",
 			"timeline": [
-				"rowLabelStyle": ["fontSize": graph_axis_font, "color": graph_axis_color_transparent ? "transparent" : graph_axis_color],
+				"rowLabelStyle": ["fontSize": graph_axis_font, "color": gtSetB('graph_axis_color_transparent') ? sTRANSPRNT : graph_axis_color],
 				"barLabelStyle": ["fontSize": graph_axis_font],
 			],
 			"haxis" : [ "text": ["fontSize": "24px"]],
-			"backgroundColor": graph_background_color_transparent ? "transparent" : graph_background_color,
+			"backgroundColor": gtSetB('graph_background_color_transparent') ? sTRANSPRNT : gtSetStr('graph_background_color'),
 			"colors" : colors
 		],
 	]
@@ -3684,7 +3729,7 @@ Map getSubscriptions_timeline(){
 
 	Map sensors_fmt=gtSensorFmt(true)
 
-	List order=graph_order ? parseJson(graph_order) : []
+	List order=gtSetStr('graph_order') ? parseJson(gtSetStr('graph_order')) : []
 
 	Map subscriptions=[
 			(sID): isPoll ? 'poll' : 'sensor',
@@ -3723,7 +3768,7 @@ def attributeTimegraph(){
 
 def graphTimegraph(){
 
-	List<Map> timespanEnum2=[
+	List<Map<String,String>> timespanEnum2=[
 			["10":"10 Milliseconds"], ["1000":"1 Second"], ["5000":"5 Seconds"], ["30000":"30 Seconds"],
 			["60000":"1 Minute"], ["120000":"2 Minutes"], ["300000":"5 Minutes"], ["600000":"10 Minutes"],
 			["2400000":"30 minutes"], ["3600000":"1 Hour"], ["43200000":"12 Hours"],
@@ -3732,18 +3777,18 @@ def graphTimegraph(){
 
 	dynamicPage(name: "graphSetupPage"){
 
-		List container
+		List<String> container
 		container=[]
 
 		hubiForm_section("General Options", 1, sBLK, sBLK){
 
-			//input( (sTYPE): sENUM, (sNM): "graph_timespan",(sTIT): "<b>Select Time span to Graph</b>", multiple: false, required: true, options: timespanEnum, defaultValue: "43200000")
-			input( (sTYPE): sENUM, (sNM): "graph_point_span",(sTIT): "<b>Integration Time</b><br><small>(The amount of time each data point covers)</small>",
-					multiple: false, required: true, options: timespanEnum2, defaultValue: "300000", submitOnChange: true)
+			//input( (sTYPE): sENUM, (sNM): "graph_timespan",(sTIT): "<b>Select Time span to Graph</b>", (sMULTP): false, (sREQ): true, options: timespanEnum, (sDEFV): "43200000")
+			input( (sTYPE): sENUM, (sNM): 'graph_point_span',(sTIT): "<b>Integration Time</b><br><small>(The amount of time each data point covers)</small>",
+					(sMULTP): false, (sREQ): true, options: timespanEnum2, (sDEFV): "300000", (sSUBOC): true)
 
 			inputGraphUpdateRate()
-			input( (sTYPE): sENUM, (sNM): "graph_refresh_rate",(sTIT): "<b>Graph Update Rate</b></br><small>(For panel viewing; the refresh rate of the graph)</small>",
-					multiple: false, required: true, options: rateEnum, defaultValue: "300000")
+			input( (sTYPE): sENUM, (sNM): 'graph_refresh_rate',(sTIT): "<b>Graph Update Rate</b></br><small>(For panel viewing; the refresh rate of the graph)</small>",
+					(sMULTP): false, (sREQ): true, options: rateEnum, (sDEFV): "300000")
 
 			container=[]
 
@@ -3761,16 +3806,16 @@ def graphTimegraph(){
 			}
 
 			container << hubiForm_slider ((sTIT): "<b>Weeks</b>", (sNM): "graph_timespan_weeks",
-					default: 0, min: 0, max: 104, units: " weeks", submit_on_change: true)
+					(sDEFLT): 0, (sMIN): 0, (sMAX): 104, (sUNITS): " weeks", (sSUBONCHG): true)
 
 			container << hubiForm_slider ((sTIT): "<b>Days</b>", (sNM): "graph_timespan_days",
-					default: 0, min: 0, max: 30, units: " days", submit_on_change: true)
+					(sDEFLT): 0, (sMIN): 0, (sMAX): 30, (sUNITS): " days", (sSUBONCHG): true)
 
 			container << hubiForm_slider ((sTIT): "<b>Hours</b>", (sNM): "graph_timespan_hours",
-					default: 0, min: 0, max: 24, units: " hours", submit_on_change: true)
+					(sDEFLT): 0, (sMIN): 0, (sMAX): 24, (sUNITS): " hours", (sSUBONCHG): true)
 
 			container << hubiForm_slider ((sTIT): "<b>Minutes</b>", (sNM): "graph_timespan_minutes",
-					default: 0, min: 0, max: 60, units: " seconds", submit_on_change: true)
+					(sDEFLT): 0, (sMIN): 0, (sMAX): 60, (sUNITS): " seconds", (sSUBONCHG): true)
 
 			Long msecs
 			if(graph_timespan_weeks==null){
@@ -3785,7 +3830,7 @@ def graphTimegraph(){
 			app.updateSetting("graph_timespan", [(sTYPE): "number", (sVAL): msecs])
 			settings["graph_timespan"]=msecs
 
-			Integer points=graph_point_span ? (msecs/Double.parseDouble((String)graph_point_span)).toInteger() : 280
+			Integer points=gtSetStr('graph_point_span') ? (msecs/Double.parseDouble(gtSetStr('graph_point_span'))).toInteger() : 280
 
 			if(points > 2000){
 				container << hubiForm_text ("""<span style="color: red; font-weight: bold;">WARNING:</span> <b>${(points)} Points </b>will be generated per Attribute per Graph<br><small>Too many points will cause webCoRE graphs to hang or take a long time to generate</small>""")
@@ -3795,10 +3840,10 @@ def graphTimegraph(){
 
 			container << hubiForm_sub_section("Other Options")
 
-			container << hubiForm_color ("Graph Background",	"graph_background", "#FFFFFF", false)
-			container << hubiForm_switch([(sTIT): "<b>Smooth Graph Points</b><br><small>(Enable Google Graph Smoothing)</small>", (sNM): "graph_smoothing", default: false])
-			container << hubiForm_switch([(sTIT): "<b>Flip Graph to Vertical?</b><br><small>(Rotate 90 degrees)</small>", (sNM): "graph_y_orientation", default: false])
-			container << hubiForm_switch([(sTIT): "<b>Reverse Data Order?</b><br><small> (Flip data left to Right)</small>", (sNM): "graph_z_orientation", default: false])
+			container << hubiForm_color ("Graph Background",	"graph_background", sWHT, false)
+			container << hubiForm_switch([(sTIT): "<b>Smooth Graph Points</b><br><small>(Enable Google Graph Smoothing)</small>", (sNM): "graph_smoothing", (sDEFLT): false])
+			container << hubiForm_switch([(sTIT): "<b>Flip Graph to Vertical?</b><br><small>(Rotate 90 degrees)</small>", (sNM): "graph_y_orientation", (sDEFLT): false])
+			container << hubiForm_switch([(sTIT): "<b>Reverse Data Order?</b><br><small> (Flip data left to Right)</small>", (sNM): "graph_z_orientation", (sDEFLT): false])
 
 			hubiForm_container(container, 1)
 
@@ -3806,12 +3851,12 @@ def graphTimegraph(){
 
 		hubiForm_section("Graph Title", 1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_switch([(sTIT): "<b>Show Title on Graph</b>", (sNM): "graph_show_title", default: false, submit_on_change: true])
-			if(graph_show_title==true){
-				container << hubiForm_text_input ("<b>Graph Title</b>", "graph_title", "Graph Title", false)
-				container << hubiForm_font_size ((sTIT): "Title", (sNM): "graph_title", default: 9, min: 2, max: 20)
-				container << hubiForm_color	("Title", "graph_title", "#000000", false)
-				container << hubiForm_switch	([(sTIT): "Graph Title Inside Graph?", (sNM): "graph_title_inside", default: false])
+			container << hubiForm_switch([(sTIT): "<b>Show Title on Graph</b>", (sNM): 'graph_show_title', (sDEFLT): false, (sSUBONCHG): true])
+			if(gtSetB('graph_show_title')){
+				container << hubiForm_text_input("<b>Graph Title</b>", "graph_title", "Graph Title", false)
+				container << hubiForm_font_size((sTIT): "Title", (sNM): "graph_title", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
+				container << hubiForm_color("Title", "graph_title", sBLACK, false)
+				container << hubiForm_switch	([(sTIT): "Graph Title Inside Graph?", (sNM): 'graph_title_inside', (sDEFLT): false])
 			}
 			hubiForm_container(container, 1)
 		}
@@ -3820,23 +3865,23 @@ def graphTimegraph(){
 			container=[]
 
 			container << hubiForm_switch	([(sTIT): "<b>Set Fill % of Graph?</b><br><small>(False=Default (80%) Fill)</small>",
-											  (sNM): "graph_percent_fill", default: false, submit_on_change: true])
-			if(graph_percent_fill==true){
+											  (sNM): "graph_percent_fill", (sDEFLT): false, (sSUBONCHG): true])
+			if(gtSetB('graph_percent_fill')){
 
 				container << hubiForm_slider ((sTIT): "Horizontal fill % of the graph", (sNM): "graph_h_fill",
-						default: 80, min: 1, max: 100, units: "%", submit_on_change: false)
+						(sDEFLT): 80, (sMIN): 1, (sMAX): 100, (sUNITS): "%", (sSUBONCHG): false)
 				container << hubiForm_slider ((sTIT): "Vertical fill % of the graph", (sNM): "graph_v_fill",
-						default: 80, min: 1, max: 100, units: "%", submit_on_change: false)
+						(sDEFLT): 80, (sMIN): 1, (sMAX): 100, (sUNITS): "%", (sSUBONCHG): false)
 
 			}
 			container << hubiForm_switch	([(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>",
-											  (sNM): "graph_static_size", default: false, submit_on_change: true])
-			if(graph_static_size==true){
+											  (sNM): "graph_static_size", (sDEFLT): false, (sSUBONCHG): true])
+			if(gtSetB('graph_static_size')){
 
 				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size",
-						default: 800, min: 100, max: 3000, units: " pixels", submit_on_change: false)
+						(sDEFLT): 800, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels", (sSUBONCHG): false)
 				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size",
-						default: 600, min: 100, max: 3000, units: " pixels", submit_on_change: false)
+						(sDEFLT): 600, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels", (sSUBONCHG): false)
 			}
 
 			hubiForm_container(container, 1)
@@ -3845,10 +3890,10 @@ def graphTimegraph(){
 		hubiForm_section("Horizontal Axis", 1, sBLK, sBLK){
 			//Axis
 			container=[]
-			container << hubiForm_font_size ((sTIT): "Horizontal Axis", (sNM): "graph_haxis", default: 9, min: 2, max: 20)
-			container << hubiForm_color	("Horizontal Header", "graph_hh", "#C0C0C0", false)
-			container << hubiForm_color	("Horizontal Axis", "graph_ha", "#C0C0C0", false)
-			container << hubiForm_text_input ("<b>Num Horizontal Gridlines</b><small> (Blank for auto)</small>", "graph_h_num_grid", sBLK, false)
+			container << hubiForm_font_size((sTIT): "Horizontal Axis", (sNM): "graph_haxis", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
+			container << hubiForm_color("Horizontal Header", "graph_hh", sSILVER, false)
+			container << hubiForm_color("Horizontal Axis", "graph_ha", sSILVER, false)
+			container << hubiForm_text_input("<b>Num Horizontal Gridlines</b><small> (Blank for auto)</small>", "graph_h_num_grid", sBLK, false)
 
 			container+=  hubiForm_help()
 			hubiForm_container(container, 1)
@@ -3857,42 +3902,42 @@ def graphTimegraph(){
 		//Vertical Axis
 		hubiForm_section("Vertical Axis", 1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_font_size ((sTIT): "Vertical Axis", (sNM): "graph_vaxis", default: 9, min: 2, max: 20)
-			container << hubiForm_color ("Vertical Header", "graph_vh", "#000000", false)
-			container << hubiForm_color ("Vertical Axis", "graph_va", "#C0C0C0", false)
+			container << hubiForm_font_size ((sTIT): "Vertical Axis", (sNM): "graph_vaxis", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
+			container << hubiForm_color ("Vertical Header", "graph_vh", sBLACK, false)
+			container << hubiForm_color ("Vertical Axis", "graph_va", sSILVER, false)
 			hubiForm_container(container, 1)
 		}
 
 		//Left Axis
-		List formatEnum=[["": "No Formatting ::: 12345"], ["decimal":"Decimal ::: 12,345"], ["short": "Short ::: 12K"], ["scientific": "Scientific ::: 1e5"], ["percent": "Percent ::: 1234500%"], ["long": "Long ::: 12 Thousand"]]
+		List<Map<String,String>> formatEnum=[["": "No Formatting ::: 12345"], ["decimal":"Decimal ::: 12,345"], ["short": "Short ::: 12K"], ["scientific": "Scientific ::: 1e5"], ["percent": "Percent ::: 1234500%"], ["long": "Long ::: 12 Thousand"]]
 
 		hubiForm_section("Left Axis", 1, "arrow_back", sBLK){
-			input( (sTYPE): sENUM, (sNM): "graph_vaxis_1_format",(sTIT): "<b>Number Format</b>", multiple: false, required: true, options: formatEnum, defaultValue: sBLK)
+			input( (sTYPE): sENUM, (sNM): "graph_vaxis_1_format",(sTIT): "<b>Number Format</b>", (sMULTP): false, (sREQ): true, options: formatEnum, (sDEFV): sBLK)
 			container=[]
 			container << hubiForm_text_input("<b>Minimum for left axis</b><small> (Blank for auto)</small>", "graph_vaxis_1_min", sBLK, false)
 			container << hubiForm_text_input("<b>Maximum for left axis</b><small> (Blank for auto)</small>", "graph_vaxis_1_max", sBLK, false)
 			container << hubiForm_text_input("<b>Num Vertical Gridlines</b><small> (Blank for auto)</small>", "graph_vaxis_1_num_lines", sBLK, false)
-			container << hubiForm_switch	([(sTIT): "<b>Show Left Axis Label on Graph</b>", (sNM): "graph_show_left_label", default: false, submit_on_change: true])
-			if(graph_show_left_label==true){
-				container << hubiForm_text_input ("<b>Input Left Axis Label</b>", "graph_left_label", "Left Axis Label", false)
-				container << hubiForm_font_size ((sTIT): "Left Axis", (sNM): "graph_left", default: 9, min: 2, max: 20)
-				container << hubiForm_color	("Left Axis", "graph_left", "#FFFFFF", false)
+			container << hubiForm_switch	([(sTIT): "<b>Show Left Axis Label on Graph</b>", (sNM): "graph_show_left_label", (sDEFLT): false, (sSUBONCHG): true])
+			if(gtSetB('graph_show_left_label')){
+				container << hubiForm_text_input("<b>Input Left Axis Label</b>", "graph_left_label", "Left Axis Label", false)
+				container << hubiForm_font_size((sTIT): "Left Axis", (sNM): "graph_left", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
+				container << hubiForm_color("Left Axis", "graph_left", sWHT, false)
 			}
 			hubiForm_container(container, 1)
 		}
 
 		//Right Axis
 		hubiForm_section("Right Axis", 1, "arrow_forward", sBLK){
-			input( (sTYPE): sENUM, (sNM): "graph_vaxis_2_format",(sTIT): "<b>Number Format</b>", multiple: false, required: true, options: formatEnum, defaultValue: sBLK)
+			input( (sTYPE): sENUM, (sNM): "graph_vaxis_2_format",(sTIT): "<b>Number Format</b>", (sMULTP): false, (sREQ): true, options: formatEnum, (sDEFV): sBLK)
 			container=[]
 			container << hubiForm_text_input("<b>Minimum for right axis</b><small> (Blank for auto)</small>", "graph_vaxis_2_min", sBLK, false)
 			container << hubiForm_text_input("<b>Maximum for right axis</b><small> (Blank for auto)</small>", "graph_vaxis_2_max", sBLK, false)
 			container << hubiForm_text_input("<b>Num Vertical Gridlines</b><small> (Blank for auto)</small>", "graph_vaxis_2_num_lines", sBLK, false)
-			container << hubiForm_switch	([(sTIT): "<b>Show Right Axis Label on Graph</b>", (sNM): "graph_show_right_label", default: false, submit_on_change: true])
-			if(graph_show_right_label==true){
+			container << hubiForm_switch	([(sTIT): "<b>Show Right Axis Label on Graph</b>", (sNM): "graph_show_right_label", (sDEFLT): false, (sSUBONCHG): true])
+			if(gtSetB('graph_show_right_label')){
 				container << hubiForm_text_input("<b>Input right Axis Label</b>", "graph_right_label", "Right Axis Label", false)
-				container << hubiForm_font_size ((sTIT): "Right Axis", (sNM): "graph_right", default: 9, min: 2, max: 20)
-				container << hubiForm_color	("Right Axis", "graph_right", "#FFFFFF", false)
+				container << hubiForm_font_size ((sTIT): "Right Axis", (sNM): "graph_right", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
+				container << hubiForm_color	("Right Axis", "graph_right", sWHT, false)
 			}
 			hubiForm_container(container, 1)
 		}
@@ -3902,13 +3947,13 @@ def graphTimegraph(){
 			container=[]
 			List<Map> legendPosition=[["top": "Top"], ["bottom":"Bottom"], ["in": "Inside Top"]]
 			List<Map> insidePosition=[["start": "Left"], ["center": "Center"], ["end": "Right"]]
-			container << hubiForm_switch([(sTIT): "<b>Show Legend on Graph</b>", (sNM): "graph_show_legend", default: false, submit_on_change: true])
-			if(graph_show_legend==true){
-				container << hubiForm_font_size ((sTIT): "Legend", (sNM): "graph_legend", default: 9, min: 2, max: 20)
-				container << hubiForm_color	("Legend", "graph_legend", "#000000", false)
+			container << hubiForm_switch([(sTIT): "<b>Show Legend on Graph</b>", (sNM): "graph_show_legend", (sDEFLT): false, (sSUBONCHG): true])
+			if(gtSetB('graph_show_legend')){
+				container << hubiForm_font_size ((sTIT): "Legend", (sNM): "graph_legend", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
+				container << hubiForm_color	("Legend", "graph_legend", sBLACK, false)
 				hubiForm_container(container, 1)
-				input( (sTYPE): sENUM, (sNM): "graph_legend_position",(sTIT): "<b>Legend Position</b>", defaultValue: "Bottom", options: legendPosition)
-				input( (sTYPE): sENUM, (sNM): "graph_legend_inside_position",(sTIT): "<b>Legend Justification</b>", defaultValue: "center", options: insidePosition)
+				input( (sTYPE): sENUM, (sNM): "graph_legend_position",(sTIT): "<b>Legend Position</b>", (sDEFV): "bottom", options: legendPosition)
+				input( (sTYPE): sENUM, (sNM): "graph_legend_inside_position",(sTIT): "<b>Legend Justification</b>", (sDEFV): sCENTER, options: insidePosition)
 			}else{
 				hubiForm_container(container, 1)
 			}
@@ -3917,38 +3962,38 @@ def graphTimegraph(){
 
 		hubiForm_section("Current Value Overlay", 1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_switch	([(sTIT): "<b>Show Current Values on Graph?</b>", (sNM): "show_overlay", default: false, submit_on_change: true])
-			if(show_overlay == true){
-				container << hubiForm_color	("Background", "overlay_background", "#000000", false)
+			container << hubiForm_switch	([(sTIT): "<b>Show Current Values on Graph?</b>", (sNM): 'show_overlay', (sDEFLT): false, (sSUBONCHG): true])
+			if(gtSetB('show_overlay')){
+				container << hubiForm_color	("Background", "overlay_background", sBLACK, false)
 				container << hubiForm_slider	((sTIT): "Background Opacity",
 						(sNM): "overlay_background_opacity",
-						default: 90,
-						min: 0,
-						max: 100,
-						units: "%",
-						submit_on_change: false)
-				container << hubiForm_font_size ((sTIT): "Device", (sNM): "overlay", default: 12, min: 2, max: 40)
-				container << hubiForm_color	("Device Text", "overlay_text", "#FFFFFF", false)
+						(sDEFLT): 90,
+						(sMIN): 0,
+						(sMAX): 100,
+						(sUNITS): "%",
+						(sSUBONCHG): false)
+				container << hubiForm_font_size ((sTIT): "Device", (sNM): 'overlay', (sDEFLT): 12, (sMIN): 2, (sMAX): 40)
+				container << hubiForm_color	("Device Text", 'overlay_text', sWHT, false)
 
 				List<String> horizontalAlignmentEnum=["Left", "Middle", "Right"]
 				container << hubiForm_enum ((sTIT):	"Horizontal Placement",
 						(sNM):	"overlay_horizontal_placement",
 						list:	horizontalAlignmentEnum,
-						default: "Right")
+						(sDEFLT): "Right")
 
 				List<String> verticalAlignmentEnum=["Top", "Middle", "Bottom"]
 				container << hubiForm_enum ((sTIT):	"Vertical Placement",
 						(sNM):	"overlay_vertical_placement",
 						list:	verticalAlignmentEnum,
-						default: "Top")
+						(sDEFLT): "Top")
 
 			}else{
-				if(settings['overlay_background_color']!='#000000' || settings['overlay_background_opacity']!=90){
-					app.updateSetting("overlay_background_color", [(sTYPE):'color', (sVAL):"#000000"])
-					app.updateSetting("overlay_background_color_transparent", [(sTYPE):'bool', (sVAL):'false'])
+				if(gtSetStr('overlay_background_color')!='#000000' || settings['overlay_background_opacity']!=90){
+					app.updateSetting('overlay_background_color', [(sTYPE):'color', (sVAL):sBLACK])
+					app.updateSetting('overlay_background_color_transparent', [(sTYPE):'bool', (sVAL):'false'])
 					app.updateSetting("overlay_background_opacity", [(sTYPE):'number',(sVAL):90])
 					app.updateSetting("overlay_background_font", [(sTYPE):'number',(sVAL): 12])
-					app.updateSetting("overlay_text_color", [(sTYPE):'color', (sVAL):"#FFFFFF"])
+					app.updateSetting("overlay_text_color", [(sTYPE):'color', (sVAL):sWHT])
 					app.updateSetting("overlay_text_color_transparent", [(sTYPE):'bool', (sVAL):'false'])
 					app.updateSetting("overlay_horizontal_placement", [(sTYPE):sENUM,(sVAL):"Right"])
 					app.updateSetting("overlay_vertical_placement", [(sTYPE):sENUM,(sVAL):"Top"])
@@ -3958,7 +4003,7 @@ def graphTimegraph(){
 			container << hubiForm_sub_section("Display Order")
 			hubiForm_container(container, 1)
 			container=[]
-			hubiForm_list_reorder("overlay_order", "background")
+			hubiForm_list_reorder('overlay_order', sBACKGRND)
 			//hubiForm_container(container, 1)
 		}
 
@@ -3985,7 +4030,7 @@ def graphTimegraph(){
 				String sid=sMs(ent,sID)
 				String attribute=sMs(ent,sA)
 
-				switch ((String)settings["graph_type_${sid}_${attribute}"]){
+				switch (gtSetStr("graph_type_${sid}_${attribute}")){
 					//list:["Line", "Area", "Scatter", "Bar", "Stepped"],
 					case "Bar"	: show_title=true; show_bar=true; break
 				}
@@ -3996,12 +4041,12 @@ def graphTimegraph(){
 				container=[]
 
 				container << hubiForm_slider ((sTIT): "Bar Graphs:: Relative Width for Bars",
-						(sNM): "graph_bar_width",
-						default: 90,
-						min: 0,
-						max: 100,
-						units: "%",
-						submit_on_change: false)
+						(sNM): 'graph_bar_width',
+						(sDEFLT): 90,
+						(sMIN): 0,
+						(sMAX): 100,
+						(sUNITS): "%",
+						(sSUBONCHG): false)
 				hubiForm_container(container, 1)
 			}
 		}else
@@ -4015,13 +4060,13 @@ def graphTimegraph(){
 				String rid=ent.rid.toString()
 				String attribute=sMs(ent,sA)
 				String dn=sMs(ent,sDISPNM)
-				String typ=((String) ent[sT]).capitalize()
+				String typ=sMs(ent,sT).capitalize()
 				String hint= typ=='Fuel' ? " (Canister ${ent.c} Name ${ent.n})" : sBLK
 				String sa= "${sid}_${attribute}".toString()
 
 				String asasn= "attribute_${sa}_states"
 
-				hubiForm_section("${sLblTyp(ent[sT])}${dn} - ${attribute}${hint}", 1, "direction",sid+attribute){
+				hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}${hint}", 1, "direction",sid+attribute){
 
 					container=[]
 
@@ -4030,28 +4075,28 @@ def graphTimegraph(){
 					container << hubiForm_enum ((sTIT):			"Plot Type",
 							(sNM):			"graph_type_${sa}".toString(),
 							list:			["Line", "Area", "Scatter", "Bar", "Stepped"],
-							default:		"Line",
-							submit_on_change: true)
+							(sDEFLT):		"Line",
+							(sSUBONCHG): true)
 					// TODO submit_on_change was commented out....
 
 					container << hubiForm_enum ((sTIT):			"Time Integration Function",
 							(sNM):			"var_${sa}_function".toString(),
 							list:			["Average", "Min", "Max", "Mid", "Sum"],
-							default:		"Average")
+							(sDEFLT):		"Average")
 
 					container << hubiForm_enum ((sTIT):			"Axis Side",
 							(sNM):			"graph_axis_number_${sa}".toString(),
 							list:			["Left", "Right"],
-							default:		"Left")
+							(sDEFLT):		"Left")
 
 					String colorText,fillText
-					colorText=""
+					colorText=sBLK
 					fillText="Fill"
-					String graphType=sMs(settings,"graph_type_${sa}")
+					String graphType=gtSetStr("graph_type_${sa}")
 					switch (graphType){
 						case "Line":
 							colorText="Line"
-							fillText=""
+							fillText=sBLK
 							break
 						case "Area":
 							colorText="Area Line"
@@ -4066,7 +4111,7 @@ def graphTimegraph(){
 							colorText="Line"
 							break
 						default:
-							fillText=""
+							fillText=sBLK
 					}
 
 					container << hubiForm_sub_section(colorText+" Options")
@@ -4078,15 +4123,15 @@ def graphTimegraph(){
 
 					container << hubiForm_slider ((sTIT): colorText+" Opacity",
 							(sNM): "var_${sa}_stroke_opacity",
-							default: 90,
-							min: 0,
-							max: 100,
-							units: "%",
-							submit_on_change: false)
+							(sDEFLT): 90,
+							(sMIN): 0,
+							(sMAX): 100,
+							(sUNITS): "%",
+							(sSUBONCHG): false)
 
 					container << hubiForm_line_size ((sTIT): colorText,
 							(sNM): "var_${sa}_stroke",
-							default: 2, min: 1, max: 20)
+							(sDEFLT): 2, (sMIN): 1, (sMAX): 20)
 
 					if(graphType in ["Bar","Area","Stepped"]){
 
@@ -4099,18 +4144,18 @@ def graphTimegraph(){
 
 						container << hubiForm_slider ((sTIT): fillText+" Opacity",
 								(sNM): "var_${sa}_fill_opacity",
-								default: 90,
-								min: 0,
-								max: 100,
-								units: "%",
-								submit_on_change: false)
+								(sDEFLT): 90,
+								(sMIN): 0,
+								(sMAX): 100,
+								(sUNITS): "%",
+								(sSUBONCHG): false)
 					}
 					if(graphType in ["Scatter","Line","Area"]){
 
 						container << hubiForm_sub_section("Data Points")
 
 						if(graphType in ["Line","Area"]){
-							container << hubiForm_switch([(sTIT): "<b>Display Data Points on Line?</b>", (sNM): "var_${sa}_line_plot_points", default: false, submit_on_change: true])
+							container << hubiForm_switch([(sTIT): "<b>Display Data Points on Line?</b>", (sNM): "var_${sa}_line_plot_points", (sDEFLT): false, (sSUBONCHG): true])
 						}
 
 						if(settings["var_${sa}_line_plot_points"] || graphType == "Scatter"){
@@ -4119,15 +4164,15 @@ def graphTimegraph(){
 									(sTIT): "Point Type",
 									(sNM): "var_${sa}_point_type".toString(),
 									list: [ "Circle", "Triangle", "Square", "Diamond", "Star", "Polygon"],
-									default: "Circle")
+									(sDEFLT): "Circle")
 
 							container << hubiForm_slider ((sTIT): "Point Size",
 									(sNM): "var_${sa}_point_size".toString(),
-									default: 5,
-									min: 0,
-									max: 60,
-									units: " points",
-									submit_on_change: false)
+									(sDEFLT): 5,
+									(sMIN): 0,
+									(sMAX): 60,
+									(sUNITS): " points",
+									(sSUBONCHG): false)
 							if(graphType == "Area"){
 								container << hubiForm_text ("<b>*Note, Area Plots use the same fill setting for Points and Area (Above)")
 							}else{
@@ -4138,11 +4183,11 @@ def graphTimegraph(){
 
 								container << hubiForm_slider ((sTIT): "Point Fill Opacity",
 										(sNM): "var_${sa}_fill_opacity",
-										default: 90,
-										min: 0,
-										max: 100,
-										units: "%",
-										submit_on_change: false)
+										(sDEFLT): 90,
+										(sMIN): 0,
+										(sMAX): 100,
+										(sUNITS): "%",
+										(sSUBONCHG): false)
 							}
 						}else{
 							app.updateSetting ("var_${sa}_point_size", 0)
@@ -4172,7 +4217,7 @@ def graphTimegraph(){
 							Boolean multiple=true
 							String varn=multiple ? 'sensors' : 'sensor_' // have to get devices from settings
 							def a=gtSetting(varn)
-							List devs = multiple ? a : [a]
+							List devs = multiple ? (List)a : [a]
 							if(devs.size()){
 								sensor=devs.find{ it.id == rid }
 								List sas= (List)sensor.getSupportedAttributes()
@@ -4195,7 +4240,7 @@ def graphTimegraph(){
 						for(String value in possible_values){
 							container << hubiForm_text_input("Value for <mark>$value</mark>",
 									"attribute_${sa}_${value}",
-									"100",
+									s100,
 									false)
 						}
 						app.updateSetting (asasn, possible_values)
@@ -4206,13 +4251,13 @@ def graphTimegraph(){
 						Boolean cs
 						cs= settings[csn]
 						container << hubiForm_sub_section("""Custom State Values for "$attribute" """ )
-						if(cs == null){
-							app.updateSetting(csn, [(sTYPE): sBOOL, (sVAL): "false"])
-						}
+						if(cs == null)
+							app.updateSetting(csn, [(sTYPE): sBOOL, (sVAL): sFALSE])
+
 						container << hubiForm_switch([(sTIT): "<b>Set Custom State Values?</b><br><small>(For custom drivers w/ non-numeric values)</small>",
 													  (sNM): csn,
-													  default: false,
-													  submit_on_change: true])
+													  (sDEFLT): false,
+													  (sSUBONCHG): true])
 
 						cs= settings[csn]
 						if(cs){
@@ -4275,32 +4320,31 @@ def graphTimegraph(){
 					}
 
 					//Line and Area Graphs can be "Drop-line"
-					if((graphType in ["Line","Area","Stepped"]) && !enumType && settings["attribute_${sa}_custom_states"] == false){
+					if((graphType in ["Line","Area","Stepped"]) && !enumType && gtSetB("attribute_${sa}_custom_states") == false){
 
 						container << hubiForm_sub_section("Handle Missing Values")
 
-						container << hubiForm_switch([(sTIT): "<b>Display Missing Data as a Drop Line?</b>", (sNM): "attribute_${sa}_drop_line", default: false, submit_on_change: true])
+						container << hubiForm_switch([(sTIT): "<b>Display Missing Data as a Drop Line?</b>", (sNM): "attribute_${sa}_drop_line", (sDEFLT): false, (sSUBONCHG): true])
 
-						if(settings["attribute_${sa}_drop_line"]==true){
-
+						if(gtSetB("attribute_${sa}_drop_line")){
 							container << hubiForm_text_input("<b>Value of Missing Data</b>",
 									"attribute_${sa}_drop_value",
 									s0, false)
 						}
 
 						container << hubiForm_switch([(sTIT): "<b>Extend Left Value?</b><br><small>When values are unavailable, extend value to left</small>",
-													  (sNM): "attribute_${sa}_extend_left", default: false, submit_on_change: false])
+													  (sNM): "attribute_${sa}_extend_left", (sDEFLT): false, (sSUBONCHG): false])
 
 						container << hubiForm_switch([(sTIT): "<b>Extend Right Value?</b><br><small>When values are unavailable, extend value to right</small>",
-													  (sNM): "attribute_${sa}_extend_right", default: false, submit_on_change: false])
+													  (sNM): "attribute_${sa}_extend_right", (sDEFLT): false, (sSUBONCHG): false])
 
 					}
 
 					container << hubiForm_sub_section("Restrict Displayed Values")
 
-					container << hubiForm_switch([(sTIT): "<b>Restrict Displaying Bad Values?</b>", (sNM): "attribute_${sa}_bad_value", default: false, submit_on_change: true])
+					container << hubiForm_switch([(sTIT): "<b>Restrict Displaying Bad Values?</b>", (sNM): "attribute_${sa}_bad_value", (sDEFLT): false, (sSUBONCHG): true])
 
-					if(settings["attribute_${sa}_bad_value"]==true){
+					if(gtSetB("attribute_${sa}_bad_value")){
 
 						container << hubiForm_text_input("<b>Min Value to Exclude</b><br><small>If the recorded sensor value is <b>below</b> this value it will be dropped</small>",
 								"attribute_${sa}_min_value",
@@ -4308,7 +4352,7 @@ def graphTimegraph(){
 
 						container << hubiForm_text_input("<b>Max Value to Exclude</b><br><small>If the recorded sensor value is <b>above</b> this value it will be dropped</small>",
 								"attribute_${sa}_max_value",
-								"100", false)
+								s100, false)
 					}
 
 					container << hubiForm_text_input("<b>Units for Pretty Display</b>",
@@ -4333,7 +4377,7 @@ String getData_timegraph(){
 	then=new Date()
 
 	use (TimeCategory){
-		Double val=Double.parseDouble("${graph_timespan}")/1000.0
+		Double val=Double.parseDouble(gtSetStr('graph_timespan'))/1000.0
 		then -= (val.toInteger()).seconds
 		graph_time=then.getTime()
 	}
@@ -4358,7 +4402,7 @@ String getData_timegraph(){
 			resp[sid][attribute]=data.findAll{ Map it -> (Long)it[sDT] > graph_time}
 
 			//Restrict "bad" values
-			if(settings["attribute_${sa}_bad_value"]==true){
+			if(gtSetB("attribute_${sa}_bad_value")){
 				Float min=Float.valueOf(settings["attribute_${sa}_min_value"].toString())
 				Float max=Float.valueOf(settings["attribute_${sa}_max_value"].toString())
 				resp[sid][attribute]= ((List<Map>)resp[sid][attribute]).findAll{ Map it -> (Double)it[sVAL] > min && (Double)it[sVAL] < max}
@@ -4374,70 +4418,70 @@ Map getOptions_timegraph(){
 	//Map<String,Map> series=["series" : [:]]
 
 	Map options=[
-			"graphReduction": graph_max_points,
-			"graphTimespan": Long.parseLong("${graph_timespan}"),
-			"graphUpdateRate": Integer.parseInt(graph_update_rate),
-			"graphPointSpan": Long.parseLong(graph_point_span),
-			"graphRefreshRate" : Integer.parseInt(graph_refresh_rate),
+			"graphReduction": gtSetI('graph_max_points'),
+			"graphTimespan": Long.parseLong(gtSetStr('graph_timespan')),
+			"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
+			"graphPointSpan": Long.parseLong(gtSetStr('graph_point_span')),
+			"graphRefreshRate" : Integer.parseInt(gtSetStr('graph_refresh_rate')),
 			"overlays": [ "display_overlays" : show_overlay,
 							"horizontal_alignment" : overlay_horizontal_placement,
 							"vertical_alignment" : overlay_vertical_placement,
-							"order" : overlay_order
+							"order" : gtSetStr('overlay_order')
 			],
 			"graphOptions": [
 					"tooltip" : ["format" : "short"],
-					"width": graph_static_size ? graph_h_size : "100%",
-					"height": graph_static_size ? graph_v_size : "100%",
+					"width": gtSetB('graph_static_size') ? graph_h_size : "100%",
+					"height": gtSetB('graph_static_size') ? graph_v_size : "100%",
 					"chartArea": [ "width":	graph_percent_fill ? "${graph_h_fill}%" : "80%",
 									"height": graph_percent_fill ? "${graph_v_fill}%" : "80%"],
 					"hAxis": [
 							"textStyle": ["fontSize": graph_haxis_font,
-										"color": graph_hh_color_transparent ? "transparent" : graph_hh_color
+										"color": gtSetB('graph_hh_color_transparent') ? sTRANSPRNT : graph_hh_color
 							],
-							"gridlines": ["color": graph_ha_color_transparent ? "transparent" : graph_ha_color,
-										"count": graph_h_num_grid != "" ? graph_h_num_grid : null
+							"gridlines": ["color": gtSetB('graph_ha_color_transparent') ? sTRANSPRNT : graph_ha_color,
+										"count": graph_h_num_grid != sBLK ? graph_h_num_grid : null
 							],
-							"format":	graph_h_format==""?"":graph_h_format
+							"format":	gtSetStr('graph_h_format')==sBLK?sBLK:gtSetStr('graph_h_format')
 					],
 					"vAxis": ["textStyle": ["fontSize": graph_vaxis_font,
-											"color": graph_vh_color_transparent ? "transparent" : graph_vh_color,
+											"color": gtSetB('graph_vh_color_transparent') ? sTRANSPRNT : graph_vh_color,
 					],
-							"gridlines": ["color": graph_va_color_transparent ? "transparent" : graph_va_color],
+							"gridlines": ["color": gtSetB('graph_va_color_transparent') ? sTRANSPRNT : graph_va_color],
 					],
 					"vAxes": [
 							0: ["title" : graph_show_left_label ? graph_left_label: null,
-								"titleTextStyle": ["color": graph_left_color_transparent ? "transparent" : graph_left_color, "fontSize": graph_left_font],
-								"viewWindow": ["min": graph_vaxis_1_min != "" ? graph_vaxis_1_min : null,
-											"max": graph_vaxis_1_max != "" ? graph_vaxis_1_max : null],
-								"gridlines": ["count" : graph_vaxis_1_num_lines != "" ? graph_vaxis_1_num_lines : null ],
+								"titleTextStyle": ["color": gtSetB('graph_left_color_transparent') ? sTRANSPRNT : graph_left_color, "fontSize": graph_left_font],
+								"viewWindow": ["min": graph_vaxis_1_min != sBLK ? graph_vaxis_1_min : null,
+											"max": graph_vaxis_1_max != sBLK ? graph_vaxis_1_max : null],
+								"gridlines": ["count" : graph_vaxis_1_num_lines != sBLK ? graph_vaxis_1_num_lines : null ],
 								"minorGridlines": ["count" : 0],
 								"format": graph_vaxis_1_format,
 
 							],
 
 							1: ["title": graph_show_right_label ? graph_right_label : null,
-								"titleTextStyle": ["color": graph_right_color_transparent ? "transparent" : graph_right_color, "fontSize": graph_right_font],
-								"viewWindow": ["min": graph_vaxis_2_min != "" ? graph_vaxis_2_min : null,
-											"max": graph_vaxis_2_max != "" ? graph_vaxis_2_max : null],
-								"gridlines": ["count" : graph_vaxis_2_num_lines != "" ? graph_vaxis_2_num_lines : null ],
+								"titleTextStyle": ["color": gtSetB('graph_right_color_transparent') ? sTRANSPRNT : graph_right_color, "fontSize": graph_right_font],
+								"viewWindow": ["min": graph_vaxis_2_min != sBLK ? graph_vaxis_2_min : null,
+											"max": graph_vaxis_2_max != sBLK ? graph_vaxis_2_max : null],
+								"gridlines": ["count" : graph_vaxis_2_num_lines != sBLK ? graph_vaxis_2_num_lines : null ],
 								"minorGridlines": ["count" : 0],
 								"format": graph_vaxis_2_format,
 							]
 					],
 					"bar": [ "groupWidth" : graph_bar_width+"%", "fill-opacity" : 0.5],
 					"pointSize": graph_scatter_size,
-					"legend": !graph_show_legend ? ["position": sNONE] : ["position": graph_legend_position,
+					"legend": !gtSetB('graph_show_legend') ? ["position": sNONE] : ["position": graph_legend_position,
 																		"alignment": graph_legend_inside_position,
 																		"textStyle": ["fontSize": graph_legend_font,
-																						"color": graph_legend_color_transparent ? "transparent" : graph_legend_color]],
-					"backgroundColor": graph_background_color_transparent ? "transparent" : graph_background_color,
-					"curveType": !graph_smoothing ? "" : "function",
-					"title": !graph_show_title ? "" : graph_title,
-					"titleTextStyle": !graph_show_title ? "" : ["fontSize": graph_title_font, "color": graph_title_color_transparent ? "transparent" : graph_title_color],
-					"titlePosition" : graph_title_inside ? "in" : "out",
+																						"color": gtSetB('graph_legend_color_transparent') ? sTRANSPRNT : gtSetStr('graph_legend_color')]],
+					"backgroundColor": gtSetB('graph_background_color_transparent') ? sTRANSPRNT : gtSetStr('graph_background_color'),
+					"curveType": !graph_smoothing ? sBLK : "function",
+					"title": !gtSetB('graph_show_title') ? sBLK : gtSetStr('graph_title'),
+					"titleTextStyle": !gtSetB('graph_show_title') ? sBLK : ["fontSize": graph_title_font, "color": gtSetB('graph_title_color_transparent') ? sTRANSPRNT : gtSetStr('graph_title_color')],
+					"titlePosition" : gtSetB('graph_title_inside') ? "in" : "out",
 					"interpolateNulls": true, //for null vals on our chart
-					"orientation" : graph_y_orientation == true ? "vertical" : "horizontal",
-					"reverseCategories" : graph_x_orientation,
+					"orientation" : gtSetB('graph_y_orientation')? "vertical" : "horizontal",
+					"reverseCategories" : graph_z_orientation,
 					"series": [:],
 
 			]
@@ -4456,16 +4500,16 @@ Map getOptions_timegraph(){
 			String sa= "${sid}_${attribute}".toString()
 
 			String type_
-			type_= settings["graph_type_${sa}"] != null ? ((String)settings["graph_type_${sa}"]).toLowerCase() : 'line'
+			type_= settings["graph_type_${sa}"] != null ? gtSetStr("graph_type_${sa}").toLowerCase() : 'line'
 			if(type_ == "stepped") type_="steppedArea"
 			Integer axes_=settings["graph_axis_number_${sa}"] == "Left" ? 0 : 1
-			String stroke_color=settings["var_${sa}_stroke_color"]
-			String stroke_opacity=settings["var_${sa}_stroke_opacity"]
+			String stroke_color=gtSetStr("var_${sa}_stroke_color")
+			String stroke_opacity=gtSetStr("var_${sa}_stroke_opacity")
 			//def stroke_line_size=settings["var_${sa}_stroke_line_size"]
 			//String fill_color=settings["var_${sa}_fill_color"]
 			//String fill_opacity=settings["var_${sa}_fill_opacity"]
 			def point_size=settings["var_${sa}_point_size"]
-			String point_type=settings["var_${sa}_point_type"] != null ? ((String)settings["var_${sa}_point_type"]).toLowerCase() : ""
+			String point_type=settings["var_${sa}_point_type"] != null ? gtSetStr("var_${sa}_point_type").toLowerCase() : sBLK
 
 			type_=type_=='bar' ? 'bars' : type_
 
@@ -4493,12 +4537,12 @@ Map getOptions_timegraph(){
 
 	//add colors and thicknesses
 			Integer axis=settings["graph_axis_number_${sa}"] == "Left" ? 0 : 1
-			String text_color=settings["graph_line_${sa}_color"]
-			String text_color_transparent=settings["graph_line_${sa}_color_transparent"]
+			String text_color=gtSetStr("graph_line_${sa}_color")
+			Boolean text_color_transparent=gtSetB("graph_line_${sa}_color_transparent")
 
 			Map annotations=[
 					"targetAxisIndex": axis,
-					"color": text_color_transparent ? "transparent" : text_color
+					"color": text_color_transparent ? sTRANSPRNT : text_color
 			]
 
 			options.graphOptions.series << annotations
@@ -4662,7 +4706,7 @@ async function onLoad(){
 				box-sizing: border-box;
 				padding: ${overlay_font ? (overlay_font.toInteger()/2): 12}px ${overlay_font}px;
 				position: absolute;
-				background-color: ${overlay_background_color ? getRGBA(overlay_background_color, overlay_background_opacity) : ""};
+				background-color: ${gtSetStr('overlay_background_color') ? getRGBA(gtSetStr('overlay_background_color'), overlay_background_opacity) : ""};
 				top: 50px;
 				left: 100px;
 				text-align: center;
@@ -5032,7 +5076,7 @@ function placeMarker(dataTable){
 	<body style="${fullSizeStyle}">
 	<div id="timeline" style="${fullSizeStyle}" align="center"></div>
 	"""
-	if(show_overlay==true) html+= getOverlay_timegraph()
+	if(gtSetB('show_overlay')) html+= getOverlay_timegraph()
 
 	html+= """
 
@@ -5051,7 +5095,7 @@ String getOverlay_timegraph(){
 	String html
 	html="""<div id="graph-overlay" class="overlay"><table style="width:100%">"""
 
-	List<String> val=new JsonSlurper().parseText(overlay_order) as List<String>
+	List<String> val=new JsonSlurper().parseText(gtSetStr('overlay_order')) as List<String>
 	for(String str in val){
 		String[] splitStr=str.split('_')
 		String sid=splitStr[1]
@@ -5061,8 +5105,8 @@ String getOverlay_timegraph(){
 		Map ent=findDataSourceEntry(sid,attribute)
 		Double v=getValue(sid,attribute,getLatestVal(ent))
 
-		String units=settings["units_${sa}"] ? settings["units_${sa}"] : ""
-		String name; name=settings["graph_name_override_${sa}"]
+		String units=gtSetStr("units_${sa}") ?: sBLK
+		String name; name=gtSetStr("graph_name_override_${sa}")
 		name=name.replaceAll("%deviceName%", sMs(ent,sDISPNM)).replaceAll("%attributeName%", attribute)
 		String s=sprintf("%.1f%s",v,units)
 		html += """<tr><td class="overlay-title" id="overlay-${sa}-name">${name}</td>
@@ -5119,7 +5163,7 @@ Map getSubscriptions_timegraph(){
 			states_[sid]= states_[sid] ?: [:]
 
 			String varn= "attribute_${sa}_states".toString()
-			if((List)settings[varn] && settings["attribute_${sa}_custom_states"] == true){
+			if((List)settings[varn] && gtSetB("attribute_${sa}_custom_states")){
 				states_[sid][attr]=[:]
 				for(String st in (List<String>)settings[varn]){
 					states_[sid][attr][st]=settings["attribute_${sa}_${st}"]
@@ -5128,12 +5172,11 @@ Map getSubscriptions_timegraph(){
 
 			drop_[sid]= drop_[sid] ?: [:]
 
-			Boolean drop_valid
-			drop_valid=false
-			if(settings["attribute_${sa}_drop_line"] == true)
+			Boolean drop_valid; drop_valid=false
+			if(gtSetB("attribute_${sa}_drop_line"))
 				drop_valid=true
 
-			drop_[sid][attr]=[	valid: drop_valid ? "true" : "false",
+			drop_[sid][attr]=[	valid: drop_valid ? sTRUE : sFALSE,
 								(sVAL): drop_valid ? settings["attribute_${sa}_drop_value"] : "null"
 			]
 
@@ -5161,7 +5204,7 @@ Map getSubscriptions_timegraph(){
 					fill_color:	fill_color,
 					fill_opacity:	fill_opacity,
 					function:	function,
-					units:		settings["units_${sa}"] ?: sBLK,
+					(sUNITS):		settings["units_${sa}"] ?: sBLK,
 			]
 		}
 	}
@@ -5219,19 +5262,19 @@ static String convertToString(Long msec_){
 	if(msec == 0L) return "00:00:00"
 
 	Double hours=Math.floor(msec/3600000.0D)
-	Double mins=Math.floor((msec%3600000.0D)/60000.0D)
-	Double secs=Math.floor((msec%60000.0D)/1000.0D)
+	Double mins=Math.floor((msec%3600000)/60000.0D)
+	Double secs=Math.floor((msec%60000)/1000.0D)
 
 	return dd(hours)+":"+dd(mins)+":"+dd(secs)
 }
 
 def graphHeatmap(){
 
-	List<Map> decayEnum=[["1000":"1 Second"],	["30000":"30 Seconds"], ["60000":"1 Minute"], ["300000":"5 Minutes"], ["600000":"10 Minutes"],
+	List<Map<String,String>> decayEnum=[["1000":"1 Second"],	["30000":"30 Seconds"], ["60000":"1 Minute"], ["300000":"5 Minutes"], ["600000":"10 Minutes"],
 						["1800000":"Half Hour"], ["3600000":"1 Hour"], ["7200000":"2 Hours"], ["21600000":"6 Hours"], ["43200000":"12 Hours"], ["86400000":"1 Day"],
 						["172800000":"2 Days"], ["259200000":"3 Days"], ["345600000":"4 Days"], ["432000000":"5 Days"], ["518400000":"6 Days"], ["604800000":"7 Days"]]
 
-	List<Map> typeEnum=[[(sVAL): "Value"], ["time" : "Trigger (Time Since Last Update)"]]
+	List<Map<String,String>> typeEnum=[[(sVAL): "Value"], ["time" : "Trigger (Time Since Last Update)"]]
 
 //	TODO
 	Integer count_
@@ -5248,25 +5291,25 @@ def graphHeatmap(){
 	app.updateSetting ("attribute_count", count_)
 
 	dynamicPage(name: "graphSetupPage"){
-		List container
+		List<String> container
 		hubiForm_section("General Options", 1, sBLK, sBLK){
 
 			container=[]
-			input( (sTYPE): sENUM, (sNM): "graph_type",(sTIT): "<b>Select Graph Type</b>", multiple: false, required: false, options: typeEnum, defaultValue: sVAL, submitOnChange: true)
+			input( (sTYPE): sENUM, (sNM): "graph_type",(sTIT): "<b>Select Graph Type</b>", (sMULTP): false, (sREQ): false, options: typeEnum, (sDEFV): sVAL, (sSUBOC): true)
 			inputGraphUpdateRate()
 
-			if(!graph_type) graph_type=sVAL
-			if(graph_type == "time"){
-				input( (sTYPE): sENUM, (sNM): "graph_decay",(sTIT): "<b>Decay Rate</b>", multiple: false, required: false, options: decayEnum, defaultValue: "300000", submitOnChange: true)
+			if(!gtSetStr('graph_type')) graph_type=sVAL
+			if(gtSetStr('graph_type') == "time"){
+				input( (sTYPE): sENUM, (sNM): "graph_decay",(sTIT): "<b>Decay Rate</b>", (sMULTP): false, (sREQ): false, options: decayEnum, (sDEFV): "300000", (sSUBOC): true)
 			}
 
-			container << hubiForm_color ("Graph Background", "graph_background", "#FFFFFF", false)
-			container << hubiForm_color ("Graph Line", "graph_line", "#000000", false)
+			container << hubiForm_color ("Graph Background", "graph_background", sWHT, false)
+			container << hubiForm_color ("Graph Line", "graph_line", sBLACK, false)
 			container << hubiForm_line_size ((sTIT): "Graph Line",
 					(sNM): "graph",
-					default: 2,
-					min: 1,
-					max: count_,
+					(sDEFLT): 2,
+					(sMIN): 1,
+					(sMAX): count_,
 			)
 
 			hubiForm_container(container, 1)
@@ -5290,7 +5333,7 @@ def graphHeatmap(){
 					true)
 
 			List subcontainer
-			if(graph_type == sVAL){
+			if(gtSetStr('graph_type') == sVAL){
 				Integer gradient
 				for(gradient=0; gradient < num_; gradient++){
 					subcontainer=[]
@@ -5321,7 +5364,7 @@ def graphHeatmap(){
 
 					subcontainer << hubiForm_text_format(
 							[text: convertToString(curr_time),
-							horizontal_align: "right",
+							horizontal_align: sRIGHT,
 							vertical_align: "20px",
 							sz: 24] )
 
@@ -5348,30 +5391,30 @@ def graphHeatmap(){
 			Integer rows=Math.ceil(count_/cols).intValue()
 			container << hubiForm_slider ((sTIT): "Number of Columns<br><small>"+count_+" Devices/Attributes -- "+cols+" X "+rows+"</small>",
 					(sNM): "graph_num_columns",
-					default: default_,
-					min: 1,
-					max: count_,
-					units: " columns",
-					submit_on_change: true)
+					(sDEFLT): default_,
+					(sMIN): 1,
+					(sMAX): count_,
+					(sUNITS): " columns",
+					(sSUBONCHG): true)
 
-			input( (sTYPE): sBOOL, (sNM): "graph_static_size",(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", defaultValue: false, submitOnChange: true)
-			if((Boolean)settings.graph_static_size){
-				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", default: 800, min: 100, max: 3000, units: " pixels")
-				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", default: 600, min: 100, max: 3000, units: " pixels")
+			input( (sTYPE): sBOOL, (sNM): "graph_static_size",(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sDEFV): false, (sSUBOC): true)
+			if(gtSetB('graph_static_size')){
+				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): 800, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels")
+				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): 600, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels")
 			}
 
 			hubiForm_container(container, 1)
 		}
 		hubiForm_section("Annotations", 1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_switch([(sTIT): "Show values inside Heat Map?", (sNM): "show_annotations", default: false, submit_on_change: true])
-			if((Boolean)settings.show_annotations){
-				container << hubiForm_font_size	((sTIT): "Annotation", (sNM): "annotation", default: 16, min: 2, max: 40)
-				container << hubiForm_color		("Annotation", "annotation", "#FFFFFF", false)
-				container << hubiForm_color		("Annotation Aura", "annotation_aura", "#000000", false)
-				container << hubiForm_slider	((sTIT): "Number Decimal Places", (sNM): "graph_decimals", default: 1, min: 0, max: 4, units: " decimal places")
-				container << hubiForm_switch	([(sTIT): "Bold Annotation", (sNM): "annotation_bold", default:false])
-				container << hubiForm_switch	([(sTIT): "Italic Annotation", (sNM): "annotation_italic", default:false])
+			container << hubiForm_switch([(sTIT): "Show values inside Heat Map?", (sNM): "show_annotations", (sDEFLT): false, (sSUBONCHG): true])
+			if(gtSetB('show_annotations')){
+				container << hubiForm_font_size	((sTIT): "Annotation", (sNM): "annotation", (sDEFLT): 16, (sMIN): 2, (sMAX): 40)
+				container << hubiForm_color		("Annotation", "annotation", sWHT, false)
+				container << hubiForm_color		("Annotation Aura", "annotation_aura", sBLACK, false)
+				container << hubiForm_slider	((sTIT): "Number Decimal Places", (sNM): "graph_decimals", (sDEFLT): 1, (sMIN): 0, (sMAX): 4, (sUNITS): " decimal places")
+				container << hubiForm_switch	([(sTIT): "Bold Annotation", (sNM): "annotation_bold", (sDEFLT):false])
+				container << hubiForm_switch	([(sTIT): "Italic Annotation", (sNM): "annotation_italic", (sDEFLT):false])
 			}
 			hubiForm_container(container, 1)
 		}
@@ -5423,7 +5466,7 @@ Map getOptions_heatmap(){
 
 			String attrib_string="attribute_${sid}_${attribute}_color"
 			String transparent_attrib_string="attribute_${sid}_${attribute}_color_transparent"
-			colors << (settings[transparent_attrib_string] ? "transparent" : settings[attrib_string])
+			colors << (gtSetB(transparent_attrib_string) ? sTRANSPRNT : settings[attrib_string])
 		}
 	}
 /*
@@ -5437,20 +5480,20 @@ Map getOptions_heatmap(){
 	} */
 
 	Map options=[
-			"graphUpdateRate": Integer.parseInt(graph_update_rate),
-			(sGRAPHT): sMs(settings,'graph_type'),
+			"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
+			(sGRAPHT): gtSetStr('graph_type'),
 			"graphOptions": [
 					"bar" : [ "groupWidth" : "100%" ],
-					"width": graph_static_size ? graph_h_size : "100%",
-					"height": graph_static_size ? graph_v_size: "100%",
+					"width": gtSetB('graph_static_size') ? graph_h_size : "100%",
+					"height": gtSetB('graph_static_size') ? graph_v_size: "100%",
 					"timeline": [
-							"rowLabelStyle": ["fontSize": graph_axis_font, "color": graph_axis_color_transparent ? "transparent" : graph_axis_color],
+							"rowLabelStyle": ["fontSize": graph_axis_font, "color": gtSetB('graph_axis_color_transparent') ? sTRANSPRNT : graph_axis_color],
 							"barLabelStyle": ["fontSize": graph_axis_font]
 					],
-					"backgroundColor": graph_background_color_transparent ? "transparent" : graph_background_color,
+					"backgroundColor": gtSetB('graph_background_color_transparent') ? sTRANSPRNT : gtSetStr('graph_background_color'),
 					"isStacked": true,
-					"chartArea": [ "left": 10,
-								"right" : 10,
+					"chartArea": [ (sLEFT): 10,
+							   (sRIGHT) : 10,
 								"top": 10,
 								"bottom": 10
 					],
@@ -5462,16 +5505,16 @@ Map getOptions_heatmap(){
 					"vAxis": [ "textPosition": sNONE,
 							"gridlines" : [ "count" : s0 ]
 					],
-					"annotations" : [	"alwaysOutside": "false",
+					"annotations" : [	"alwaysOutside": sFALSE,
 										"textStyle": [
 												"fontSize": annotation_font,
 												"bold":	annotation_bold,
 												"italic": annotation_italic,
-												"color":	annotation_color_transparent ? "transparent" : annotation_color,
-												"auraColor":annotation_aura_color_transparent ? "transparent" : annotation_aura_color,
+												"color":	gtSetB('annotation_color_transparent') ? sTRANSPRNT : annotation_color,
+												"auraColor":gtSetB('annotation_aura_color_transparent') ? sTRANSPRNT : annotation_aura_color,
 										],
-										"stem": [ "color": "transparent",
-												"highContrast": "false"
+										"stem": [ "color": sTRANSPRNT,
+												"highContrast": sFALSE
 										],
 					],
 			]
@@ -5958,7 +6001,7 @@ Map getSubscriptions_heatmap(){
 		gradients[i]=["val": settings["graph_gradient_${i}_value"], "color": settings["graph_gradient_${i}_color"]]
 	}
 
-	List order=graph_order ? parseJson(graph_order) : []
+	List order=gtSetStr('graph_order') ? parseJson(gtSetStr('graph_order')) : []
 
 	Map subscriptions=[
 			(sID): isPoll ? 'poll' : 'sensor',
@@ -6004,7 +6047,7 @@ def deviceLinegraph(){
 
 def graphLinegraph(){
 
-	List<Map> timespanEnum2=[
+	List<Map<String,String>> timespanEnum2=[
 			["60000":"1 Minute"], ["120000":"2 Minutes"], ["300000":"5 Minutes"], ["600000":"10 Minutes"],
 			["2400000":"30 minutes"], ["3600000":"1 Hour"], ["43200000":"12 Hours"],
 			["86400000":"1 Day"], ["259200000":"3 Days"], ["604800000":"1 Week"]
@@ -6014,7 +6057,7 @@ def graphLinegraph(){
 
 		Boolean non_numeric
 		non_numeric=false
-		List container
+		List<String> container
 //	TODO
 		List<Map> dataSources=gtDataSources()
 		if(dataSources){
@@ -6024,25 +6067,24 @@ def graphLinegraph(){
 
 				Map a=gtStartEndTypes(ent,attribute)
 				if(a)
-					non_numeric = true
+					non_numeric= true
 			}
 		}
 
-		if(non_numeric){
-			app.updateSetting ("graph_max_points", 0)
-		}
+		if(non_numeric)
+			app.updateSetting ('graph_max_points', 0)
 
 		hubiForm_section("General Options", 1, sBLK, sBLK){
-			input( (sTYPE): sENUM, (sNM): "graph_type",(sTIT): "<b>Graph Type</b>", defaultValue: "Line Graph", options: ["Line Graph", "Area Graph", "Scatter Plot"], submitOnChange: true)
+			input( (sTYPE): sENUM, (sNM): "graph_type",(sTIT): "<b>Graph Type</b>", (sDEFV): "Line Graph", options: ["Line Graph", "Area Graph", "Scatter Plot"], (sSUBOC): true)
 			inputGraphUpdateRate()
-			input( (sTYPE): sENUM, (sNM): "graph_timespan",(sTIT): "<b>Select Time span to Graph</b>", multiple: false, required: true, options: timespanEnum, defaultValue: "43200000")
+			input( (sTYPE): sENUM, (sNM): "graph_timespan",(sTIT): "<b>Select Time span to Graph</b>", (sMULTP): false, (sREQ): true, options: timespanEnum, (sDEFV): "43200000")
 			container=[]
-			container << hubiForm_color ("Graph Background",	"graph_background", "#FFFFFF", false)
-			container << hubiForm_switch((sTIT): "Smooth Graph Points", (sNM): "graph_smoothing", default: false)
-			container << hubiForm_switch((sTIT): "<b>Flip Graph to Vertical?</b><br><small>(Rotate 90 degrees)</small>", (sNM): "graph_y_orientation", default: false)
-			container << hubiForm_switch((sTIT): "<b>Reverse Data Order?</b><br><small> (Flip data left to Right)</small>", (sNM): "graph_z_orientation", default: false)
+			container << hubiForm_color ("Graph Background",	"graph_background", sWHT, false)
+			container << hubiForm_switch((sTIT): "Smooth Graph Points", (sNM): "graph_smoothing", (sDEFLT): false)
+			container << hubiForm_switch((sTIT): "<b>Flip Graph to Vertical?</b><br><small>(Rotate 90 degrees)</small>", (sNM): "graph_y_orientation", (sDEFLT): false)
+			container << hubiForm_switch((sTIT): "<b>Reverse Data Order?</b><br><small> (Flip data left to Right)</small>", (sNM): "graph_z_orientation", (sDEFLT): false)
 			if(!non_numeric)
-				container << hubiForm_slider ((sTIT): "Maximum number of Data Points?</b><br><small>(Zero for ALL)</small>", (sNM): "graph_max_points", default: 0, min: 0, max: 1000, units: " data points", submit_on_change: false)
+				container << hubiForm_slider ((sTIT): "Maximum number of Data Points?</b><br><small>(Zero for ALL)</small>", (sNM): 'graph_max_points', (sDEFLT): 0, (sMIN): 0, (sMAX): 1000, (sUNITS): " data points", (sSUBONCHG): false)
 
 			hubiForm_container(container, 1)
 
@@ -6050,22 +6092,22 @@ def graphLinegraph(){
 
 		hubiForm_section("Graph Title", 1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_switch((sTIT): "Show Title on Graph", (sNM): "graph_show_title", default: false, submit_on_change: true)
-			if(graph_show_title==true){
-				container << hubiForm_text_input ("Graph Title", "graph_title", "Graph Title", false)
-				container << hubiForm_font_size ((sTIT): "Title", (sNM): "graph_title", default: 9, min: 2, max: 20)
-				container << hubiForm_color	("Title", "graph_title", "#000000", false)
-				container << hubiForm_switch	((sTIT): "Graph Title Inside Graph?", (sNM): "graph_title_inside", default: false)
+			container << hubiForm_switch((sTIT): "Show Title on Graph", (sNM): 'graph_show_title', (sDEFLT): false, (sSUBONCHG): true)
+			if(gtSetB('graph_show_title')){
+				container << hubiForm_text_input("Graph Title", "graph_title", "Graph Title", false)
+				container << hubiForm_font_size((sTIT): "Title", (sNM): "graph_title", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
+				container << hubiForm_color("Title", "graph_title", sBLACK, false)
+				container << hubiForm_switch((sTIT): "Graph Title Inside Graph?", (sNM): 'graph_title_inside', (sDEFLT): false)
 			}
 			hubiForm_container(container, 1)
 		}
 
 		hubiForm_section("Graph Size", 1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_switch	((sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sNM): "graph_static_size", default: false, submit_on_change: true)
-			if(graph_static_size==true){
-				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", default: 800, min: 100, max: 3000, units: " pixels", submit_on_change: false)
-				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", default: 600, min: 100, max: 3000, units: " pixels", submit_on_change: false)
+			container << hubiForm_switch	((sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sNM): "graph_static_size", (sDEFLT): false, (sSUBONCHG): true)
+			if(gtSetB('graph_static_size')){
+				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): 800, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels", (sSUBONCHG): false)
+				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): 600, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels", (sSUBONCHG): false)
 			}
 
 			hubiForm_container(container, 1)
@@ -6074,9 +6116,9 @@ def graphLinegraph(){
 		hubiForm_section("Horizontal Axis", 1, sBLK, sBLK){
 			//Axis
 			container=[]
-			container << hubiForm_font_size	((sTIT): "Horizontal Axis", (sNM): "graph_haxis", default: 9, min: 2, max: 20)
-			container << hubiForm_color	("Horizontal Header", "graph_hh", "#C0C0C0", false)
-			container << hubiForm_color	("Horizontal Axis", "graph_ha", "#C0C0C0", false)
+			container << hubiForm_font_size	((sTIT): "Horizontal Axis", (sNM): "graph_haxis", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
+			container << hubiForm_color	("Horizontal Header", "graph_hh", sSILVER, false)
+			container << hubiForm_color	("Horizontal Axis", "graph_ha", sSILVER, false)
 			container << hubiForm_text_input ("<b>Num Horizontal Gridlines</b><br><small>(Blank for auto)</small>", "graph_h_num_grid", sBLK, false)
 
 			container+=  hubiForm_help()
@@ -6086,9 +6128,9 @@ def graphLinegraph(){
 		//Vertical Axis
 		hubiForm_section("Vertical Axis", 1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_font_size ((sTIT): "Vertical Axis", (sNM): "graph_vaxis", default: 9, min: 2, max: 20)
-			container << hubiForm_color ("Vertical Header", "graph_vh", "#000000", false)
-			container << hubiForm_color ("Vertical Axis", "graph_va", "#C0C0C0", false)
+			container << hubiForm_font_size ((sTIT): "Vertical Axis", (sNM): "graph_vaxis", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
+			container << hubiForm_color ("Vertical Header", "graph_vh", sBLACK, false)
+			container << hubiForm_color ("Vertical Axis", "graph_va", sSILVER, false)
 			hubiForm_container(container, 1)
 		}
 
@@ -6098,11 +6140,11 @@ def graphLinegraph(){
 			container << hubiForm_text_input("<b>Minimum for left axis</b><small>(Blank for auto)</small>", "graph_vaxis_1_min", sBLK, false)
 			container << hubiForm_text_input("<b>Maximum for left axis</b><small>(Blank for auto)</small>", "graph_vaxis_1_max", sBLK, false)
 			container << hubiForm_text_input("<b>Num Vertical Gridlines</b><br><small>(Blank for auto)</small>", "graph_vaxis_1_num_lines", sBLK, false)
-			container << hubiForm_switch	((sTIT): "<b>Show Left Axis Label on Graph</b>", (sNM): "graph_show_left_label", default: false, submit_on_change: true)
-			if(graph_show_left_label==true){
+			container << hubiForm_switch	((sTIT): "<b>Show Left Axis Label on Graph</b>", (sNM): "graph_show_left_label", (sDEFLT): false, (sSUBONCHG): true)
+			if(gtSetB('graph_show_left_label')){
 				container << hubiForm_text_input ("<b>Input Left Axis Label</b>", "graph_left_label", "Left Axis Label", false)
-				container << hubiForm_font_size ((sTIT): "Left Axis", (sNM): "graph_left", default: 9, min: 2, max: 20)
-				container << hubiForm_color	("Left Axis", "graph_left", "#FFFFFF", false)
+				container << hubiForm_font_size ((sTIT): "Left Axis", (sNM): "graph_left", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
+				container << hubiForm_color	("Left Axis", "graph_left", sWHT, false)
 			}
 			hubiForm_container(container, 1)
 		}
@@ -6113,11 +6155,11 @@ def graphLinegraph(){
 			container << hubiForm_text_input("<b>Minimum for right axis</b><small>(Blank for auto)</small>", "graph_vaxis_2_min", sBLK, false)
 			container << hubiForm_text_input("<b>Maximum for right axis</b><small>(Blank for auto)</small>", "graph_vaxis_2_max", sBLK, false)
 			container << hubiForm_text_input("<b>Num Vertical Gridlines</b><br><small>(Blank for auto)</small>", "graph_vaxis_2_num_lines", sBLK, false)
-			container << hubiForm_switch	((sTIT): "<b>Show Right Axis Label on Graph</b>", (sNM): "graph_show_right_label", default: false, submit_on_change: true)
-			if(graph_show_right_label==true){
+			container << hubiForm_switch	((sTIT): "<b>Show Right Axis Label on Graph</b>", (sNM): "graph_show_right_label", (sDEFLT): false, (sSUBONCHG): true)
+			if(gtSetB('graph_show_right_label')){
 				container << hubiForm_text_input ("<b>Input right Axis Label</b>", "graph_right_label", "Right Axis Label", false)
-				container << hubiForm_font_size ((sTIT): "Right Axis", (sNM): "graph_right", default: 9, min: 2, max: 20)
-				container << hubiForm_color	("Right Axis", "graph_right", "#FFFFFF", false)
+				container << hubiForm_font_size ((sTIT): "Right Axis", (sNM): "graph_right", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
+				container << hubiForm_color	("Right Axis", "graph_right", sWHT, false)
 			}
 			hubiForm_container(container, 1)
 		}
@@ -6127,13 +6169,13 @@ def graphLinegraph(){
 			container=[]
 			List<Map> legendPosition=[["top": "Top"], ["bottom":"Bottom"], ["in": "Inside Top"]]
 			List<Map> insidePosition=[["start": "Left"], ["center": "Center"], ["end": "Right"]]
-			container << hubiForm_switch((sTIT): "Show Legend on Graph", (sNM): "graph_show_legend", default: false, submit_on_change: true)
-			if(graph_show_legend==true){
-				container << hubiForm_font_size ((sTIT): "Legend", (sNM): "graph_legend", default: 9, min: 2, max: 20)
-				container << hubiForm_color	("Legend", "graph_legend", "#000000", false)
+			container << hubiForm_switch((sTIT): "Show Legend on Graph", (sNM): "graph_show_legend", (sDEFLT): false, (sSUBONCHG): true)
+			if(gtSetB('graph_show_legend')){
+				container << hubiForm_font_size ((sTIT): "Legend", (sNM): "graph_legend", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
+				container << hubiForm_color	("Legend", "graph_legend", sBLACK, false)
 				hubiForm_container(container, 1)
-				input( (sTYPE): sENUM, (sNM): "graph_legend_position",(sTIT): "<b>Legend Position</b>", defaultValue: "bottom", options: legendPosition)
-				input( (sTYPE): sENUM, (sNM): "graph_legend_in side_position",(sTIT): "<b>Legend Justification</b>", defaultValue: "center", options: insidePosition)
+				input( (sTYPE): sENUM, (sNM): "graph_legend_position",(sTIT): "<b>Legend Position</b>", (sDEFV): "bottom", options: legendPosition)
+				input( (sTYPE): sENUM, (sNM): "graph_legend_inside_position",(sTIT): "<b>Legend Justification</b>", (sDEFV): sCENTER, options: insidePosition)
 			}else{
 				hubiForm_container(container, 1)
 			}
@@ -6164,17 +6206,17 @@ def graphLinegraph(){
 				String attribute=sMs(ent,sA)
 				String dn=sMs(ent,sDISPNM)
 
-				hubiForm_section("${sLblTyp(ent[sT])}${dn} - ${attribute}", 1, sBLK,sid+attribute){
+				hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}", 1, sBLK,sid+attribute){
 
 					container=[]
-					input( (sTYPE): sENUM, (sNM): "graph_axis_number_${sid}_${attribute}",(sTIT): "<b>Graph Axis Side</b>", defaultValue: s0, options: availableAxis)
+					input( (sTYPE): sENUM, (sNM): "graph_axis_number_${sid}_${attribute}",(sTIT): "<b>Graph Axis Side</b>", (sDEFV): s0, options: availableAxis)
 					container << hubiForm_color("Line",
 							"graph_line_${sid}_${attribute}",
 							hubiTools_rotating_colors(cnt),
 							false)
 					container << hubiForm_line_size((sTIT): "Line Thickness",
 							(sNM): "attribute_${sid}_${attribute}",
-							default: 2, min: 1, max: 20)
+							(sDEFLT): 2, (sMIN): 1, (sMAX): 20)
 
 		//TODO figure out from data if there are choices
 					String startVal, endVal
@@ -6185,17 +6227,17 @@ def graphLinegraph(){
 						startVal=a.start
 						endVal=a.end
 					}
-				//	String startVal=supportedTypes[attribute] ? supportedTypes[attribute].start : ""
-				//	String endVal=supportedTypes[attribute] ? supportedTypes[attribute].end : ""
+				//	String startVal=supportedTypes[attribute] ? supportedTypes[attribute].start : sBLK
+				//	String endVal=supportedTypes[attribute] ? supportedTypes[attribute].end : sBLK
 
-					if(graph_type == "Area Graph"){
+					if(gtSetStr('graph_type') == "Area Graph"){
 						container << hubiForm_slider ((sTIT): "Opacity of the area below the line",
 								(sNM): "attribute_${sid}_${attribute}_opacity",
-								default: 30,
-								min: 0,
-								max: 100,
-								units: "%",
-								submit_on_change: false)
+								(sDEFLT): 30,
+								(sMIN): 0,
+								(sMAX): 100,
+								(sUNITS): "%",
+								(sSUBONCHG): false)
 					}
 					String nnvars= "attribute_${sid}_${attribute}_non_number".toString()
 					String svars= "attribute_${sid}_${attribute}_startString".toString()
@@ -6208,7 +6250,7 @@ def graphLinegraph(){
 
 						container << hubiForm_text_input("Value for <mark>$startVal</mark>",
 								"attribute_${sid}_${attribute}_${startVal}",
-								"100", false)
+								s100, false)
 
 						container << hubiForm_text_input("Value for <mark>$endVal</mark>",
 								"attribute_${sid}_${attribute}_${endVal}",
@@ -6219,14 +6261,14 @@ def graphLinegraph(){
 						wremoveSetting(nnvars)
 						wremoveSetting(svars)
 						wremoveSetting(evars)
-						container << hubiForm_switch((sTIT): "Display as a Drop Line", (sNM): "attribute_${sid}_${attribute}_drop_line", default: false, submit_on_change: true)
+						container << hubiForm_switch((sTIT): "Display as a Drop Line", (sNM): "attribute_${sid}_${attribute}_drop_line", (sDEFLT): false, (sSUBONCHG): true)
 
-						if(settings["attribute_${sid}_${attribute}_drop_line"]==true){
+						if(gtSetB("attribute_${sid}_${attribute}_drop_line")){
 							container << hubiForm_text_input("Value to drop the Line",
 									"attribute_${sid}_${attribute}_drop_value",
 									s0, false)
 							hubiForm_container(container, 1)
-							input( (sTYPE): sENUM, (sNM): "attribute_${sid}_${attribute}_drop_time",(sTIT): "Drop Line Time", defaultValue: "300000", options: timespanEnum2 )
+							input( (sTYPE): sENUM, (sNM): "attribute_${sid}_${attribute}_drop_time",(sTIT): "Drop Line Time", (sDEFV): "300000", options: timespanEnum2 )
 
 						}else{
 							hubiForm_container(container, 1)
@@ -6247,7 +6289,7 @@ String getData_linegraph(){
 
 	Long graph_time
 	use (TimeCategory){
-		then -= Integer.parseInt(graph_timespan).milliseconds
+		then -= Integer.parseInt(gtSetStr('graph_timespan')).milliseconds
 		graph_time=then.getTime()
 	}
 
@@ -6285,16 +6327,16 @@ String getData_linegraph(){
 			temp=null
 
 /*
-				respEvents << sensor.statesSince(attribute, then, [max: 50000]).collect{[ date: it.date.getTime(), (sVAL): getValue(sid, attribute, it.value) ]}
+				respEvents << sensor.statesSince(attribute, then, [(sMAX): 50000]).collect{[ date: it.date.getTime(), (sVAL): getValue(sid, attribute, it.value) ]}
 				respEvents=respEvents.flatten()
 				respEvents=respEvents.reverse()
 */
 				//Add drop lines for non-numerical devices
 			if(settings["attribute_${sa}_non_number"] && respEvents.size()>1){
-				String start=settings["attribute_${sa}_startString"]
-				String end=settings["attribute_${sa}_endString"]
-				Float startVal=Float.parseFloat((String)settings["attribute_${sa}_${start}".toString()])
-				Float endVal=Float.parseFloat((String)settings["attribute_${sa}_${end}".toString()])
+				String start=gtSetStr("attribute_${sa}_startString")
+				String end=gtSetStr("attribute_${sa}_endString")
+				Float startVal=Float.parseFloat( gtSetStr("attribute_${sa}_${start}"))
+				Float endVal=Float.parseFloat( gtSetStr("attribute_${sa}_${end}"))
 				tEvents=[]
 				//Add Start Event
 				Long currDate
@@ -6319,8 +6361,8 @@ String getData_linegraph(){
 			}
 
 			//graph_max_points
-			if(graph_max_points > 0){
-				Integer reduction=Math.ceil(respEvents.size() / graph_max_points.toDouble()).toInteger()
+			if(gtSetI('graph_max_points') > 0){
+				Integer reduction=Math.ceil(respEvents.size() / gtSetI('graph_max_points').toDouble()).toInteger()
 				respEvents=respEvents.collate(reduction).collect{ List group ->
 					group.inject([ (sDT): 0, (sVAL): 0 ]){ col, it ->
 						col[sDT] += it[sDT] / group.size()
@@ -6332,7 +6374,7 @@ String getData_linegraph(){
 
 			//add drop line data
 			tEvents=[]
-			if(settings["attribute_${sa}_drop_line"] && respEvents.size()>1){
+			if(gtSetB("attribute_${sa}_drop_line") && respEvents.size()>1){
 				def curr, prev
 				Long currDate, prevDate
 
@@ -6365,54 +6407,54 @@ String getData_linegraph(){
 Map getOptions_linegraph(){
 
 	Map options=[
-			"graphReduction": graph_max_points,
-			"graphTimespan": Integer.parseInt(graph_timespan),
-			"graphUpdateRate": Integer.parseInt(graph_update_rate),
+			"graphReduction": gtSetI('graph_max_points'),
+			"graphTimespan": Integer.parseInt(gtSetStr('graph_timespan')),
+			"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
 			"graphOptions": [
-					"width": graph_static_size ? graph_h_size : "100%",
-					"height": graph_static_size ? graph_v_size: "100%",
-					"chartArea": [ "width": graph_static_size ? graph_h_size : "80%", "height": graph_static_size ? graph_v_size: "80%"],
+					"width": gtSetB('graph_static_size') ? graph_h_size : "100%",
+					"height": gtSetB('graph_static_size') ? graph_v_size: "100%",
+					"chartArea": [ "width": gtSetB('graph_static_size') ? graph_h_size : "80%", "height": gtSetB('graph_static_size') ? graph_v_size: "80%"],
 					"hAxis": ["textStyle": ["fontSize": graph_haxis_font,
-											"color": graph_hh_color_transparent ? "transparent" : graph_hh_color ],
-							"gridlines": ["color": graph_ha_color_transparent ? "transparent" : graph_ha_color,
-											"count": graph_h_num_grid != "" ? graph_h_num_grid : null
+											"color": gtSetB('graph_hh_color_transparent') ? sTRANSPRNT : graph_hh_color ],
+							"gridlines": ["color": gtSetB('graph_ha_color_transparent') ? sTRANSPRNT : graph_ha_color,
+											"count": graph_h_num_grid != sBLK ? graph_h_num_grid : null
 							],
-							"format":	graph_h_format==""?"":graph_h_format
+							"format":	gtSetStr('graph_h_format')==sBLK?sBLK:gtSetStr('graph_h_format')
 					],
 					"vAxis": ["textStyle": ["fontSize": graph_vaxis_font,
-											"color": graph_vh_color_transparent ? "transparent" : graph_vh_color],
-							"gridlines": ["color": graph_va_color_transparent ? "transparent" : graph_va_color],
+											"color": gtSetB('graph_vh_color_transparent') ? sTRANSPRNT : graph_vh_color],
+							"gridlines": ["color": gtSetB('graph_va_color_transparent') ? sTRANSPRNT : graph_va_color],
 					],
 					"vAxes": [
 							0: ["title" : graph_show_left_label ? graph_left_label: null,
-								"titleTextStyle": ["color": graph_left_color_transparent ? "transparent" : graph_left_color, "fontSize": graph_left_font],
-								"viewWindow": ["min": graph_vaxis_1_min != "" ? graph_vaxis_1_min : null,
-											"max": graph_vaxis_1_max != "" ? graph_vaxis_1_max : null],
-								"gridlines": ["count" : graph_vaxis_1_num_lines != "" ? graph_vaxis_1_num_lines : null ],
+								"titleTextStyle": ["color": gtSetB('graph_left_color_transparent') ? sTRANSPRNT : graph_left_color, "fontSize": graph_left_font],
+								"viewWindow": ["min": graph_vaxis_1_min != sBLK ? graph_vaxis_1_min : null,
+											"max": graph_vaxis_1_max != sBLK ? graph_vaxis_1_max : null],
+								"gridlines": ["count" : graph_vaxis_1_num_lines != sBLK ? graph_vaxis_1_num_lines : null ],
 								"minorGridlines": ["count" : 0]
 							],
 
 							1: ["title": graph_show_right_label ? graph_right_label : null,
-								"titleTextStyle": ["color": graph_right_color_transparent ? "transparent" : graph_right_color, "fontSize": graph_right_font],
-								"viewWindow": ["min": graph_vaxis_2_min != "" ? graph_vaxis_2_min : null,
-											"max": graph_vaxis_2_max != "" ? graph_vaxis_2_max : null],
-								"gridlines": ["count" : graph_vaxis_2_num_lines != "" ? graph_vaxis_2_num_lines : null ],
+								"titleTextStyle": ["color": gtSetB('graph_right_color_transparent') ? sTRANSPRNT : graph_right_color, "fontSize": graph_right_font],
+								"viewWindow": ["min": graph_vaxis_2_min != sBLK ? graph_vaxis_2_min : null,
+											"max": graph_vaxis_2_max != sBLK ? graph_vaxis_2_max : null],
+								"gridlines": ["count" : graph_vaxis_2_num_lines != sBLK ? graph_vaxis_2_num_lines : null ],
 								"minorGridlines": ["count" : 0]
 							]
 
 					],
-					"legend": !graph_show_legend ? ["position": sNONE] : ["position": graph_legend_position,
+					"legend": !gtSetB('graph_show_legend') ? ["position": sNONE] : ["position": graph_legend_position,
 																		"alignment": graph_legend_inside_position,
 																		"textStyle": ["fontSize": graph_legend_font,
-																						"color": graph_legend_color_transparent ? "transparent" : graph_legend_color]],
-					"backgroundColor": graph_background_color_transparent ? "transparent" : graph_background_color,
-					"curveType": !graph_smoothing ? "" : "function",
-					"title": !graph_show_title ? "" : graph_title,
-					"titleTextStyle": !graph_show_title ? "" : ["fontSize": graph_title_font, "color": graph_title_color_transparent ? "transparent" : graph_title_color],
-					"titlePosition" : graph_title_inside ? "in" : "out",
+																		"color": gtSetB('graph_legend_color_transparent') ? sTRANSPRNT : graph_legend_color]],
+					"backgroundColor": gtSetB('graph_background_color_transparent') ? sTRANSPRNT : gtSetStr('graph_background_color'),
+					"curveType": !graph_smoothing ? sBLK : "function",
+					"title": !gtSetB('graph_show_title') ? sBLK : gtSetStr('graph_title'),
+					"titleTextStyle": !gtSetB('graph_show_title') ? sBLK : ["fontSize": graph_title_font, "color": gtSetB('graph_title_color_transparent') ? sTRANSPRNT : gtSetStr('graph_title_color')],
+					"titlePosition" : gtSetB('graph_title_inside') ? "in" : "out",
 					"interpolateNulls": true, //for null vals on our chart
-					"orientation" : graph_y_orientation == true ? "vertical" : "horizontal",
-					"reverseCategories" : graph_x_orientation,
+					"orientation" : gtSetB('graph_y_orientation')? "vertical" : "horizontal",
+					"reverseCategories" : graph_z_orientation,
 					"series": [],
 
 			]
@@ -6429,8 +6471,8 @@ Map getOptions_linegraph(){
 
 			//add colors and thicknesses
 			Integer axis=Integer.parseInt(settings["graph_axis_number_${sa}"].toString())
-			String text_color=settings["graph_line_${sa}_color"]
-			String text_color_transparent=settings["graph_line_${sa}_color_transparent"]
+			String text_color=gtSetStr("graph_line_${sa}_color")
+			Boolean text_color_transparent=gtSetB("graph_line_${sa}_color_transparent")
 			Integer line_thickness=(Integer)settings["attribute_${sa}_line_size"]
 			Float opacity
 			opacity=0.0
@@ -6440,8 +6482,8 @@ Map getOptions_linegraph(){
 
 			Map annotations=[
 					"targetAxisIndex": axis,
-					"color": text_color_transparent ? "transparent" : text_color,
-					"stroke": text_color_transparent ? "transparent" : "red",
+					"color": text_color_transparent ? sTRANSPRNT : text_color,
+					"stroke": text_color_transparent ? sTRANSPRNT : "red",
 					"lineWidth": line_thickness,
 					"areaOpacity" : opacity
 			]
@@ -6454,7 +6496,7 @@ Map getOptions_linegraph(){
 }
 
 String getDrawType_linegraph(){
-	switch (graph_type){
+	switch (gtSetStr('graph_type')){
 		case "Line Graph": return "google.visualization.LineChart"
 		case "Area Graph": return "google.visualization.AreaChart"
 		case "Scatter Plot": return "google.visualization.ScatterChart"
@@ -6811,7 +6853,7 @@ function drawChart(callback){
 
 	graphOptions.hAxis=Object.assign(graphOptions.hAxis,{ viewWindow:{ min: moment(min).toDate(), max: moment(now).toDate() } });
 
-	let chart=new ${drawType_linegraph()}(document.getElementById("timeline"));
+	let chart=new ${drawType_linegraph}(document.getElementById("timeline"));
 
 	//if we have a callback
 	if(callback) google.visualization.events.addListener(chart, 'ready', callback);
@@ -6855,7 +6897,7 @@ Map getSubscriptions_linegraph(){
 			String sid=sMs(ent,sID)
 			String attribute=sMs(ent,sA)
 			String dn=sMs(ent,sDISPNM)
-			//String typ=((String) ent[sT]).capitalize()
+			//String typ=sMs(ent,sT).capitalize()
 			String sa="${sid}_${attribute}".toString()
 
 			String attr=attribute
@@ -6876,9 +6918,9 @@ Map getSubscriptions_linegraph(){
 			drop_[sid]= drop_[sid] ?: [:]
 			non_num_[sid]= non_num_[sid] ?: [:]
 
-			if(settings["attribute_${sa}_non_number"]==true){
-				String startString=settings["attribute_${sa}_startString"]
-				String endString=settings["attribute_${sa}_endString"]
+			if(gtSetB("attribute_${sa}_non_number")){
+				String startString=gtSetStr("attribute_${sa}_startString")
+				String endString=gtSetStr("attribute_${sa}_endString")
 				non_num_[sid][attr]=[ valid: true,
 									start:	startString,
 									startVal:	settings["attribute_${sa}_${startString}"],
@@ -6888,7 +6930,7 @@ Map getSubscriptions_linegraph(){
 			}else{
 				non_num_[sid][attr]=[ valid: false,
 										start: sBLK,
-										end: ""]
+										end: sBLK]
 			}
 
 			drop_[sid][attr]=[valid: settings["attribute_${sa}_drop_line"],
@@ -6933,10 +6975,10 @@ def attributeRangebar(){
 	List<Map> dataSources= createDataSources(true)
 	//state.count_=0
 	dynamicPage(name: "attributeConfigurationPage", nextPage:"graphSetupPage"){
-		List container
+		List<String> container
 
 		hubiForm_section("Graph Order", 1, "directions", sBLK){
-			hubiForm_list_reorder("graph_order", "background", "#3e4475")
+			hubiForm_list_reorder('graph_order', sBACKGRND, "#3e4475")
 		}
 //	TODO
 		if(dataSources){
@@ -6952,7 +6994,7 @@ def attributeRangebar(){
 
 //				Integer cnt=1
 				//state.count_++
-				hubiForm_section("${sLblTyp(ent[sT])}${dn} - ${attribute}${hint}", 1, "direction",sid+attribute){
+				hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}${hint}", 1, "direction",sid+attribute){
 					container=[]
 
 					if(typ=='Sensor'){
@@ -6973,9 +7015,9 @@ def attributeRangebar(){
 					container << hubiForm_color	("Bar Background",		"attribute_${sa}_background","#5b626e", false, true)
 					container << hubiForm_color	("Min/Max",			"attribute_${sa}_minmax", "#607c91", false)
 					container << hubiForm_color	("Current Value",		"attribute_${sa}_current", "#8eb6d4", false)
-					container << hubiForm_color	("Current Value Border", "attribute_${sa}_current_border", "#FFFFFF", false)
-					container << hubiForm_switch ((sTIT): "Show Current Value on Bar?", (sNM): "attribute_${sa}_show_value", default: false, submit_on_change: true)
-					if(settings["attribute_${sa}_show_value"]==true){
+					container << hubiForm_color	("Current Value Border", "attribute_${sa}_current_border", sWHT, false)
+					container << hubiForm_switch ((sTIT): "Show Current Value on Bar?", (sNM): "attribute_${sa}_show_value", (sDEFLT): false, (sSUBONCHG): true)
+					if(gtSetB("attribute_${sa}_show_value")){
 						container << hubiForm_text_input("Units", "attribute_${sa}_annotation_units", sBLK, false)
 					}
 					hubiForm_container(container, 1)
@@ -6991,53 +7033,53 @@ def graphRangebar(){
 	List timespanEnum1=[[0:"Live"], [1:"Hourly"], [2:"Daily"], [3:"Every Three Days"], [4:"Weekly"]]
 
 	dynamicPage(name: "graphSetupPage"){
-		List container
+		List<String> container
 		hubiForm_section("General Options", 1, sBLK, sBLK){
 			container=[]
-			input( (sTYPE): sENUM, (sNM): "graph_type",(sTIT): "<b>Select graph type</b>", multiple: false, required: false, options: [["1": "Bar Chart"],["2": "Column Chart"]], defaultValue: s1)
+			input( (sTYPE): sENUM, (sNM): "graph_type",(sTIT): "<b>Select graph type</b>", (sMULTP): false, (sREQ): false, options: [["1": "Bar Chart"],["2": "Column Chart"]], (sDEFV): s1)
 			inputGraphUpdateRate()
-			input( (sTYPE): sENUM, (sNM): "graph_timespan",(sTIT): "<b>Select Time span to Graph (i.e How Often to Reset Range)</b>", multiple: false, required: false, options: timespanEnum1, defaultValue: "2", submitOnChange: true)
+			input( (sTYPE): sENUM, (sNM): "graph_timespan",(sTIT): "<b>Select Time span to Graph (i.e How Often to Reset Range)</b>", (sMULTP): false, (sREQ): false, options: timespanEnum1, (sDEFV): "2", (sSUBOC): true)
 
-			container << hubiForm_color ("Graph Background", "graph_background", "#FFFFFF", false)
-			container << hubiForm_slider ((sTIT): "Graph Bar Width (1%-100%)", (sNM): "graph_bar_percent", default: 90, min: 1, max: 100, units: "%")
-			container << hubiForm_text_input("Graph Max", "graph_max", "100", false)
+			container << hubiForm_color ("Graph Background", "graph_background", sWHT, false)
+			container << hubiForm_slider ((sTIT): "Graph Bar Width (1%-100%)", (sNM): "graph_bar_percent", (sDEFLT): 90, (sMIN): 1, (sMAX): 100, (sUNITS): "%")
+			container << hubiForm_text_input("Graph Max", "graph_max", s100, false)
 			container << hubiForm_text_input("Graph Min", "graph_min", s0, false)
 
 			hubiForm_container(container, 1)
 		}
 		hubiForm_section("Axes", 1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_color ("Axis", "haxis", "#000000", false)
-			container << hubiForm_font_size ((sTIT): "Axis", (sNM): "haxis", default: 9, min: 2, max: 20)
-			container << hubiForm_slider ((sTIT): "Number of Pixels for Axis", (sNM): "graph_h_buffer", default: 40, min: 10, max: 500, units: " pixels")
+			container << hubiForm_color ("Axis", "haxis", sBLACK, false)
+			container << hubiForm_font_size ((sTIT): "Axis", (sNM): "haxis", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
+			container << hubiForm_slider ((sTIT): "Number of Pixels for Axis", (sNM): "graph_h_buffer", (sDEFLT): 40, (sMIN): 10, (sMAX): 500, (sUNITS): " pixels")
 			hubiForm_container(container, 1)
 		}
 		hubiForm_section("Device Names", 1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_font_size ((sTIT): "Device Name", (sNM): "graph_axis", default: 9, min: 2, max: 20)
-			container << hubiForm_color ("Device Name","graph_axis", "#000000", false)
-			container << hubiForm_slider ((sTIT): "Number of Pixels for Device Name Area", (sNM): "graph_v_buffer", default: 100, min: 10, max: 500, units: " pixels")
+			container << hubiForm_font_size ((sTIT): "Device Name", (sNM): "graph_axis", (sDEFLT): 9, (sMIN): 2, (sMAX): 20)
+			container << hubiForm_color ("Device Name","graph_axis", sBLACK, false)
+			container << hubiForm_slider ((sTIT): "Number of Pixels for Device Name Area", (sNM): "graph_v_buffer", (sDEFLT): 100, (sMIN): 10, (sMAX): 500, (sUNITS): " pixels")
 
 			hubiForm_container(container, 1)
 		}
 		hubiForm_section("Graph Size", 1, sBLK, sBLK){
 			container=[]
-			input( (sTYPE): sBOOL, (sNM): "graph_static_size",(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", defaultValue: false, submitOnChange: true)
-			if((Boolean)settings.graph_static_size){
-				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", default: 800, min: 100, max: 3000, units: " pixels", submit_on_change: false)
-				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", default: 600, min: 100, max: 3000, units: " pixels", submit_on_change: false)
+			input( (sTYPE): sBOOL, (sNM): "graph_static_size",(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sDEFV): false, (sSUBOC): true)
+			if(gtSetB('graph_static_size')){
+				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): 800, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels", (sSUBONCHG): false)
+				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): 600, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels", (sSUBONCHG): false)
 			}
 
 			hubiForm_container(container, 1)
 		}
 		hubiForm_section("Annotations", 1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_font_size ((sTIT): "Annotation", (sNM): "annotation", default: 16, min: 2, max: 40)
-			container << hubiForm_switch	((sTIT): "Show Annotation Outside (true) or Inside (false) of Bars", (sNM): "annotation_inside", default: false)
-			container << hubiForm_color	("Annotation", "annotation", "#000000", false)
-			container << hubiForm_color	("Annotation Aura", "annotation_aura", "#FFFFFF", false)
-			container << hubiForm_switch	((sTIT): "Bold Annotation", (sNM): "annotation_bold", default: false)
-			container << hubiForm_switch	((sTIT): "Italic Annotation", (sNM): "annotation_italic", default: false)
+			container << hubiForm_font_size ((sTIT): "Annotation", (sNM): "annotation", (sDEFLT): 16, (sMIN): 2, (sMAX): 40)
+			container << hubiForm_switch	((sTIT): "Show Annotation Outside (true) or Inside (false) of Bars", (sNM): "annotation_inside", (sDEFLT): false)
+			container << hubiForm_color	("Annotation", "annotation", sBLACK, false)
+			container << hubiForm_color	("Annotation Aura", "annotation_aura", sWHT, false)
+			container << hubiForm_switch	((sTIT): "Bold Annotation", (sNM): "annotation_bold", (sDEFLT): false)
+			container << hubiForm_switch	((sTIT): "Italic Annotation", (sNM): "annotation_italic", (sDEFLT): false)
 
 			hubiForm_container(container, 1)
 		}
@@ -7050,7 +7092,7 @@ String getData_rangebar(){
 	Date then
 	then=new Date()
 
-	switch ((String)settings.graph_timespan){
+	switch (gtSetStr('graph_timespan')){
 		case s0: //"Live":
 			break
 		case s1: //"Hourly":
@@ -7098,15 +7140,15 @@ String getData_rangebar(){
 			//List data1=data.findAll{ (Long)it.date > graph_time}
 			List<Double> temp=data.collect{ Map it -> getValue(sid,attribute,it[sVAL]) }
 
-			//List temp=sensor.statesSince(attribute, then, [max: 1000]).collect{ it.getFloatValue() }
+			//List temp=sensor.statesSince(attribute, then, [(sMAX): 1000]).collect{ it.getFloatValue() }
 			Integer sz=data.size()
 			//Float v= sensor.currentState(attribute).getFloatValue()
 			Float v= "${data[sz-1][sVAL]}".toFloat()
 
 			if(temp.size() == 0){
-				resp[sid][attribute]=[current: v, min: v, max: v]
+				resp[sid][attribute]=[current: v, (sMIN): v, (sMAX): v]
 			}else{
-				resp[sid][attribute]=[current: v, min: temp.min(), max: temp.max()]
+				resp[sid][attribute]=[current: v, (sMIN): temp.min(), (sMAX): temp.max()]
 			}
 		}
 	}
@@ -7126,14 +7168,14 @@ Map getOptions_rangebar(){
 
 			String attrib_string="attribute_${sid}_${attribute}_color"
 			String transparent_attrib_string="attribute_${sid}_${attribute}_color_transparent"
-			colors << (settings[transparent_attrib_string] ? "transparent" : settings[attrib_string])
+			colors << (gtSetB(transparent_attrib_string) ? sTRANSPRNT : gtSetStr(attrib_string))
 
 		}
 	}
 
 	String axis1
 	String axis2
-	if((String)settings.graph_type == s1){
+	if(gtSetStr('graph_type') == s1){
 		axis1="hAxis"
 		axis2="vAxis"
 	}else{
@@ -7142,33 +7184,33 @@ Map getOptions_rangebar(){
 	}
 
 	Map options=[
-			"graphTimespan": Integer.parseInt(settings.graph_timespan),
-			"graphUpdateRate": Integer.parseInt(settings.graph_update_rate),
-			(sGRAPHT): Integer.parseInt(sMs(settings,'graph_type')),
+			"graphTimespan": Integer.parseInt(gtSetStr('graph_timespan')),
+			"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
+			(sGRAPHT): Integer.parseInt(gtSetStr('graph_type')),
 			"graphOptions": [
 					"bar" : [ "groupWidth" : "${settings.graph_bar_percent}%",
 					],
-					"width": (Boolean)settings.graph_static_size ? settings.graph_h_size : "100%",
-					"height": (Boolean)settings.graph_static_size ? settings.graph_v_size: "90%",
+					"width": gtSetB('graph_static_size') ? settings.graph_h_size : "100%",
+					"height": gtSetB('graph_static_size') ? settings.graph_v_size: "90%",
 					"timeline": [
-							"rowLabelStyle": ["fontSize": settings.graph_axis_font, "color": settings.graph_axis_color_transparent ? "transparent" : settings.graph_axis_color],
+							"rowLabelStyle": ["fontSize": settings.graph_axis_font, "color": gtSetB('graph_axis_color_transparent') ? sTRANSPRNT : settings.graph_axis_color],
 							"barLabelStyle": ["fontSize": settings.graph_axis_font]
 					],
-					"backgroundColor": graph_background_color_transparent ? "transparent" : graph_background_color,
+					"backgroundColor": gtSetB('graph_background_color_transparent') ? sTRANSPRNT : gtSetStr('graph_background_color'),
 					"isStacked": true,
-					"chartArea": [ "left": settings.graph_type == s1 ? settings.graph_v_buffer : settings.graph_h_buffer,
-								"right" : 10,
+					"chartArea": [ (sLEFT): gtSetStr('graph_type') == s1 ? settings.graph_v_buffer : settings.graph_h_buffer,
+							   (sRIGHT) : 10,
 								"top": 10,
-								"bottom": settings.graph_type == s1 ? settings.graph_h_buffer : settings.graph_v_buffer ],
+								"bottom": gtSetStr('graph_type') == s1 ? settings.graph_h_buffer : settings.graph_v_buffer ],
 					"legend" : [ "position" : sNONE ],
 					(axis1): [ "viewWindow" : ["max" : graph_max,
 											"min" : graph_min],
 							"minValue" : graph_min,
 							"maxValue" : graph_max,
-							"textStyle" : ["color": haxis_color_transparent ? "transparent" : haxis_color,
+							"textStyle" : ["color": gtSetB('haxis_color_transparent') ? sTRANSPRNT : haxis_color,
 											"fontSize": haxis_font]
 					],
-					(axis2): [ "textStyle" : ["color": graph_axis_color_transparent ? "transparent" : graph_axis_color,
+					(axis2): [ "textStyle" : ["color": gtSetB('graph_axis_color_transparent') ? sTRANSPRNT : graph_axis_color,
 											"fontSize": graph_axis_font]
 					],
 					"annotations" : [	"alwaysOutside": true,
@@ -7176,11 +7218,11 @@ Map getOptions_rangebar(){
 												"fontSize": annotation_font,
 												"bold":	annotation_bold,
 												"italic": annotation_italic,
-												"color":	annotation_color_transparent ? "transparent" : annotation_color,
-												"auraColor":annotation_aura_color_transparent ? "transparent" : annotation_aura_color,
+												"color":	gtSetB('annotation_color_transparent') ? sTRANSPRNT : annotation_color,
+												"auraColor":gtSetB('annotation_aura_color_transparent') ? sTRANSPRNT : annotation_aura_color,
 										],
-										"stem": [ "color": "transparent" ],
-										"highContrast": "false"
+										"stem": [ "color": sTRANSPRNT ],
+										"highContrast": sFALSE
 					],
 
 			],
@@ -7595,10 +7637,10 @@ Map getSubscriptions_rangebar(){
 
 			_attributes[sid] << attribute
 			labels[sid][attribute]=settings["graph_name_override_${sa}"]
-			colors[sid][attribute]=["backgroundColor":		settings["attribute_${sa}_background_color_transparent"] ? "transparent" : settings["attribute_${sa}_background_color"],
-									"minMaxColor":			settings["attribute_${sa}_minmax_color_transparent"] ? "transparent" : settings["attribute_${sa}_minmax_color"],
-									"currentValueColor":	settings["attribute_${sa}_current_color_transparent"] ? "transparent" : settings["attribute_${sa}_current_color"],
-									"currentValueBorderColor": settings["attribute_${sa}_current_border_color_transparent"] ? "transparent" : settings["attribute_${sa}_current_border_color"],
+			colors[sid][attribute]=["backgroundColor":		gtSetB("attribute_${sa}_background_color_transparent") ? sTRANSPRNT : gtSetStr("attribute_${sa}_background_color"),
+									"minMaxColor":			gtSetB("attribute_${sa}_minmax_color_transparent") ? sTRANSPRNT : settings["attribute_${sa}_minmax_color"],
+									"currentValueColor":	gtSetB("attribute_${sa}_current_color_transparent") ? sTRANSPRNT : settings["attribute_${sa}_current_color"],
+									"currentValueBorderColor": gtSetB("attribute_${sa}_current_border_color_transparent") ? sTRANSPRNT : settings["attribute_${sa}_current_border_color"],
 									"showAnnotation":			settings["attribute_${sa}_show_value"],
 									"annotation_font":		settings["attribute_${sa}_annotation_font"],
 									"annotation_units":		settings["attribute_${sa}_annotation_units"],
@@ -7608,7 +7650,7 @@ Map getSubscriptions_rangebar(){
 
 	Map sensors_fmt=gtSensorFmt()
 
-	List order=graph_order ? parseJson(graph_order) : []
+	List order=gtSetStr('graph_order') ? parseJson(gtSetStr('graph_order')) : []
 
 	Map subscriptions=[
 			(sID): isPoll ? 'poll' : 'sensor',
@@ -7640,7 +7682,7 @@ def tileRadar(){
 	List<Map> zoomEnum =	[[3:"3"], [4: "4"], [5: "5"], [6: "6"], [7: "7"], [8: "8"], [9: "9"], [10: "10"]]
 	List<Map> refreshEnum=[[60000:"1 minute"], [300000: "5 minutes"], [600000: "10 minutes"], [1200000: "20 minutes"], [1800000: "30 minutes"], [3600000: "1 hour"]]
 
-	List<Map> weatherMapEnum=[["radar" :	"Current Radar"],
+	List<Map<String,String>> weatherMapEnum=[["radar" :	"Current Radar"],
 								["temp" :	"Temperature"],
 								["wind" :	"Wind"],
 								["rain" :	"Rain and Thunder"],
@@ -7648,27 +7690,27 @@ def tileRadar(){
 								["snowAccu" : "Snow Accumulation"],
 								["snowcover": "Snow Ground Cover"]]
 
-	List<Map> forecastModelEnum =[["ecmwf":	"European Centre for Medium-Range Weather Forecasts"],
+	List<Map<String,String>> forecastModelEnum =[["ecmwf":	"European Centre for Medium-Range Weather Forecasts"],
 								["gfs":	"Global Forecast System"]]
 
-	List<Map> hoursModelEnum=[["now" : "Current"],
+	List<Map<String,String>> hoursModelEnum=[["now" : "Current"],
 								["12" : "12 Hours"],
 								["24" : "24 Hours"]]
 
-	List<Map> measureEnum=[["in": "inches"],
+	List<Map<String,String>> measureEnum=[["in": "inches"],
 							["mm": "millimeters"]]
 
-	List<Map> windEnum=[["knot" : "Knots (k)"],
-						["meters_per_second" : "Meters / Second (m/s)"],
-						["kilometers_per_hour" : "Kilometers / Hour (km/h)"],
-						["miles_per_hour" : "Miles per Hour (mph)"]]
+/*	List<Map<String,String>> windEnum=[["knot" : "Knots (k)"],
+						[(sMETERSPS) : "Meters / Second (m/s)"],
+						[(sKILOSPH) : "Kilometers / Hour (km/h)"],
+						[(sMILESPH) : "Miles per Hour (mph)"]] */
 
-	List<Map> tempEnum =	[[(sFAHR): "Fahrenheit (°F)"],
+	List<Map<String,String>> tempEnum =	[[(sFAHR): "Fahrenheit (°F)"],
 							 [(sCELS) : "Celsius (°C)"]]
 
 	dynamicPage(name: "graphSetupPage"){
 
-		List container
+		List<String> container
 
 		hubiForm_section("Tile Setup", 1, sBLK, sBLK){
 			container=[]
@@ -7687,11 +7729,11 @@ def tileRadar(){
 				settings['zoom']=3
 			} */
 
-			input( (sTYPE): sENUM, (sNM): "zoom",(sTIT): "<b>Zoom Amount</b>", required: false, multiple: false, options: zoomEnum, defaultValue: 3, submitOnChange: false)
-			input( (sTYPE): sENUM, (sNM): "refresh",(sTIT): "<b>Refresh Time</b>", required: false, multiple: false, options: refreshEnum, defaultValue: 600000, submitOnChange: false)
-			input( (sTYPE): sENUM, (sNM): "overlay",(sTIT): "<b>Map Type</b>", required: false, multiple: false, options: weatherMapEnum, defaultValue: "radar", submitOnChange: true)
+			input( (sTYPE): sENUM, (sNM): "zoom",(sTIT): "<b>Zoom Amount</b>", (sREQ): false, (sMULTP): false, options: zoomEnum, (sDEFV): 3, (sSUBOC): false)
+			input( (sTYPE): sENUM, (sNM): "refresh",(sTIT): "<b>Refresh Time</b>", (sREQ): false, (sMULTP): false, options: refreshEnum, (sDEFV): 600000, (sSUBOC): false)
+			input( (sTYPE): sENUM, (sNM): 'overlay',(sTIT): "<b>Map Type</b>", (sREQ): false, (sMULTP): false, options: weatherMapEnum, (sDEFV): "radar", (sSUBOC): true)
 
-			if(settings.overlay != "radar"){
+			if(gtSetStr('overlay') != "radar"){
 				container=[]
 				container << hubiForm_text("""<b>You have chosen a forecast map.</b> Please note:<br>
 									1. Forecast maps are update on the hour<br>
@@ -7699,44 +7741,44 @@ def tileRadar(){
 									3. Refreshing these maps "more often" won't change anything""")
 				hubiForm_container(container, 1)
 
-				if(product == "radar") app.updateSetting("product", [(sTYPE): sENUM, (sVAL): "gfs"])
-				input( (sTYPE): sENUM, (sNM): "product",(sTIT): "<b>Forecast Model</b>", required: false, multiple: false, options: forecastModelEnum, defaultValue: "gfs", submitOnChange: false)
-				input( (sTYPE): sENUM, (sNM): "calendar",(sTIT): "<b>Display Time</b>", required: false, multiple: false, options: hoursModelEnum, defaultValue: "now", submitOnChange: false)
+				if(gtSetStr('product') == "radar") app.updateSetting('product', [(sTYPE): sENUM, (sVAL): "gfs"])
+				input( (sTYPE): sENUM, (sNM): 'product',(sTIT): "<b>Forecast Model</b>", (sREQ): false, (sMULTP): false, options: forecastModelEnum, (sDEFV): "gfs", (sSUBOC): false)
+				input( (sTYPE): sENUM, (sNM): "calendar",(sTIT): "<b>Display Time</b>", (sREQ): false, (sMULTP): false, options: hoursModelEnum, (sDEFV): "now", (sSUBOC): false)
 			}else{
-				app.updateSetting ("product", [(sTYPE): sENUM, (sVAL): "gfs"])
+				app.updateSetting ('product', [(sTYPE): sENUM, (sVAL): "gfs"])
 				app.updateSetting ("calendar", [(sTYPE): sENUM, (sVAL): "now"])
 			}
 
-/*			if(!settings.wind_units){
-				app.updateSetting("wind_units", [(sTYPE): sENUM, (sVAL): "miles_per_hour"])
-				settings['wind_units']='miles_per_hour'
-				app.updateSetting("temp_units", [(sTYPE): sENUM, (sVAL): sFAHR])
-				settings['temp_units']='fahrenheit'
-				app.updateSetting("background", [(sTYPE): sENUM, (sVAL): "#000000"])
+/*			if(!gtSetStr('wind_units')){
+				app.updateSetting('wind_units', [(sTYPE): sENUM, (sVAL): sMILESPH])
+				settings['wind_units']=sMILESPH
+				app.updateSetting('temp_units', [(sTYPE): sENUM, (sVAL): sFAHR])
+				settings['temp_units']=sFAHR
+				app.updateSetting(sBACKGRND, [(sTYPE): sENUM, (sVAL): sBLACK])
 				settings['background']='#000000'
 				app.updateSetting("background_opacity", [(sTYPE): sENUM, (sVAL): 90])
 				settings['background_opacity']=90
 			} */
-			input( (sTYPE): sENUM, (sNM): "wind_units",(sTIT): "<b>Wind Speed Units</b>", required: false, multiple: false, options: windEnum, defaultValue: "miles_per_hour", submitOnChange: false)
-			input( (sTYPE): sENUM, (sNM): "temp_units",(sTIT): "<b>Temperature Units</b>", required: false, multiple: false, options: tempEnum, defaultValue: sFAHR, submitOnChange: false)
+			input( (sTYPE): sENUM, (sNM): 'wind_units',(sTIT): "<b>Wind Speed Units</b>", (sREQ): false, (sMULTP): false, options: unitWind /*windEnum*/, (sDEFV): sMILESPH, (sSUBOC): false)
+			input( (sTYPE): sENUM, (sNM): 'temp_units',(sTIT): "<b>Temperature Units</b>", (sREQ): false, (sMULTP): false, options: tempEnum, (sDEFV): sFAHR, (sSUBOC): false)
 			container=[]
 			container << hubiForm_switch((sTIT): "<b>Show Marker on Graph?</b>",
 					(sNM): "marker",
-					default: false,
-					submit_on_change: false)
+					(sDEFLT): false,
+					(sSUBONCHG): false)
 
 			container << hubiForm_color("Background",
-					"background",
-					"#000000",
+					sBACKGRND,
+					sBLACK,
 					false)
 
 			container << hubiForm_slider	((sTIT): "Background Opacity",
 					(sNM): "background_opacity",
-					default: 90,
-					min: 0,
-					max: 100,
-					units: "%",
-					submit_on_change: false)
+					(sDEFLT): 90,
+					(sMIN): 0,
+					(sMAX): 100,
+					(sUNITS): "%",
+					(sSUBONCHG): false)
 			hubiForm_container(container, 1)
 
 		}
@@ -7748,7 +7790,7 @@ def mainRadar(){
 	dynamicPage(name: "mainPage"){
 
 		checkDup()
-		List container
+		List<String> container
 		if(!state.endpoint){
 			hubiForm_section("Please set up OAuth API", 1, "report", sBLK){
 				href( (sNM): "enableAPIPageLink",(sTIT): "Enable API", description: sBLK, page: "enableAPIPage")
@@ -7760,7 +7802,7 @@ def mainRadar(){
 				hubiForm_container(container, 1)
 			}
 
-			if(settings.wind_units){
+			if(gtSetStr('wind_units')){
 				local_graph_url()
 				preview_tile()
 			}
@@ -7778,16 +7820,16 @@ String getGraph_radar(){
 
 	String wind
 	wind="kt"
-	switch (wind_units){
+	switch (gtSetStr('wind_units')){
 		case "knot" : wind="kt"; break
-		case "meters_per_second" : wind="m%2Fs"; break
-		case "kilometers_per_hour" : wind="km%2Fh"; break
-		case "miles_per_hour" : wind="mph"; break
+		case sMETERSPS : wind="m%2Fs"; break
+		case sKILOSPH : wind="km%2Fh"; break
+		case sMILESPH : wind="mph"; break
 	}
 
 	String temp
 	temp="%C2%B0F"
-	switch (temp_units){
+	switch (gtSetStr('temp_units')){
 		case sFAHR: temp="%C2%B0F"; break
 		case sCELS : temp="%C2%B0C"
 	}
@@ -7798,7 +7840,7 @@ String getGraph_radar(){
 	display: flex;
 	flex-flow: column;
 	height: 100%;
-	background-color: ${getRGBA(background_color, background_opacity)};
+	background-color: ${getRGBA(gtSetStr('background_color'), background_opacity)};
 }
 
 </style>
@@ -7840,7 +7882,7 @@ var url="https://embed.windy.com/embed2.html";
 var width=document.getElementById('radar').offsetWidth-5;
 var height=window.innerHeight-15;
 
-var params="?lat=${latitude}&lon=${longitude}&detailLat=${latitude}&detailLon=${longitude}&width="+width+"&height"+height+"&zoom=${zoom}&level=surface&overlay=${settings.overlay}&product=${product}&menu=&message=true&marker=${marker==true ? 'true' : ''}&calendar=${calendar}&pressure=&type=map&location=coordinates&detail=&metricWind=${wind}&metricTemp=${temp}&radarRange=-1"
+var params="?lat=${latitude}&lon=${longitude}&detailLat=${latitude}&detailLon=${longitude}&width="+width+"&height"+height+"&zoom=${zoom}&level=surface&overlay=${settings.overlay}&product=${product}&menu=&message=true&marker=${gtSetB('marker') ? 'true' : ''}&calendar=${calendar}&pressure=&type=map&location=coordinates&detail=&metricWind=${wind}&metricTemp=${temp}&radarRange=-1"
 
 var iframe_url=url + params;
 
@@ -7874,44 +7916,41 @@ document.getElementById("windy2").height=height+"px";
 
 def tileWeather2(){
 
-	List updateEnum=[["60000":"1 Minute"],["300000":"5 Minutes"], ["600000":"10 Minutes"], ["1200000":"20 Minutes"], ["1800000":"Half Hour"],
-					   ["3600000":"1 Hour"], ["6400000":"2 Hours"], ["19200000":"6 Hours"], ["43200000":"12 Hours"], ["86400000":"1 Day"]]
-
 	dynamicPage(name: "graphSetupPage"){
 
 		hubiForm_section("General Options", 1, sBLK, sBLK){
-			input( (sTYPE): sENUM, (sNM): "openweather_refresh_rate",(sTIT): "<b>Select OpenWeather Update Rate</b>", multiple: false, required: true, options: updateEnum, defaultValue: "300000")
+			input( (sTYPE): sENUM, (sNM): "openweather_refresh_rate",(sTIT): "<b>Select OpenWeather Update Rate</b>", (sMULTP): false, (sREQ): true, options: updateEnum, (sDEFV): "300000")
 
-			List container=[]
+			List<String> container=[]
 
 			container << hubiForm_color("Background",
-					"background",
-					"#000000",
+					sBACKGRND,
+					sBLACK,
 					false)
 			container << hubiForm_slider	((sTIT): "Background Opacity",
 					(sNM): "background_opacity",
-					default: 90,
-					min: 0,
-					max: 100,
-					units: "%",
-					submit_on_change: false)
+					(sDEFLT): 90,
+					(sMIN): 0,
+					(sMAX): 100,
+					(sUNITS): "%",
+					(sSUBONCHG): false)
 
-			container << hubiForm_switch	((sTIT): "Color Icons?", (sNM): "color_icons", default: false)
+			container << hubiForm_switch	((sTIT): "Color Icons?", (sNM): "color_icons", (sDEFLT): false)
 
 			hubiForm_container(container, 1)
 
 //			List<Map> daysEnum=[[0: "Today"], [1: "Tomorrow"], [2: "2 Days from Now"], [3: "3 Days from Now"], [4: "4 Days from Now"], [5: "Five Days from Now"]]
-//			input( (sTYPE): sENUM, (sNM): "day_num",(sTIT): "Day to Display", multiple: false, required: false, options: daysEnum, defaultValue: "1")
+//			input( (sTYPE): sENUM, (sNM): "day_num",(sTIT): "Day to Display", (sMULTP): false, (sREQ): false, options: daysEnum, (sDEFV): "1")
 		}
 
-		//List decimalEnum =	[[0: "None (0)"], [1: "One (0.1)"], [2: "Two (0.12)"], [3: "Three (0.123)"], [4: "Four (0.1234)"]]
 		((Map<String,Map>)state.unit_type).each{String key, Map measurement->
 			if(measurement.out != sNONE ){
 				hubiForm_section(sMs(measurement,sNM), 1, sBLK, sBLK){
-					List container=[]
+					//TODO bad??
+					List<String> container=[]
 					hubiForm_container(container, 1)
-					input( (sTYPE): sENUM, (sNM): key+"_units",(sTIT): "Displayed Units", required: false, multiple: false,
-							options: measurement.enum, defaultValue: measurement.out, submitOnChange: false)
+					input( (sTYPE): sENUM, (sNM): key+"_units",(sTIT): "Displayed Units", (sREQ): false, (sMULTP): false,
+							options: measurement.enum, (sDEFV): measurement.out, (sSUBOC): false)
 				}
 			}
 		}
@@ -7923,19 +7962,19 @@ def deviceWeather2(){
 	List<Map> final_attrs
 
 	dynamicPage(name: "deviceSelectionPage"){
-		List container
+		List<String> container
 		hubiForm_section("Device Selection", 1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_switch((sTIT): "Make Hubitat Devices Available?", (sNM): "override_openweather", default: false, submit_on_change: true)
+			container << hubiForm_switch((sTIT): "Make Hubitat Devices Available?", (sNM): "override_openweather", (sDEFLT): false, (sSUBONCHG): true)
 			hubiForm_container(container, 1)
 		}
 
 		Map<String,Map<String,Map>> measurement_list=[:]
-		if(override_openweather == true){
+		if(gtSetB('override_openweather')){
 			hubiForm_section("Sensor Selection", 1, sBLK, sBLK){
 				container=[]
 				if(container)hubiForm_container(container, 1)
-				input ("sensors", "capability.*",(sTIT): "Select Sensors", multiple: true, required: false, submitOnChange: true)
+				input ("sensors", "capability.*",(sTIT): "Select Sensors", (sMULTP): true, (sREQ): false, (sSUBOC): true)
 			}
 			if(sensors){
 				final_attrs=[]
@@ -7951,8 +7990,8 @@ def deviceWeather2(){
 							String units=cv.getUnit()
 							def value=cv.getValue()
 							String dn=sensor.displayName
-							sensor_list."${sid}"."${name}"=[ sensor_name: "${dn}", (sVAL): value, unit: units, supported_unit: getUnits(units, value)]
-							final_attrs << [("${sid}.${name}".toString()) : "${dn} (${name}) ::: [${value} ${units ?: ""} ]"]
+							sensor_list."${sid}"."${name}"=[ sensor_name: "${dn}", (sVAL): value, (sUNIT): units, supported_unit: getUnits(units, value)]
+							final_attrs << [("${sid}.${name}".toString()) : "${dn} (${name}) ::: [${value} ${units ?: sBLK} ]"]
 						}
 					}
 				}
@@ -7963,7 +8002,7 @@ def deviceWeather2(){
 					if(type.out != sNONE){
 						hubiForm_section(sMs(type,sNM), 1, sBLK, sBLK){
 							container=[]
-							input( (sTYPE): sENUM, (sNM): "${key}_devices",(sTIT): sMs(type,sNM), required: false, multiple: true, options: final_attrs, defaultValue: sBLK, submitOnChange: true)
+							input( (sTYPE): sENUM, (sNM): "${key}_devices",(sTIT): sMs(type,sNM), (sREQ): false, (sMULTP): true, options: final_attrs, (sDEFV): sBLK, (sSUBOC): true)
 							if(settings["${key}_devices"]){
 								settings["${key}_devices"].each{ String iattr->
 									String attr
@@ -7996,9 +8035,9 @@ def deviceWeather2(){
 										if(list[0].none != "None")
 											input( (sTYPE): sENUM, (sNM): "${key}.${sensor_id}.${attr}",
 													(sTIT): "<b>"+sensor_name+" :: "+attr+"</b><br>Valid units not detected ("+unit+'); Expected <b>"'+key+'"</b> type<br><small>Please select measurement units below</small>',
-													required: false, multiple: false,
+													(sREQ): false, (sMULTP): false,
 													options: list,
-													defaultValue: sBLK, submitOnChange: false)
+													(sDEFV): sBLK, (sSUBOC): false)
 
 										measurement_list."${key}"."${sensor_id}"."${attr}"=[sensor_name: sensor_list."${sensor_id}"."${attr}".sensor_name,
 																							in_units: settings["${key}.${sensor_id}.${attr}"]
@@ -8030,7 +8069,7 @@ def deviceWeather2(){
 @Field static final String sCUR='current'
 
 @Field List unitTemp =		[[(sFAHR): "Fahrenheit (°F)"], [(sCELS) : "Celsius (°C)"], ["kelvin" : "Kelvin (K)"]]
-@Field List unitWind =		[["meters_per_second": "Meters per Second (m/s)"], ["miles_per_hour": "Miles per Hour (mph)"], ["knots": "Knots (kn)"], ["kilometers_per_hour": "Kilometers per Hour (km/h)"]]
+@Field List<Map<String,String>> unitWind =		[[(sMETERSPS): "Meters per Second (m/s)"], [(sMILESPH): "Miles per Hour (mph)"], ["knots": "Knots (kn)"], [(sKILOSPH): "Kilometers per Hour (km/h)"]]
 @Field List unitDepth =		[["millimeters": "Millimeters (mm)"], ["inches": """Inches (") """]]
 @Field List unitPressure=	[["millibars": "Millibars (mbar)"], ["millimeters_mercury": "Millimeters of Mercury (mmHg)"], ["inches_mercury": "Inches of Mercury (inHg)"], ["hectopascal" : "Hectopascal (hPa)"]]
 @Field List unitDirection=	[["degrees": "Degrees (°)"], ["radians" : "Radians (°)"], ["cardinal": "Cardinal (N, NE, E, SE, etc)"]]
@@ -8046,225 +8085,225 @@ def deviceWeather2(){
 
 @Field List<Map<String,Object>> tileSetFLD= [
 		[
-				(sTIT): 'Forecast Weather Icon',		var: "weather_icon", (sTYPE): "weather_icon", period:sCUR, (sVAL): sBLK,
-				(sICON): "alert-circle", icon_loc: "center", icon_space: sBLK,
-				h: 6, w: 12, baseline_row: 1, baseline_column: 13,
-				alignment: "center", text: sBLK, decimals: 1,
+				(sTIT): 'Forecast Weather Icon',		(sVAR): "weather_icon", (sTYPE): "weather_icon", period:sCUR, (sVAL): sBLK,
+				(sICON): "alert-circle", icon_loc: sCENTER, icon_space: sBLK,
+				h: 6, w: 12, (sBLROW): 1, (sBLCOL): 13,
+				(sALIGNMENT): sCENTER, text: sBLK, (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: sNONE, decimal: sNO, unit_space: sBLK,
-				font: 40, font_weight: "100",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): sNONE, decimal: sNO, unit_space: sBLK,
+				font: 40, font_weight: s100,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Current Weather',		var: "description", (sTYPE): "weather_description", period:sCUR, (sVAL): 0,
+				(sTIT): 'Current Weather',		(sVAR): "description", (sTYPE): "weather_description", period:sCUR, (sVAL): 0,
 				(sICON): sNONE, icon_loc: sNONE, icon_space: sBLK,
-				h: 4, w: 12, baseline_row: 7, baseline_column: 13,
-				alignment: "center", text: sBLK, decimals: 0,
+				h: 4, w: 12, (sBLROW): 7, (sBLCOL): 13,
+				(sALIGNMENT): sCENTER, text: sBLK, (sDECIMALS): 0,
 				lpad: 0, rpad: 0,
-				unit: sNONE, decimal: sNO, unit_space: sBLK,
-				font: 20, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): sNONE, decimal: sNO, unit_space: sBLK,
+				font: 20, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Current Temperature',		var: "current_temperature", (sTYPE): sTEMP, period:sCUR,
-				(sICON): sNONE, icon_loc: "left", icon_space: sBLK,
-				h: 4, w: 12, baseline_row: 1, baseline_column: 1,
-				alignment: "center", text: sBLK, decimals: 1,
+				(sTIT): 'Current Temperature',		(sVAR): "current_temperature", (sTYPE): sTEMP, period:sCUR,
+				(sICON): sNONE, icon_loc: sLEFT, icon_space: sBLK,
+				h: 4, w: 12, (sBLROW): 1, (sBLCOL): 1,
+				(sALIGNMENT): sCENTER, text: sBLK, (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: unitTemp, decimal: sYES, unit_space: sBLK,
+				(sUNIT): unitTemp, decimal: sYES, unit_space: sBLK,
 				font: 20, font_weight: "900",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Feels Like',				var: "feels_like", (sTYPE): "feels_like", period:sCUR,
-				(sICON): "home-thermometer-outline", icon_loc: "left", icon_space: sSPC,
-				h: 2, w: 12, baseline_row: 5, baseline_column: 1,
-				alignment: "center", text: "Feels Like: ", decimals: 1,
+				(sTIT): 'Feels Like',				(sVAR): "feels_like", (sTYPE): "feels_like", period:sCUR,
+				(sICON): "home-thermometer-outline", icon_loc: sLEFT, icon_space: sSPC,
+				h: 2, w: 12, (sBLROW): 5, (sBLCOL): 1,
+				(sALIGNMENT): sCENTER, text: "Feels Like: ", (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: unitTemp, decimal: sYES, unit_space: sBLK,
-				font: 7, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): unitTemp, decimal: sYES, unit_space: sBLK,
+				font: 7, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Forecast High',				var: "forecast_high", (sTYPE): "temperature_max", period:"daily.0",
-				(sICON): "arrow-up-thick", icon_loc: "left", icon_space: sBLK,
-				h: 4, w: 6, baseline_row: 7, baseline_column: 7,
-				alignment: "center", text: sBLK, decimals: 1,
+				(sTIT): 'Forecast High',				(sVAR): "forecast_high", (sTYPE): "temperature_max", period:"daily.0",
+				(sICON): "arrow-up-thick", icon_loc: sLEFT, icon_space: sBLK,
+				h: 4, w: 6, (sBLROW): 7, (sBLCOL): 7,
+				(sALIGNMENT): sCENTER, text: sBLK, (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: unitTemp, decimal: sYES, unit_space: sBLK,
-				font: 7, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): unitTemp, decimal: sYES, unit_space: sBLK,
+				font: 7, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Forecast Low',				var: "forecast_low", (sTYPE): "temperature_min", period:"daily.0",
-				(sICON): "arrow-down-thick", icon_loc: "left",  icon_space: sBLK,
-				h: 4,  w: 6, baseline_row: 7,  baseline_column:  1,
-				alignment: "center", text: sBLK,  decimals: 1,
+				(sTIT): 'Forecast Low',				(sVAR): "forecast_low", (sTYPE): "temperature_min", period:"daily.0",
+				(sICON): "arrow-down-thick", icon_loc: sLEFT,  icon_space: sBLK,
+				h: 4,  w: 6, (sBLROW): 7,  (sBLCOL):  1,
+				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: unitTemp,   decimal: sYES, unit_space: sBLK,
-				font: 6, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): unitTemp,   decimal: sYES, unit_space: sBLK,
+				font: 6, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Precipitation Title',		var: "precipitation_title", (sTYPE): "blank",  period:sNONE,
-				(sICON): "umbrella-outline", icon_loc: "left",  icon_space: sSPC,
-				h: 2,  w: 8, baseline_row: 11,  baseline_column:  1,
-				alignment: "center", text: "Precipitation",
-				lpad: 0, rpad: 0,  decimals: 1,
-				unit: unitDepth,   decimal: sNO,  unit_space: sBLK,
-				font: 6, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sTIT): 'Precipitation Title',		(sVAR): "precipitation_title", (sTYPE): "blank",  period:sNONE,
+				(sICON): "umbrella-outline", icon_loc: sLEFT,  icon_space: sSPC,
+				h: 2,  w: 8, (sBLROW): 11,  (sBLCOL):  1,
+				(sALIGNMENT): sCENTER, text: "Precipitation",
+				lpad: 0, rpad: 0,  (sDECIMALS): 1,
+				(sUNIT): unitDepth,   decimal: sNO,  unit_space: sBLK,
+				font: 6, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Forecast Precipitation',	var: "forecast_precipitation", (sTYPE): "rain", period:"daily.0",
-				(sICON): "ruler", icon_loc: "left",  icon_space: sSPC,
-				h: 2,  w: 8, baseline_row: 15,  baseline_column:  1,
-				alignment: "center", text: sBLK,
-				lpad: 0, rpad: 0,  decimals: 1,
-				unit: unitDepth,   decimal: sYES, unit_space: sBLK,
-				font: 4, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sTIT): 'Forecast Precipitation',	(sVAR): "forecast_precipitation", (sTYPE): "rain", period:"daily.0",
+				(sICON): "ruler", icon_loc: sLEFT,  icon_space: sSPC,
+				h: 2,  w: 8, (sBLROW): 15,  (sBLCOL):  1,
+				(sALIGNMENT): sCENTER, text: sBLK,
+				lpad: 0, rpad: 0,  (sDECIMALS): 1,
+				(sUNIT): unitDepth,   decimal: sYES, unit_space: sBLK,
+				font: 4, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 
 		],
 		[
-				(sTIT): 'Forecast Percent Precipitation', var: "forecast_percent_precipitation", (sTYPE): "chance_precipitation", period:"daily.0",
-				(sICON): "cloud-question", icon_loc: "left",  icon_space: sSPC,
-				h: 2,  w: 8, baseline_row: 13,  baseline_column: 1,
-				alignment: "center", text: sBLK,  decimals: 1,
+				(sTIT): 'Forecast Percent Precipitation', (sVAR): "forecast_percent_precipitation", (sTYPE): "chance_precipitation", period:"daily.0",
+				(sICON): "cloud-question", icon_loc: sLEFT,  icon_space: sSPC,
+				h: 2,  w: 8, (sBLROW): 13,  (sBLCOL): 1,
+				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: unitPercent,   decimal: sYES, unit_space: sBLK,
-				font: 4, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): unitPercent,   decimal: sYES, unit_space: sBLK,
+				font: 4, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Current Precipitation',		var: "current_precipitation", (sTYPE): "rain_past_hour", period:sCUR,
-				(sICON): "calendar-today", icon_loc: "left",  icon_space: sSPC,
-				h: 2,  w: 8, baseline_row: 17,  baseline_column:  1,
-				alignment: "center", text: sBLK,  decimals: 1,
+				(sTIT): 'Current Precipitation',		(sVAR): "current_precipitation", (sTYPE): "rain_past_hour", period:sCUR,
+				(sICON): "calendar-today", icon_loc: sLEFT,  icon_space: sSPC,
+				h: 2,  w: 8, (sBLROW): 17,  (sBLCOL):  1,
+				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: unitDepth,   decimal: sYES,  unit_space: sBLK,
-				font: 4, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): unitDepth,   decimal: sYES,  unit_space: sBLK,
+				font: 4, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Wind Title',			var: "wind_title", (sTYPE): "blank",   period:sNONE,
-				(sICON): "weather-windy-variant", icon_loc: "left",  icon_space: sSPC,
-				h: 2,  w: 8, baseline_row: 11,  baseline_column:  9,
-				alignment: "center", text: "Wind",  decimals: 1,
+				(sTIT): 'Wind Title',			(sVAR): "wind_title", (sTYPE): "blank",   period:sNONE,
+				(sICON): "weather-windy-variant", icon_loc: sLEFT,  icon_space: sSPC,
+				h: 2,  w: 8, (sBLROW): 11,  (sBLCOL):  9,
+				(sALIGNMENT): sCENTER, text: "Wind",  (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: sNONE,   decimal: sNO, unit_space: sBLK,
-				font: 4, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): sNONE,   decimal: sNO, unit_space: sBLK,
+				font: 4, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Wind Speed',			var: "wind_speed", (sTYPE): "wind_speed",  period:sCUR,
-				(sICON): "tailwind", icon_loc: "left",  icon_space: sSPC,
-				h: 2,  w: 8, baseline_row: 13,  baseline_column:  9,
-				alignment: "center", text: sBLK,  decimals: 1,
+				(sTIT): 'Wind Speed',			(sVAR): "wind_speed", (sTYPE): "wind_speed",  period:sCUR,
+				(sICON): "tailwind", icon_loc: sLEFT,  icon_space: sSPC,
+				h: 2,  w: 8, (sBLROW): 13,  (sBLCOL):  9,
+				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: unitWind,   decimal: sYES, unit_space: sSPC,
-				font: 4, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): unitWind,   decimal: sYES, unit_space: sSPC,
+				font: 4, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Wind Gust',				var: "wind_gust", (sTYPE): "wind_gust",  period:sCUR,
-				(sICON): "weather-windy", icon_loc: "left",  icon_space: sSPC,
-				h: 2,  w: 8, baseline_row: 15,  baseline_column:  9,
-				alignment: "center", text: sBLK,  decimals: 1,
+				(sTIT): 'Wind Gust',				(sVAR): "wind_gust", (sTYPE): "wind_gust",  period:sCUR,
+				(sICON): "weather-windy", icon_loc: sLEFT,  icon_space: sSPC,
+				h: 2,  w: 8, (sBLROW): 15,  (sBLCOL):  9,
+				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: unitWind,   decimal: sYES, unit_space: sSPC,
-				font: 4, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): unitWind,   decimal: sYES, unit_space: sSPC,
+				font: 4, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Wind Direction',		var: "wind_direction", (sTYPE): "wind_direction",  period:sCUR,
-				(sICON): "compass-outline", icon_loc: "left",  icon_space: sSPC,
-				h: 2,  w: 8, baseline_row: 17,  baseline_column:  9,
-				alignment: "center", text: sBLK,  decimals: 1,
+				(sTIT): 'Wind Direction',		(sVAR): "wind_direction", (sTYPE): "wind_direction",  period:sCUR,
+				(sICON): "compass-outline", icon_loc: sLEFT,  icon_space: sSPC,
+				h: 2,  w: 8, (sBLROW): 17,  (sBLCOL):  9,
+				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: unitDirection,   decimal: sNO, unit_space: sBLK,
-				font: 4, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): unitDirection,   decimal: sNO, unit_space: sBLK,
+				font: 4, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Pressure Title',		var: "pressure_title", (sTYPE): "blank", period:sCUR,
-				(sICON): "gauge", icon_loc: "left",  icon_space: sSPC,
-				h: 2,  w: 8, baseline_row: 11,  baseline_column:  17,
-				alignment: "center", text: "Pressure", decimals: 1,
+				(sTIT): 'Pressure Title',		(sVAR): "pressure_title", (sTYPE): "blank", period:sCUR,
+				(sICON): "gauge", icon_loc: sLEFT,  icon_space: sSPC,
+				h: 2,  w: 8, (sBLROW): 11,  (sBLCOL):  17,
+				(sALIGNMENT): sCENTER, text: "Pressure", (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: sNONE,   decimal: sYES, unit_space: sBLK,
-				font: 4, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): sNONE,   decimal: sYES, unit_space: sBLK,
+				font: 4, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Current Pressure',		var: "current_pressure", (sTYPE): "pressure", period:sCUR,
-				(sICON): "thermostat", icon_loc: "left",  icon_space: sSPC,
-				h: 2,  w: 8, baseline_row: 13,  baseline_column:  17,
-				alignment: "center", text: sBLK,  decimals: 1,
+				(sTIT): 'Current Pressure',		(sVAR): "current_pressure", (sTYPE): "pressure", period:sCUR,
+				(sICON): "thermostat", icon_loc: sLEFT,  icon_space: sSPC,
+				h: 2,  w: 8, (sBLROW): 13,  (sBLCOL):  17,
+				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: unitPressure,   decimal: sYES,  unit_space: sSPC,
-				font: 4, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): unitPressure,   decimal: sYES,  unit_space: sSPC,
+				font: 4, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Humidity',				var: "current_humidity", (sTYPE): "humidity", period:sCUR,
-				(sICON): "water-percent", icon_loc: "left",  icon_space: sSPC,
-				h: 2,  w: 4, baseline_row: 20,  baseline_column:  1,
-				alignment: "center", text: sBLK,  decimals: 1,
+				(sTIT): 'Humidity',				(sVAR): "current_humidity", (sTYPE): "humidity", period:sCUR,
+				(sICON): "water-percent", icon_loc: sLEFT,  icon_space: sSPC,
+				h: 2,  w: 4, (sBLROW): 20,  (sBLCOL):  1,
+				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: unitPercent,   decimal: sYES, unit_space: sBLK,
-				font: 4, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): unitPercent,   decimal: sYES, unit_space: sBLK,
+				font: 4, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Current Dewpoint',		var: "current_dewpoint", (sTYPE): "dew_point", period:sCUR,
-				(sICON): "wave", icon_loc: "left",  icon_space: sSPC,
-				h: 2,  w: 4, baseline_row: 20,  baseline_column: 11,
-				alignment: "center", text: sBLK,  decimals: 1,
+				(sTIT): 'Current Dewpoint',		(sVAR): "current_dewpoint", (sTYPE): "dew_point", period:sCUR,
+				(sICON): "wave", icon_loc: sLEFT,  icon_space: sSPC,
+				h: 2,  w: 4, (sBLROW): 20,  (sBLCOL): 11,
+				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: unitTemp,   decimal: sYES, unit_space: sBLK,
-				font: 4, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): unitTemp,   decimal: sYES, unit_space: sBLK,
+				font: 4, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Sunrise',				var: "sunrise", (sTYPE): "sunrise",  period:sCUR,
-				(sICON): "weather-sunset-up", icon_loc: "left",  icon_space: sSPC,
-				h: 2,  w: 5, baseline_row: 20,  baseline_column:  15,
-				alignment: "center", text: sBLK,  decimals: 1,
+				(sTIT): 'Sunrise',				(sVAR): "sunrise", (sTYPE): "sunrise",  period:sCUR,
+				(sICON): "weather-sunset-up", icon_loc: sLEFT,  icon_space: sSPC,
+				h: 2,  w: 5, (sBLROW): 20,  (sBLCOL):  15,
+				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: unitTime,   decimal: sNO,  unit_space: sBLK,
-				font: 3, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): unitTime,   decimal: sNO,  unit_space: sBLK,
+				font: 3, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 		[
-				(sTIT): 'Sunset',				var: "sunset", (sTYPE): "sunset",  period:sCUR,
-				(sICON): "weather-sunset-down", icon_loc: "left",  icon_space: sSPC,
-				h: 2,  w: 5, baseline_row: 20,  baseline_column:  20,
-				alignment: "center", text: sBLK,  decimals: 1,
+				(sTIT): 'Sunset',				(sVAR): "sunset", (sTYPE): "sunset",  period:sCUR,
+				(sICON): "weather-sunset-down", icon_loc: sLEFT,  icon_space: sSPC,
+				h: 2,  w: 5, (sBLROW): 20,  (sBLCOL):  20,
+				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): 1,
 				lpad: 0, rpad: 0,
-				unit: unitTime,   decimal: sNO,  unit_space: sBLK,
-				font: 3, font_weight: "400",
-				font_color: "#2c3e50", font_opacity: "100", background_color: "#18bc9c", background_opacity: "100",
-				font_auto_resize: "true", justification: "center", font_adjustment: 0, display: true,
+				(sUNIT): unitTime,   decimal: sNO,  unit_space: sBLK,
+				font: 3, font_weight: s400,
+				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
+				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: 0, display: true,
 		],
 ]
 
@@ -8297,11 +8336,11 @@ def mainWeather2(){
 			tmap += [(key): [:]+item]
 		}
 		span_typeFLD= tmap */
-/*		state.span_type=[ current: [(sTIT): "Current Measurements", num_time: 0, time_units:  ""],
+/*		state.span_type=[ current: [(sTIT): "Current Measurements", num_time: 0, time_units:  sBLK],
 							daily:   [(sTIT): "Daily Forecast", num_time: 7, time_units:  "day"],
 							hourly:  [(sTIT): "Hourly Forecast", num_time: 48, time_units: "hour"],
-							blank:   [(sTIT): "Blank Tile", num_time: 0, time_units:  ""],
-							sensor:  [(sTIT): "Device Measurement", num_time: 0, time_units: ""],
+							blank:   [(sTIT): "Blank Tile", num_time: 0, time_units:  sBLK],
+							sensor:  [(sTIT): "Device Measurement", num_time: 0, time_units: sBLK],
 		] */
 
 		List<Map> list=[]
@@ -8347,8 +8386,8 @@ def mainWeather2(){
 		cloud_coverage:			fill_temp_type("Cloud Coverage", "percent", "clouds", "percent_numeric", sYES, sNO, sYES, sNO),
 		visibility:				fill_temp_type("Visibility", "distance", "visibility", "miles", sYES, sNO, sYES, sNO),
 
-		wind_speed:				fill_temp_type("Wind Speed", "velocity", "wind_speed", "miles_per_hour",sYES, sYES, sYES, sNO),
-		wind_gust:				fill_temp_type("Wind Gust", "velocity", "wind_gust", "miles_per_hour", sYES, sYES, sYES, sNO),
+		wind_speed:				fill_temp_type("Wind Speed", "velocity", "wind_speed", sMILESPH,sYES, sYES, sYES, sNO),
+		wind_gust:				fill_temp_type("Wind Gust", "velocity", "wind_gust", sMILESPH, sYES, sYES, sYES, sNO),
 		wind_direction:			fill_temp_type("Wind Direction", "direction", "wind_deg", "degrees", sYES, sYES, sYES, sNO),
 
 		rain_past_hour:			fill_temp_type("Rain past Hour", "depth", "rain.1h", "millimeters", sYES, sYES, sNO, sNO),
@@ -8375,7 +8414,7 @@ def mainWeather2(){
 		percent:			[(sNM): "Percentage",		(sENUM): unitPercent,	out:  "percent_numeric", parse_func: "formatNumericData"],
 		(sICON):			[(sNM): "Weather Icons",	(sENUM): unitIcon,		out:  sNONE,			parse_func: "translateCondition"],
 		pressure:			[(sNM): "Pressure",			(sENUM): unitPressure,	out:  "inches_mercury", parse_func: "formatNumericData"],
-		velocity:			[(sNM): "Velocity",			(sENUM): unitWind,		out:  "miles_per_hour", parse_func: "formatNumericData"],
+		velocity:			[(sNM): "Velocity",			(sENUM): unitWind,		out:  sMILESPH, parse_func: "formatNumericData"],
 		time:				[(sNM): "Time",				(sENUM): unitTime,		out:  "time_twelve",	parse_func: "formatNumericData"],
 		depth:				[(sNM): "Depth",			(sENUM): unitDepth,		out:  "inches",			parse_func: "formatNumericData"],
 		direction:			[(sNM): "Direction",		(sENUM): unitDirection, out:  "cardinal",		parse_func: "formatNumericData"],
@@ -8399,8 +8438,8 @@ def mainWeather2(){
 
 	//reset to OpenWeather Data
 	Map<String,Map> temp=[:] + temp_type //atomicState.tile_type
-	temp.wind_speed.in_units='miles_per_hour'
-	temp.wind_gust.in_units='miles_per_hour'
+	temp.wind_speed.in_units=sMILESPH
+	temp.wind_gust.in_units=sMILESPH
 	//atomicState.tile_type.each{key, item->
 	temp_type.each{String key, Map item->
 		if(sMs(item,'sensor') == sNO){
@@ -8433,37 +8472,37 @@ def mainWeather2(){
 			if(item[span_key] == sYES)
 				((TreeMap)((TreeMap)typeList[span_key]).measurement_list) << [(key): [(sNM): sMs(item,sNM)]]
 		}
-		if((Integer)span.num_time > 0){
+		Integer cnt= (Integer)span.num_time
+		if(cnt > 0){
 			((TreeMap)typeList[span_key]).time_list=new TreeMap([:])
-			((TreeMap)typeList[span_key]).title=((String)span.time_units).capitalize()+"s to Display"
+			String time_units=sMs(span,'time_units')
+			((TreeMap)typeList[span_key]).title= time_units.capitalize()+"s to Display"
 			Map a
 			Integer i
-			for(i=0; i<(Integer)span.num_time; i++){
-				a=null
-				if(i==0){
-					if(span.time_units == "day")
-						a=["00" : [(sNM): " Today"]]
-				}else
-				if(span.time_units == "day" && i==1)
-					a=["01" : [(sNM): " Tomorrow"]]
-				else if(i==1)
-					a=["01" : [(sNM): " $i ${span.time_units} from now"]]
-				else if(i<10)
-					a=[("0$i".toString()) : [(sNM): " $i ${span.time_units}s from now"]]
+			for(i=0; i<cnt; i++){
+				String s= i<10 ? "0$i".toString() : "$i".toString()
+				String m
+				if(time_units == "day" && i==0)
+					m=" Today"
+				else if (time_units == "day" && i==1)
+					m= " Tomorrow"
+				else if (i==1)
+					m= " $i ${time_units} from now"
 				else
-					a=[("$i".toString()) : [(sNM): " $i ${span.time_units}s from now"]]
+					m= " $i ${time_units}s from now".toString()
 
-				if(a) ((TreeMap)((TreeMap)typeList[span_key]).time_list) << a
+				a = [(s): [(sNM): m]]
+				((TreeMap)((TreeMap)typeList[span_key]).time_list) << a
 			}
 		}
 	}
-	//atomicState.newTileDialog=""
+	//atomicState.newTileDialog=sBLK
 	state.newTileDialog=typeList.sort()
 
 	dynamicPage(name: "mainPage"){
 
 		checkDup()
-		List container
+		List<String> container
 		if(!state.endpoint){
 			hubiForm_section("Please set up OAuth API", 1, "report", sBLK){
 
@@ -8479,7 +8518,7 @@ def mainWeather2(){
 
 			if(day_num){
 				local_graph_url()
-				hubiForm_section("Configure Tile - Desktop Only", 10, "settings", sBLK, sBLK){
+				hubiForm_section("Configure Tile - Desktop Only", 10, "settings", sBLK){
 					container=[]
 					container << getPreviewWindow("tile_settings_HTML", "mainPage")
 					hubiForm_container(container, 1)
@@ -8549,80 +8588,80 @@ def processCallBack(response, data){
 
 private static String getAbbrev(String unit){
 	switch (unit){
-		case sNONE: return ""
+		case sNONE: return sBLK
 		case sFAHR: return "&deg;"
 		case sCELS: return "&deg;"
 		case "kelvin": return "K"
-		case "meters_per_second": return "m/s"
-		case "miles_per_hour": return "mph"
+		case sMETERSPS: return "m/s"
+		case sMILESPH: return "mph"
 		case "knots": return "kn"
 		case "millimeters": return "mm"
 		case "inches": return '"'
 		case "degrees": return "&deg;"
 		case "radians": return "rad"
-		case "cardinal": return ""
-		case "trend_numeric": return ""
-		case "trend_text": return ""
+		case "cardinal": return sBLK
+		case "trend_numeric": return sBLK
+		case "trend_text": return sBLK
 		case "percent_numeric": return "%"
 		case "millibars": return "mbar"
 		case "millimeters_mercury": return "mmHg"
 		case "inches_mercury": return "inHg"
 		case "hectopascal": return "hPa"
-		case "kilometers_per_hour" : return "km/h"
+		case sKILOSPH : return "km/h"
 	}
-	return ""
+	return sBLK
 }
 
-private Map getUnits(unit, ival){
-	if(unit == null)  return [(sNM): "unknown", var: "tbd", units: sNONE]
+private Map getUnits(String unit, ival){
+	if(unit == null)  return [(sNM): "unknown", (sVAR): "tbd", (sUNITS): sNONE]
 
 	try{
 		switch (unit.toLowerCase()){
 			case "f":
 			case "°f":
-				return [(sNM): "Fahrenheit (°F)", var: sTEMP, units: sFAHR]
+				return [(sNM): "Fahrenheit (°F)", (sVAR): sTEMP, (sUNITS): sFAHR]
 			case "c":
 			case "°c":
-				return [(sNM): "Celsius (°C)", var: sTEMP, units: sCELS]
+				return [(sNM): "Celsius (°C)", (sVAR): sTEMP, (sUNITS): sCELS]
 			case "mph":
-				return [(sNM): "Miles per Hour (mph)", var: "velocity", units: "miles_per_hour"]
+				return [(sNM): "Miles per Hour (mph)", (sVAR): "velocity", (sUNITS): sMILESPH]
 			case "m/s":
-				return [(sNM): "Meters per Second (m/s)", var: "velocity", units: "meters_per_second"]
+				return [(sNM): "Meters per Second (m/s)", (sVAR): "velocity", (sUNITS): sMETERSPS]
 			case "in":
 			case '"':
-				return [(sNM): 'Inches (")', var: "depth", units: "inches"]
+				return [(sNM): 'Inches (")', (sVAR): "depth", (sUNITS): "inches"]
 			case "mm":
 //			case '"':
-				return [(sNM): 'Millimeters (mm)', var: "depth", units: "millimeters"]
+				return [(sNM): 'Millimeters (mm)', (sVAR): "depth", (sUNITS): "millimeters"]
 			case "°":
 			case "deg":
-				return [(sNM): "Degrees (°)", var: "direction", units: "degrees"]
+				return [(sNM): "Degrees (°)", (sVAR): "direction", (sUNITS): "degrees"]
 			case "rad":
-				return [(sNM): "Radians (°)", var: "direction", units: "radians"]
+				return [(sNM): "Radians (°)", (sVAR): "direction", (sUNITS): "radians"]
 			case "inhg":
-				return [(sNM): "Inches of Mercury (inHg)", var: "pressure", units: "inches_mercury"]
+				return [(sNM): "Inches of Mercury (inHg)", (sVAR): "pressure", (sUNITS): "inches_mercury"]
 			case "mmhg":
-				return [(sNM): "Millimeters of Mercury mmHg)", var: "pressure", units: "millimeters_mercury"]
+				return [(sNM): "Millimeters of Mercury mmHg)", (sVAR): "pressure", (sUNITS): "millimeters_mercury"]
 			case "mbar":
-				return [(sNM): "Millibars (mbar)", var: "pressure", units: "millibars"]
+				return [(sNM): "Millibars (mbar)", (sVAR): "pressure", (sUNITS): "millibars"]
 			case "km/h":
-				return [(sNM): "Kilometers per hour (km/h)", var: "velocity", units: "kilometers_per_hour"]
+				return [(sNM): "Kilometers per hour (km/h)", (sVAR): "velocity", (sUNITS): sKILOSPH]
 			case "hPa":
-				return [(sNM): "Hectopascal (hPa)", var:"pressure", units: "hectopascal"]
+				return [(sNM): "Hectopascal (hPa)", (sVAR):"pressure", (sUNITS): "hectopascal"]
 			case "%":
-				Double value=Double.parseDouble(ival)
+				Double value=Double.parseDouble("${ival}")
 				if(value > 1.0 && value < 100.0){
-					return [(sNM): "Percent (0 to 100)", var:"percent", units: "percent_numeric"]
+					return [(sNM): "Percent (0 to 100)", (sVAR):"percent", (sUNITS): "percent_numeric"]
 				}else if(value >=0.0 && value < 1.0){
-					return [(sNM): "Percent (0.1 to 1.0)", var: "percent", units: "percent_decimal"]
+					return [(sNM): "Percent (0.1 to 1.0)", (sVAR): "percent", (sUNITS): "percent_decimal"]
 				}
 			default:
 				break
 		}
 	}catch(ex){
-		error("Unable to find units: $unit",null,iN2,ex)
+		error("Unable to find (sUNITS): $unit",null,iN2,ex)
 	}
-	return [(sNM): "unknown", var: "tbd", units: sNONE]
+	return [(sNM): "unknown", (sVAR): "tbd", (sUNITS): sNONE]
 
 }
 
@@ -8723,7 +8762,7 @@ static String applyDecimals(Map tile, val){
 	String value
 	value=val.toString()
 	if(value.isNumber()){
-		def num_decimals=tile.decimals
+		def num_decimals=tile[sDECIMALS]
 		value=sprintf("%.${num_decimals}f", value.toFloat())
 		return value
 	}
@@ -8731,32 +8770,16 @@ static String applyDecimals(Map tile, val){
 }
 
 static String getWindDirection(idirection){
-	def direction
-	direction=idirection
-	direction=Float.parseFloat(direction.toString())
-	if(direction > 348.75 || direction < 11.25) return "N"
-	if(direction >= 11.25 && direction < 33.75) return "NNE"
-	if(direction >= 33.75 && direction < 56.25) return "NE"
-	if(direction >= 56.25 && direction < 78.7) return "ENE"
-	if(direction >= 78.75 && direction < 101.25) return "E"
-	if(direction >= 101.25 && direction < 123.75) return "ESE"
-	if(direction >= 123.75 && direction < 146.25) return "SE"
-	if(direction >= 146.25 && direction < 168.75) return "SSE"
-	if(direction >= 168.75 && direction < 191.25) return "S"
-	if(direction >= 191.25 && direction < 213.75) return "SSW"
-	if(direction >= 213.75 && direction < 236.25) return "SW"
-	if(direction >= 236.25 && direction < 258.75) return "WSW"
-	if(direction >= 258.75 && direction < 281.25) return "W"
-	if(direction >= 281.25 && direction < 303.75) return "WNW"
-	if(direction >= 303.75 && direction < 326.25) return "NW"
-	if(direction >= 326.25 && direction < 348.75) return "NNW"
-	return 'Bad'
+	Double direction
+	direction=Double.parseDouble(idirection.toString())
+	List<String> bearings = ['N', 'NNE', 'NE', 'ENE', 'E', 'ESE', 'SE', 'SSE', 'S', 'SSW', 'SW', 'WSW', 'W', 'WNW', 'NW', 'NNW']
+	Integer bearing = Math.floor( ( (direction + 360.0D + 11.25D).toInteger() % 360 ).toDouble() / 22.5D).toInteger()
+	return bearings[bearing]
 }
 
 def applyConversion(Map tile, ival){
 
-	def val
-	val=ival
+	def val; val=ival
 	Map tile_type
 	String out_units, in_units
 	out_units=sBLK
@@ -8809,34 +8832,34 @@ def applyConversion(Map tile, ival){
 				break
 
 				//Velocity
-			case "meters_per_second":
+			case sMETERSPS:
 				switch (out_units){
-					case "miles_per_hour": val=(val * 2.237); break
+					case sMILESPH: val=(val * 2.237); break
 					case "knots": val=(val * 1.944); break
-					case "kilometers_per_hour": val=(val * 3.6); break
+					case sKILOSPH: val=(val * 3.6); break
 					default: val=sUNS
 				}
 				break
-			case "miles_per_hour":
+			case sMILESPH:
 				switch (out_units){
-					case "miles_per_hour": val=(val / 2.237); break
+					case sMETERSPS: val=(val / 2.237); break
 					case "knots": val=(val / 1.151); break
-					case "kilometers_per_hour": val=(val * 1.609); break
+					case sKILOSPH: val=(val * 1.609); break
 					default: val=sUNS
 				}
 				break
 			case "knots":
 				switch (out_units){
-					case "miles_per_hour": val=(val * 1.151); break
-					case "meters_per_second": val=(val / 1.944); break
-					case "kilometers_per_hour": val=(val * 1.852); break
+					case sMILESPH: val=(val * 1.151); break
+					case sMETERSPS: val=(val / 1.944); break
+					case sKILOSPH: val=(val * 1.852); break
 					default: val=sUNS
 				}
 				break
-			case "kilometers_per_hour":
+			case sKILOSPH:
 				switch (out_units){
-					case "miles_per_hour": val=(val / 1.609); break
-					case "meters_per_second": val=(val / 3.6); break
+					case sMILESPH: val=(val / 1.609); break
+					case sMETERSPS: val=(val / 3.6); break
 					case "knots": val=(val / 1.852); break
 					default: val=sUNS
 				}
@@ -8904,7 +8927,7 @@ def applyConversion(Map tile, ival){
 					case "WNW":  val=292.5; break
 					case "NW":  val=315; break
 					case "NNW":  val=337.5; break
-					default:   val=sUNS
+					default: val=sUNS
 				}
 				if(val != sUNS){
 					switch (out_units){
@@ -8936,7 +8959,7 @@ def applyConversion(Map tile, ival){
 				}
 				break
 			case "time_milliseconds":
-				Date d=new Date(val)
+				Date d=new Date(val as Long)
 
 				switch (out_units){
 					case "time_twelve":
@@ -9127,7 +9150,7 @@ List<String> formatConditionText(Map tile, String val){
 }
 
 List<String> formatTitle(Map tile, String val){
-	return["value", ""]
+	return["value", sBLK]
 }
 
 List formatPressure(Map tile, val){
@@ -9138,7 +9161,7 @@ List<String> formatDewPoint(Map tile, val){
 	// TODO does not deal with C
 	def dewPoint=val
 	String text
-	text=""
+	text=sBLK
 
 	if(dewPoint < 50) text="DRY"
 	else if(dewPoint < 55) text= "NORMAL"
@@ -9219,28 +9242,27 @@ void buildWeatherData(){
 				log.debug(val+sSPC+unit_type+sSPC+parse_func+"::: Issue executing parse function: $parse_func " + ex)
 			}
 		}else{
-			tile[sVAL]=""
+			tile[sVAL]=sBLK
 		}
 	}
 	state.tile_settings=temp
 }
 
 String getTileHTML(Map item, Boolean locked){
-	String var=sMs(item,'var')
+	String var=sMs(item,sVAR)
 
 	BigDecimal fontScale=4.6
 	BigDecimal lineScale=0.85
 	BigDecimal iconScale=3.5
 	//def header=0.1
 
-	Integer height=item.h
-	String html
-	html=""
-	String tile_locked=locked ? "false" : "true"
-	String background=getRGBA(item.background_color, (Float.parseFloat(item.background_opacity.toString())))
-	String font=getRGBA(item.font_color, Float.parseFloat(item.font_opacity.toString()))
+	Integer height=(Integer)item.h
+	String html; html=sBLK
+	String tile_locked=locked ? sFALSE : sTRUE
+	String background=getRGBA(sMs(item,'background_color'), (Float.parseFloat(item.background_opacity.toString())))
+	String font=getRGBA(sMs(item,'font_color'), Float.parseFloat(item.font_opacity.toString()))
 
-	if(item.display==true){
+	if((Boolean)item.display){
 		html += """ <div id="${var}_tile_main" class="grid-stack-item" data-gs-id="${var}" data-gs-x="${item.baseline_column}"
 			data-gs-y="${item.baseline_row}" data-gs-width="${item.w}" data-gs-height="${height}" data-gs-locked="${tile_locked}"
 			ondblclick="setOptions('${var}')">
@@ -9259,12 +9281,12 @@ String getTileHTML(Map item, Boolean locked){
 		//Compute Icon and other spacing
 
 		//Left Icon
-		if(item.icon_loc != "right"){
-			item.icon_space=item.icon_space ?:  ""
+		if(item.icon_loc != sRIGHT){
+			item.icon_space=item.icon_space ?:  sBLK
 			html+="""<span id="${var}_icon" class="mdi mdi-${item.icon}" style="font-size: ${iconScale*height}vh; color: ${font};">${item.icon_space}</span>"""
 		}
 		//Text
-		if(item.text == "null" || item.text == null) item.text=""
+		if(item.text == "null" || item.text == null) item.text=sBLK
 		html+="""<span id="${var}_text" style="color: ${font};">${item.text}</span>"""
 
 		//Main Content
@@ -9279,18 +9301,18 @@ String getTileHTML(Map item, Boolean locked){
 			out_units=state.unit_type."${tile_type}".out
 			units=getAbbrev(out_units)
 		}catch(ignored){
-			units=""
+			units=sBLK
 		}
 
-		if(units == "unknown") units=""
+		if(units == "unknown") units=sBLK
 
 		//Unit Spacing
-		html += """<span id="${var}_unit_space">${item.unit_space}</span>"""
+		html += """<span id="${var}_unit_space">${sMs(item,'unit_space')}</span>"""
 
 		html += """<span id="${var}_units" style="font-size: ${iconScale*height}vh; color: ${font};">${units}</span>"""
 
 		//Right Icon
-		if(item.icon_loc == "right"){
+		if(item.icon_loc == sRIGHT){
 			html+="""<span>${item.icon_space}</span>"""
 			html+="""<span id="${var}_icon" class="mdi mdi-${item.icon}" style="color: ${font};"></span>"""
 		}
@@ -9342,7 +9364,7 @@ String defineHTML_Header(){
 }
 
 static String addColorPicker(Map map){
-	String var=sMs(map,'var')
+	String var=sMs(map,sVAR)
 	String title=sMs(map,sTIT)
 
 	String html="""
@@ -9359,7 +9381,7 @@ static String addColorPicker(Map map){
 
 	  <div id="text_color_box" class="flex-container">
 		  <div class="flex-item" style="flex-basis: 25%;">
-			 <span><input type="color" id="${var}_color" name="${var}_color" value="#FFFFFF"></span>
+			 <span><input type="color" id="${var}_color" name="${var}_color" value=sWHT></span>
 		  </div>
 		  <div class="flex-item" style="flex-basis: 60%;">
 			 <input id="${var}_slider" class="mdl-slider mdl-js-slider" type="range" min="0" max="100" value="100" tabindex="0"
@@ -9384,9 +9406,9 @@ static String addButtonMenu(Map map){
 	String button_var=sMs(map,'var_name')
 	def default_val=map.default_value
 	String default_icon=sMs(map,'default_icon')
-	List<Map>item_list=map.list
-	String tooltip=sMs(map,'tooltip') ?: ""
-	String side=sMs(map,'side') ?: "left"
+	List<Map>item_list=(List<Map>)map.list
+	String tooltip=sMs(map,'tooltip') ?: sBLK
+	String side=sMs(map,'side') ?: sLEFT
 
 	String html
 	html="""
@@ -9401,7 +9423,7 @@ static String addButtonMenu(Map map){
 """
 
 	item_list.each{Map item->
-		Integer weight=item.font_weight ? item.font_weight : 400
+		Integer weight=item.font_weight ? (Integer)item.font_weight : 400
 		String nm=sMs(item,sNM).toLowerCase()
 		html += """
 				<li class="mdl-menu__item" onclick="${button_var}_itemSelected('${item.icon}',  '${nm}')">
@@ -9436,7 +9458,7 @@ static String addMenu(Map map){
 	def default_val=map.default_value
 	String default_icon=map.default_icon
 	List<Map> item_list=map.list
-	String tooltip=map.tooltip ? map.tooltip : ""
+	String tooltip=map.tooltip ? map.tooltip : sBLK
 	String title=map[sTIT]
 
 	String html="""
@@ -9492,11 +9514,11 @@ static String addIconMenu(Map map){
 	String button_var=sMs(map,'var_name')
 	def default_val=map.default_value
 	String default_icon=sMs(map,'default_icon')
-	List<Map> item_list=map.list
+	List<Map> item_list=(List<Map>)map.list
 	String tooltip
-	tooltip=sMs(map,'tooltip') ?: ""
+	tooltip=sMs(map,'tooltip') ?: sBLK
 	Boolean description=map.description ? map.description : false
-	def width=map.width
+	Integer width=(Integer)map.width
 	if(sMs(map,'tooltip') == "Use Icon Name") tooltip="No Icon Selected"
 
 	String html
@@ -9526,7 +9548,7 @@ static String addIconMenu(Map map){
 			html+="""<div class="flex-container">
 """
 		}
-		Integer weight=item.font_weight ? item.font_weight : 400
+		Integer weight=item.font_weight ? (Integer)item.font_weight : 400
 		String icon_var=sMs(item,sICON).replaceAll("-","_")
 		html += """ <div class="flex-item" style="flex-grow:1;">
 					<li class="mdl-menu__item" onclick="${button_var}_itemSelected('${item.icon}',  '${sMs(item,sNM).toLowerCase()}', '${sMs(item,sNM)}')">
@@ -9569,10 +9591,10 @@ static String addIconMenu(Map map){
 
 static String addSlider(Map map){
 
-	String var=sMs(map,'var')
+	String var=sMs(map,sVAR)
 	String title=sMs(map,sTIT)
-	Integer min=iMs(map,'min')
-	Integer max=iMs(map,'max')
+	Integer min=iMs(map,sMIN)
+	Integer max=iMs(map,sMAX)
 	Integer value=iMs(map,sVAL)
 
 	String html="""
@@ -9689,9 +9711,9 @@ h1{
 static String defineSelectBox(Map map){
 
 	String title=map[sTIT]
-	String var=sMs(map,'var')
-	Map<String,Map> list=map.list
-	String visible=map.visible == false ? """style="display: none;" """ : ""
+	String var=sMs(map,sVAR)
+	Map<String,Map> list=(Map<String,Map>)map.list
+	String visible=map.visible == false ? """style="display: none;" """ : sBLK
 	String function=map.function
 
 	String html
@@ -9719,7 +9741,7 @@ String defineNewTileDialog(){
 	TreeMap<String,TreeMap> typeList=(TreeMap<String,TreeMap>)state.newTileDialog
 
 	String html
-	html=""
+	html=sBLK
 	html += """
 				<dialog id="addTileDialog" class="mdl-dialog mdl-shadow--12dp" tabindex="-1" style="background-color: rgba(255, 255, 255, 0.90); border-radius: 2vh; height: 95vh; visibility: none;">
 				   <div class="mdl-dialog__content">
@@ -9749,7 +9771,7 @@ String defineNewTileDialog(){
 
 	TreeMap list
 	list=new TreeMap(typeList.main_list)
-	html+= defineSelectBox((sTIT): "Title Span", var: "new_tile_span", list: list, function: "selectTileSpan")
+	html+= defineSelectBox((sTIT): "Title Span", (sVAR): "new_tile_span", list: list, function: "selectTileSpan")
 
 	html += """
 									</div>
@@ -9764,7 +9786,7 @@ String defineNewTileDialog(){
 		list=new TreeMap( (TreeMap)((TreeMap)typeList[span_key]).measurement_list)
 		//if(list!=[:])
 		if(list)
-			html+= defineSelectBox((sTIT): span[sTIT], var: span_key+"_measurement", list: list, visible: false, function: "selectTileType")
+			html+= defineSelectBox((sTIT): span[sTIT], (sVAR): span_key+"_measurement", list: list, visible: false, function: "selectTileType")
 	}
 
 	html += """
@@ -9780,12 +9802,12 @@ String defineNewTileDialog(){
 		TreeMap tl= (TreeMap)typeList[span_key]
 		if(tl[sTIT]){
 			list=new TreeMap((TreeMap)tl.time_list)
-			html+= defineSelectBox((sTIT): tl[sTIT], var: span_key+"_time", list: list, visible: false, function: "selectTileTime")
+			html+= defineSelectBox((sTIT): tl[sTIT], (sVAR): span_key+"_time", list: list, visible: false, function: "selectTileTime")
 		}
 	}
 	/*
-	html+= defineSelectBox((sTIT): "Days to Display", var: "daily_time", list: daily_list,   visible: false, function: "selectTileTime");
-	html+= defineSelectBox((sTIT): "Hours to Display", var: "hourly_time", list: hourly_list,  visible: false, function: "selectTileTime");
+	html+= defineSelectBox((sTIT): "Days to Display", (sVAR): "daily_time", list: daily_list,   visible: false, function: "selectTileTime");
+	html+= defineSelectBox((sTIT): "Hours to Display", (sVAR): "hourly_time", list: hourly_list,  visible: false, function: "selectTileTime");
 	*/
 	html += """
 									</div>
@@ -9806,7 +9828,7 @@ String defineTileDialog(){
 	/*
 	List<Map> list=[]
 	for(Map item in (List<Map>)state.tile_settings){
-		list << [(sNM): item[sTIT], (sICON): item[sICON], var: item.var]
+		list << [(sNM): item[sTIT], (sICON): item[sICON], (sVAR): item.var]
 	} */
 
 	String html
@@ -9860,13 +9882,13 @@ String defineTileDialog(){
 """
 
 	html +=  addIconMenu(var_name: "selected_icon",(sTIT): "Select Tile Type", default_icon: "alpha-x-circle-outline",
-			default_value: "center", tooltip: "Use Icon Name", list: getIconList(), width: 4)
+			default_value: sCENTER, tooltip: "Use Icon Name", list: getIconList(), width: 4)
 
 	html += """
 			</div>
 			<div class="flex-item" style="flex-grow:1;" tabindex="-1">
 """
-	html+= addButtonMenu(var_name: "horizontal_alignment", default_icon: "format-align-center", tooltip: "Horizontal Alignment", default_value: "center", side: "left",
+	html+= addButtonMenu(var_name: "horizontal_alignment", default_icon: "format-align-center", tooltip: "Horizontal Alignment", default_value: sCENTER, side: sLEFT,
 			list:[[(sNM): "Left",   (sICON): "format-align-left"],
 				  [(sNM): "Center", (sICON): "format-align-center"],
 				  [(sNM): "Right",  (sICON): "format-align-right"]])
@@ -9876,7 +9898,7 @@ String defineTileDialog(){
 			<div class="flex-item" style="flex-grow:1;" tabindex="-1">
 """
 
-	html+= addButtonMenu(var_name: "icon_spacing", default_icon: "keyboard-space", tooltip: "Icon Spacing", default_value: "Single Space", side: "left",
+	html+= addButtonMenu(var_name: "icon_spacing", default_icon: "keyboard-space", tooltip: "Icon Spacing", default_value: "Single Space", side: sLEFT,
 			list:[[(sNM): "No Space",	(sICON): "arrow-collapse-horizontal"],
 				  [(sNM): "Single Space", (sICON): "keyboard-space"],
 				  [(sNM): "Double Space", (sICON): "arrow-expand-horizontal"]])
@@ -9886,7 +9908,7 @@ String defineTileDialog(){
 			<div class="flex-item" style="flex-grow:1;" tabindex="-1">
 """
 
-	html+= addButtonMenu(var_name: "decimal_places", default_icon: "decimal", tooltip: "Decimal Places", default_value: "One Decimal",  side: "left",
+	html+= addButtonMenu(var_name: "decimal_places", default_icon: "decimal", tooltip: "Decimal Places", default_value: "One Decimal",  side: sLEFT,
 			list:[[(sNM): "No Decimal",	(sICON): "hexadecimal"],
 				[(sNM): "One Decimal",	(sICON): "surround-sound-2-0"],
 				[(sNM): "Two Decimals",   (sICON): "decimal"]])
@@ -9896,7 +9918,7 @@ String defineTileDialog(){
 			<div class="flex-item" style="flex-grow:1;" tabindex="-1">
 """
 
-	html+= addButtonMenu(var_name: "font_weight", default_icon: "numeric-4-circle", default_value: "center", tooltip: "Font Weight", side: "right",
+	html+= addButtonMenu(var_name: "font_weight", default_icon: "numeric-4-circle", default_value: sCENTER, tooltip: "Font Weight", side: sRIGHT,
 			list:[[(sNM): "Thin",   (sICON): "numeric-1-circle"],
 				[(sNM): "Normal", (sICON): "numeric-4-circle"],
 				[(sNM): "Bold",   (sICON): "numeric-7-circle"],
@@ -9906,7 +9928,7 @@ String defineTileDialog(){
 			<div class="flex-item" style="flex-grow:1;" tabindex="-1">
 """
 
-	html+= addButtonMenu(var_name: "units_spacing", default_icon: "keyboard-space", tooltip: "Units Spacing", default_value: "Single Space", side: "right",
+	html+= addButtonMenu(var_name: "units_spacing", default_icon: "keyboard-space", tooltip: "Units Spacing", default_value: "Single Space", side: sRIGHT,
 			list:[[(sNM): "No Space",	(sICON): "arrow-collapse-horizontal"],
 				[(sNM): "Single Space", (sICON): "keyboard-space"],
 				[(sNM): "Double Space", (sICON): "arrow-expand-horizontal"]])
@@ -9919,11 +9941,11 @@ String defineTileDialog(){
 
 //TEXT COLOR
 
-	html+= addColorPicker(var: "text",(sTIT): "Text")
+	html+= addColorPicker((sVAR): "text",(sTIT): "Text")
 
 //BACKGROUND COLOR
 
-	html+= addColorPicker(var: "background",(sTIT): "Background")
+	html+= addColorPicker((sVAR): sBACKGRND,(sTIT): "Background")
 
 //Font Adjustment
 	html += """
@@ -9931,7 +9953,7 @@ String defineTileDialog(){
 		<div id="text_box" class="flex-container">
 """
 
-	html+= addSlider(var: "font_adjustment",(sTIT): "Relative Size", min: -100, (sVAL): 0, max:100)
+	html+= addSlider((sVAR): "font_adjustment",(sTIT): "Relative Size", (sMIN): -100, (sVAL): 0, (sMAX):100)
 
 	html+="""
 		</div>
@@ -10029,11 +10051,10 @@ String defineHTML_Tile(Boolean locked){
 		pressure_units='mmHg'
 	}
 */
-	String background
-	background='black'
-	if(background_color != null){
-		Float transparent=background_color_transparent ? 0.0 : background_opacity
-		background=getRGBA(background_color, transparent)
+	String background; background='black'
+	if(gtSetStr('background_color') != null){
+		Float transparent=gtSetB('background_color_transparent') ? 0.0 : background_opacity
+		background=getRGBA(gtSetStr('background_color'), transparent)
 	}
 
 	String html_
@@ -10223,12 +10244,8 @@ def updateSettings_weather2(){
  * TODO: Forecast methods
  */
 
-//@Field static List<Map> unitTemp
-//@Field static List<Map> unitWind
 @Field static List<Map> unitPrecip
 @Field static List<Map> unitDate
-//@Field static List<Map> unitTime
-//@Field static List<Map> unitPercent
 @Field static List<Map> selectionsF
 @Field static Integer rowsF
 @Field static Integer columnsF
@@ -10236,29 +10253,25 @@ def updateSettings_weather2(){
 void initFields(){
 	if(!unitPrecip){
 		unitPrecip=[["millimeters": "Millimeters (mm)"], ["inches": """Inches (") """]]
-//		unitPercent=[["percent_numeric": "Numeric (0 to 100)"], ["percent_decimal": "Decimal (0.0 to 1.0)"]]
-//		unitTemp=[[sFAHR: "Fahrenheit (°F)"], [sCELS: "Celsius (°C)"], ["kelvin": "Kelvin (K)"]]
-//		unitWind=[["meters_per_second": "Meters per Second (m/s)"], ["miles_per_hour": "Miles per Hour (mph)"], ["knots": "Knots (kn)"], ["kilometers_per_hour": "Kilometers per Hour (km/h)"]]
-//		unitTime=[["time_seconds": "Seconds since 1970"], ["time_milliseconds": "Milliseconds since 1970"], ["time_twelve": "12 Hour (2:30 PM)"], ["time_two_four": "24 Hour (14:30)"]]
 		unitDate=[["day_only": "Day Only (Thursday)"], ["date_only": "Date Only (29)"], ["day_date": "Day and Date (Thursday 29)"], ["month_day": "Month and Day (June 29)"]]
 
 		selectionsF=[
-				[(sTIT): 'Weather Forecast Icon', var: "weather_icon", ow: "weather.0.description", iu: sNONE, (sICON): sNONE, icon_loc: sNONE, icon_space: sBLK, h: 4, w: 4, baseline_row: 2, baseline_column: 1, alignment: "center", lpad: 0, rpad: 0, unit: sNONE, decimal: "no", font: 20, font_weight: "400", imperial: sNONE, metric: sNONE],
-				[(sTIT): 'Forecast Description', var: "description", ow: "weather.0.description", iu: sNONE, (sICON): sNONE, icon_loc: sNONE, icon_space: sBLK, h: 2, w: 4, baseline_row: 6, baseline_column: 1, alignment: "center", lpad: 0, rpad: 0, unit: sNONE, decimal: "no", font: 10, font_weight: "400", imperial: sNONE, metric: sNONE],
-				[(sTIT): 'Forecast Temperature', var: "temperature", ow: "temp.day", iu: sFAHR, (sICON): sNONE, icon_loc: sNONE, icon_space: sBLK, h: 4, w: 2, baseline_row: 8, baseline_column: 1, alignment: "right", lpad: 0, rpad: 0, unit: unitTemp, decimal: "yes", font: 20, font_weight: "900", imperial: sFAHR, metric: sCELS],
-				[(sTIT): 'Forecast High', var: "high", ow: "temp.max", iu: sFAHR, (sICON): "mdi-arrow-up-thick", icon_loc: "right", icon_space: sBLK, h: 2, w: 2, baseline_row: 8, baseline_column: 3, alignment: "left", lpad: 3, rpad: 0, unit: unitTemp, decimal: "yes", font: 7, font_weight: "700", imperial: sFAHR, metric: sCELS],
-				[(sTIT): 'Forecast Low', var: "low", ow: "temp.min", iu: sFAHR, (sICON): "mdi-arrow-down-thick", icon_loc: "right", icon_space: sBLK, h: 2, w: 2, baseline_row: 10, baseline_column: 3, alignment: "left", lpad: 3, rpad: 0, unit: unitTemp, decimal: "yes", font: 7, font_weight: "700", imperial: sFAHR, metric: sCELS],
-				[(sTIT): 'Precipitation Forecast', var: "precipitation", ow: "rain", iu: "millimeters", (sICON): "mdi-umbrella-outline", icon_loc: "left", icon_space: sSPC, h: 1, w: 2, baseline_row: 12, baseline_column: 1, alignment: "right", lpad: 0, rpad: 3, unit: unitPrecip, decimal: "yes", font: 4, font_weight: "400", imperial: "inches", metric: "millimeters"],
-				[(sTIT): 'Precipitation Forecast Percent', var: "precipitation_percent", ow: "pop", iu: "percent_decimal", (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: 1, w: 2, baseline_row: 12, baseline_column: 3, alignment: "left", lpad: 3, rpad: 0, unit: unitPercent, decimal: "yes", font: 4, font_weight: "400", imperial: "percent_numeric", metric: "percent_numeric"],
-				[(sTIT): 'Sunrise', var: "sunrise", ow: "sunrise", iu: "time_seconds", (sICON): "mdi-weather-sunset-up", icon_loc: "left", icon_space: sSPC, h: 1, w: 2, baseline_row: 13, baseline_column: 1, alignment: "right", lpad: 0, rpad: 3, unit: unitTime, decimal: "no", font: 4, font_weight: "400", imperial: "time_twelve", metric: "time_two_four"],
-				[(sTIT): 'Sunrise Temp', var: "sunrise_temp", ow: "temp.morn", iu: sFAHR, (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: 1, w: 1, baseline_row: 13, baseline_column: 3, alignment: "left", lpad: 3, rpad: 0, unit: unitTemp, decimal: "yes", font: 4, font_weight: "400", imperial: sFAHR, metric: sCELS],
-				[(sTIT): 'Sunset', var: "sunset", ow: "sunset", iu: "time_seconds", (sICON): "mdi-weather-sunset-down", icon_loc: "left", icon_space: sSPC, h: 1, w: 2, baseline_row: 14, baseline_column: 1, alignment: "right", lpad: 0, rpad: 3, unit: unitTime, decimal: "no", font: 4, font_weight: "400", imperial: "time_twelve", metric: "time_two_four"],
-				[(sTIT): 'Sunset Temp', var: "sunset_temp", ow: "temp.eve", iu: sFAHR, (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: 1, w: 1, baseline_row: 14, baseline_column: 3, alignment: "left", lpad: 3, rpad: 0, unit: unitTemp, decimal: "yes", font: 4, font_weight: "400", imperial: sFAHR, metric: sCELS],
-				[(sTIT): 'Dewpoint', var: "dewpoint", ow: "dew_point", iu: sFAHR, (sICON): "mdi-waves", icon_loc: "left", icon_space: sSPC, h: 1, w: 2, baseline_row: 15, baseline_column: 1, alignment: "right", lpad: 0, rpad: 3, unit: unitTemp, decimal: "yes", font: 4, font_weight: "400", imperial: sFAHR, metric: sCELS],
-				[(sTIT): 'Dewpoint Description', var: "dewpoint_desc", ow: "dew_point", iu: sNONE, (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: 1, w: 2, baseline_row: 15, baseline_column: 3, alignment: "left", lpad: 3, rpad: 0, unit: unitTemp, decimal: "no", font: 4, font_weight: "400", imperial: sNONE, metric: sNONE],
-				[(sTIT): 'Forecast Wind', var: "wind", ow: "wind_speed", iu: "miles_per_hour", (sICON): "mdi-tailwind", icon_loc: "left", icon_space: sSPC, h: 1, w: 2, baseline_row: 16, baseline_column: 1, alignment: "right", lpad: 0, rpad: 3, unit: unitWind, decimal: "yes", font: 4, font_weight: "400", imperial: "miles_per_hour", metric: "meters_per_second"],
-				[(sTIT): 'Forecast Clouds', var: "clouds", ow: "clouds", iu: "percent_numeric", (sICON): "mdi-cloud-outline", icon_loc: "right", icon_space: sSPC, h: 1, w: 2, baseline_row: 16, baseline_column: 3, alignment: "left", lpad: 3, rpad: 0, unit: unitPercent, decimal: "no", font: 4, font_weight: "400", imperial: "percent_numeric", metric: "percent_numeric"],
-				[(sTIT): 'Day and Date', var: "date", ow: "dt", iu: "time_seconds", (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: 2, w: 4, baseline_row: 18, baseline_column: 1, alignment: "center", lpad: 0, rpad: 0, unit: unitDate, decimal: "no", font: 8, font_weight: "800", imperial: "day_date", metric: "day_date"],
+				[(sTIT): 'Weather Forecast Icon', (sVAR): "weather_icon", ow: "weather.0.description", iu: sNONE, (sICON): sNONE, icon_loc: sNONE, icon_space: sBLK, h: 4, w: 4, (sBLROW): 2, (sBLCOL): 1, (sALIGNMENT): sCENTER, lpad: 0, rpad: 0, (sUNIT): sNONE, decimal: sNO, font: 20, font_weight: s400, (sIMPERIAL): sNONE, (sMETRIC): sNONE],
+				[(sTIT): 'Forecast Description', (sVAR): "description", ow: "weather.0.description", iu: sNONE, (sICON): sNONE, icon_loc: sNONE, icon_space: sBLK, h: 2, w: 4, (sBLROW): 6, (sBLCOL): 1, (sALIGNMENT): sCENTER, lpad: 0, rpad: 0, (sUNIT): sNONE, decimal: sNO, font: 10, font_weight: s400, (sIMPERIAL): sNONE, (sMETRIC): sNONE],
+				[(sTIT): 'Forecast Temperature', (sVAR): "temperature", ow: "temp.day", iu: sFAHR, (sICON): sNONE, icon_loc: sNONE, icon_space: sBLK, h: 4, w: 2, (sBLROW): 8, (sBLCOL): 1, (sALIGNMENT): sRIGHT, lpad: 0, rpad: 0, (sUNIT): unitTemp, decimal: sYES, font: 20, font_weight: "900", (sIMPERIAL): sFAHR, (sMETRIC): sCELS],
+				[(sTIT): 'Forecast High', (sVAR): "high", ow: "temp.max", iu: sFAHR, (sICON): "mdi-arrow-up-thick", icon_loc: sRIGHT, icon_space: sBLK, h: 2, w: 2, (sBLROW): 8, (sBLCOL): 3, (sALIGNMENT): sLEFT, lpad: 3, rpad: 0, (sUNIT): unitTemp, decimal: sYES, font: 7, font_weight: "700", (sIMPERIAL): sFAHR, (sMETRIC): sCELS],
+				[(sTIT): 'Forecast Low', (sVAR): "low", ow: "temp.min", iu: sFAHR, (sICON): "mdi-arrow-down-thick", icon_loc: sRIGHT, icon_space: sBLK, h: 2, w: 2, (sBLROW): 10, (sBLCOL): 3, (sALIGNMENT): sLEFT, lpad: 3, rpad: 0, (sUNIT): unitTemp, decimal: sYES, font: 7, font_weight: "700", (sIMPERIAL): sFAHR, (sMETRIC): sCELS],
+				[(sTIT): 'Precipitation Forecast', (sVAR): "precipitation", ow: "rain", iu: "millimeters", (sICON): "mdi-umbrella-outline", icon_loc: sLEFT, icon_space: sSPC, h: 1, w: 2, (sBLROW): 12, (sBLCOL): 1, (sALIGNMENT): sRIGHT, lpad: 0, rpad: 3, (sUNIT): unitPrecip, decimal: sYES, font: 4, font_weight: s400, (sIMPERIAL): "inches", (sMETRIC): "millimeters"],
+				[(sTIT): 'Precipitation Forecast Percent', (sVAR): "precipitation_percent", ow: "pop", iu: "percent_decimal", (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: 1, w: 2, (sBLROW): 12, (sBLCOL): 3, (sALIGNMENT): sLEFT, lpad: 3, rpad: 0, (sUNIT): unitPercent, decimal: sYES, font: 4, font_weight: s400, (sIMPERIAL): "percent_numeric", (sMETRIC): "percent_numeric"],
+				[(sTIT): 'Sunrise', (sVAR): "sunrise", ow: "sunrise", iu: "time_seconds", (sICON): "mdi-weather-sunset-up", icon_loc: sLEFT, icon_space: sSPC, h: 1, w: 2, (sBLROW): 13, (sBLCOL): 1, (sALIGNMENT): sRIGHT, lpad: 0, rpad: 3, (sUNIT): unitTime, decimal: sNO, font: 4, font_weight: s400, (sIMPERIAL): "time_twelve", (sMETRIC): "time_two_four"],
+				[(sTIT): 'Sunrise Temp', (sVAR): "sunrise_temp", ow: "temp.morn", iu: sFAHR, (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: 1, w: 1, (sBLROW): 13, (sBLCOL): 3, (sALIGNMENT): sLEFT, lpad: 3, rpad: 0, (sUNIT): unitTemp, decimal: sYES, font: 4, font_weight: s400, (sIMPERIAL): sFAHR, (sMETRIC): sCELS],
+				[(sTIT): 'Sunset', (sVAR): "sunset", ow: "sunset", iu: "time_seconds", (sICON): "mdi-weather-sunset-down", icon_loc: sLEFT, icon_space: sSPC, h: 1, w: 2, (sBLROW): 14, (sBLCOL): 1, (sALIGNMENT): sRIGHT, lpad: 0, rpad: 3, (sUNIT): unitTime, decimal: sNO, font: 4, font_weight: s400, (sIMPERIAL): "time_twelve", (sMETRIC): "time_two_four"],
+				[(sTIT): 'Sunset Temp', (sVAR): "sunset_temp", ow: "temp.eve", iu: sFAHR, (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: 1, w: 1, (sBLROW): 14, (sBLCOL): 3, (sALIGNMENT): sLEFT, lpad: 3, rpad: 0, (sUNIT): unitTemp, decimal: sYES, font: 4, font_weight: s400, (sIMPERIAL): sFAHR, (sMETRIC): sCELS],
+				[(sTIT): 'Dewpoint', (sVAR): "dewpoint", ow: "dew_point", iu: sFAHR, (sICON): "mdi-waves", icon_loc: sLEFT, icon_space: sSPC, h: 1, w: 2, (sBLROW): 15, (sBLCOL): 1, (sALIGNMENT): sRIGHT, lpad: 0, rpad: 3, (sUNIT): unitTemp, decimal: sYES, font: 4, font_weight: s400, (sIMPERIAL): sFAHR, (sMETRIC): sCELS],
+				[(sTIT): 'Dewpoint Description', (sVAR): "dewpoint_desc", ow: "dew_point", iu: sNONE, (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: 1, w: 2, (sBLROW): 15, (sBLCOL): 3, (sALIGNMENT): sLEFT, lpad: 3, rpad: 0, (sUNIT): unitTemp, decimal: sNO, font: 4, font_weight: s400, (sIMPERIAL): sNONE, (sMETRIC): sNONE],
+				[(sTIT): 'Forecast Wind', (sVAR): "wind", ow: "wind_speed", iu: sMILESPH, (sICON): "mdi-tailwind", icon_loc: sLEFT, icon_space: sSPC, h: 1, w: 2, (sBLROW): 16, (sBLCOL): 1, (sALIGNMENT): sRIGHT, lpad: 0, rpad: 3, (sUNIT): unitWind, decimal: sYES, font: 4, font_weight: s400, (sIMPERIAL): sMILESPH, (sMETRIC): sMETERSPS],
+				[(sTIT): 'Forecast Clouds', (sVAR): "clouds", ow: "clouds", iu: "percent_numeric", (sICON): "mdi-cloud-outline", icon_loc: sRIGHT, icon_space: sSPC, h: 1, w: 2, (sBLROW): 16, (sBLCOL): 3, (sALIGNMENT): sLEFT, lpad: 3, rpad: 0, (sUNIT): unitPercent, decimal: sNO, font: 4, font_weight: s400, (sIMPERIAL): "percent_numeric", (sMETRIC): "percent_numeric"],
+				[(sTIT): 'Day and Date', (sVAR): "date", ow: "dt", iu: "time_seconds", (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: 2, w: 4, (sBLROW): 18, (sBLCOL): 1, (sALIGNMENT): sCENTER, lpad: 0, rpad: 0, (sUNIT): unitDate, decimal: sNO, font: 8, font_weight: "800", (sIMPERIAL): "day_date", (sMETRIC): "day_date"],
 		]
 		rowsF=19
 		columnsF=4
@@ -10266,26 +10279,23 @@ void initFields(){
 
 }
 
+@Field static List<Map> updateEnum=[["60000":"1 Minute"],["300000":"5 Minutes"], ["600000":"10 Minutes"], ["1200000":"20 Minutes"], ["1800000":"Half Hour"],
+					  ["3600000":"1 Hour"], ["6400000":"2 Hours"], ["19200000":"6 Hours"], ["43200000":"12 Hours"], ["86400000":"1 Day"]]
+
 def tileForecast(){
 
-	List<Map> updateEnum=[["60000":"1 Minute"],["300000":"5 Minutes"], ["600000":"10 Minutes"], ["1200000":"20 Minutes"], ["1800000":"Half Hour"],
-							["3600000":"1 Hour"], ["6400000":"2 Hours"], ["19200000":"6 Hours"], ["43200000":"12 Hours"], ["86400000":"1 Day"]]
-
-	List<Map> unitEnum =	[["imperial":"Imperial (°F, mph, in, inHg, 0:00 am)"], ["metric":"Metric (°C, m/sec, mm, mmHg, 00:00)"]]
-//	List<Map> unitPressure=[["millibars": "Millibars (mbar)"], ["millimeters_mercury": "Millimeters of Mercury (mmHg)"], ["inches_mercury": "Inches of Mercury (inHg)"], ["hectopascal" : "Hectopascal (hPa)"]]
-//	List<Map> unitDirection=[["degrees": "Degrees (°)"], ["radians": "Radians (°)"], ["cardinal": "Cardinal (N, NE, E, SE, etc)"]]
-//	List<Map> unitTrend =	[["trend_numeric": "Numeric (↑ < 0, →=0, ↓ > 0)"], ["trend_text": "Text (↑ rising, → steady, ↓ falling)"]]
+	List<Map> unitEnum =	[[(sIMPERIAL):"Imperial (°F, mph, in, inHg, 0:00 am)"], [(sMETRIC):"Metric (°C, m/sec, mm, mmHg, 00:00)"]]
 
 	initFields()
 
 	dynamicPage(name: "graphSetupPage"){
 
-		List container
+		List<String> container
 		Map map=parent.openWeatherConfig()
 		hubiForm_section("General Options", 1, sBLK, sBLK){
-			//input( (sTYPE): sENUM, (sNM): "openweather_refresh_rate",(sTIT): "<b>Select OpenWeather Update Rate</b>", multiple: false, required: true, options: updateEnum, defaultValue: "300000")
-/*			if(override_openweather){
-				input( (sTYPE): sENUM, (sNM): "pws_refresh_rate",(sTIT): "<b>Select PWS Update Rate</b>", multiple: false, required: true, options: updateEnum, defaultValue: "300000")
+			//input( (sTYPE): sENUM, (sNM): "openweather_refresh_rate",(sTIT): "<b>Select OpenWeather Update Rate</b>", (sMULTP): false, (sREQ): true, options: updateEnum, (sDEFV): "300000")
+/*			if(gtSetB('override_openweather')){
+				input( (sTYPE): sENUM, (sNM): "pws_refresh_rate",(sTIT): "<b>Select PWS Update Rate</b>", (sMULTP): false, (sREQ): true, options: updateEnum, (sDEFV): "300000")
 			} */
 			container=[]
 			//container << hubiForm_text_input ("<b>Open Weather Map Key</b>", "tile_key", sBLK, true)
@@ -10322,22 +10332,22 @@ def tileForecast(){
 				app.updateSetting("openweather_refresh_rate", val)
 				container << hubiForm_text("""Using $map settings from main app """ )
 				container << hubiForm_color("Background",
-						"background",
-						"#000000",
+						sBACKGRND,
+						sBLACK,
 						false)
 				container << hubiForm_slider	((sTIT): "Background Opacity",
 						(sNM): "background_opacity",
-						default: 90,
-						min: 0,
-						max: 100,
-						units: "%",
-						submit_on_change: false)
+						(sDEFLT): 90,
+						(sMIN): 0,
+						(sMAX): 100,
+						(sUNITS): "%",
+						(sSUBONCHG): false)
 
-				container << hubiForm_switch	((sTIT): "Color Icons?", (sNM): "color_icons", default: false)
+				container << hubiForm_switch	((sTIT): "Color Icons?", (sNM): "color_icons", (sDEFLT): false)
 
 				hubiForm_container(container, 1)
 				List daysEnum=[[0: "Today"], [1: "Tomorrow"], [2: "2 Days from Now"], [3: "3 Days from Now"], [4: "4 Days from Now"], [5: "Five Days from Now"]]
-				input( (sTYPE): sENUM, (sNM): "day_num",(sTIT): "Day to Display", multiple: false, required: false, options: daysEnum, defaultValue: s1)
+				input( (sTYPE): sENUM, (sNM): "day_num",(sTIT): "Day to Display", (sMULTP): false, (sREQ): false, options: daysEnum, (sDEFV): s1)
 			}else{
 				container << hubiForm_text("""Main app is not configured for openweather""" )
 				hubiForm_container(container, 1)
@@ -10345,44 +10355,44 @@ def tileForecast(){
 		}
 
 		if(map){
-			List decimalEnum =	[[0: "None (0)"], [1: "One (0.1)"], [2: "Two (0.12)"], [3: "Three (0.123)"], [4: "Four (0.1234)"]]
+			List<Map> decimalsEnum=[ [0:"None (123)"], [1: "One (123.1)"], [2: "Two (123.12)"], [3: "Three (123.123)"], [4: "Four (123.1234)"] ]
 			selectionsF.each{Map measurement->
-				String mvar=sMs(measurement,'var')
+				String mvar=sMs(measurement,sVAR)
 				hubiForm_section(sMs(measurement,sTIT), 1, sBLK, sBLK){
 					container=[]
-					container << hubiForm_switch	((sTIT): "Display "+sMs(measurement,sTIT)+"?", (sNM): mvar+"_display", default: true, submit_on_change: true)
+					container << hubiForm_switch	((sTIT): "Display "+sMs(measurement,sTIT)+"?", (sNM): mvar+"_display", (sDEFLT): true, (sSUBONCHG): true)
 
-					if((settings["${mvar}_display"]==null) || (settings["${mvar}_display"]==true)){
+					if((settings["${mvar}_display"]==null) || gtSetB("${mvar}_display")){
 						container << hubiForm_fontvx_size((sTIT): mvar == "weather_icon" ? "Icon Size" : "Font Size",
 								(sNM): mvar,
-								default: measurement.font,
-								min: 1,
-								max: measurement.font*2,
-								weight: ((String)measurement.font_weight).toInteger(),
+								(sDEFLT): measurement.font,
+								(sMIN): 1,
+								(sMAX): measurement.font*2,
+								weight: sMs(measurement,'font_weight').toInteger(),
 								(sICON): mvar == "weather_icon")
 
 						container << hubiForm_slider ((sTIT): "Text Weight (400=normal, 700= bold)",
 								(sNM): mvar+"_font_weight",
-								default: ((String)measurement.font_weight).toInteger(),
-								min: 100,
-								max: 900,
-								units: sBLK,
-								submit_on_change: false)
+								(sDEFLT): sMs(measurement,'font_weight').toInteger(),
+								(sMIN): 100,
+								(sMAX): 900,
+								(sUNITS): sBLK,
+								(sSUBONCHG): false)
 
-						container << hubiForm_color("Font", mvar, "#FFFFFF", false)
+						container << hubiForm_color("Font", mvar, sWHT, false)
 						hubiForm_container(container, 1)
 
-						if(measurement.decimal == "yes"){
+						if(sMs(measurement,'decimal') == sYES){
 							container=[]
-							container << hubiForm_switch	((sTIT): "Display Unit Values (mm, mph, mbar, °, etc)", (sNM): mvar+"_display_units", default: true, submit_on_change: false)
+							container << hubiForm_switch	((sTIT): "Display Unit Values (mm, mph, mbar, °, etc)", (sNM): mvar+"_display_units", (sDEFLT): true, (sSUBONCHG): false)
 							hubiForm_container(container, 1)
-							input( (sTYPE): sENUM, (sNM): mvar+"_decimal",(sTIT): "Decimal Places", required: false, multiple: false, options: decimalEnum, defaultValue: 1, submitOnChange: false)
+							input( (sTYPE): sENUM, (sNM): mvar+"_decimal",(sTIT): "Decimal Places", (sREQ): false, (sMULTP): false, options: decimalsEnum, (sDEFV): 1, (sSUBOC): false)
 						}
 
-						String defs1=measurement.imperial
+						String defs1=sMs(measurement,sIMPERIAL)
 						String ts1= mvar+"_units"
 						if(defs1 != sNONE){
-							input( (sTYPE): sENUM, (sNM): ts1,(sTIT): "Displayed Units", required: false, multiple: false, options: measurement.unit, defaultValue: defs1, submitOnChange: false)
+							input( (sTYPE): sENUM, (sNM): ts1,(sTIT): "Displayed Units", (sREQ): false, (sMULTP): false, options: measurement.unit, (sDEFV): defs1, (sSUBOC): false)
 						}
 						if(settings[ts1] == defs1) wremoveSetting(ts1)
 					}else{
@@ -10404,7 +10414,7 @@ def mainForecast(){
 	dynamicPage(name: "mainPage"){
 
 		checkDup()
-		List container
+		List<String> container
 		if(!state.endpoint){
 			hubiForm_section("Please set up OAuth API", 1, "report", sBLK){
 
@@ -10425,12 +10435,11 @@ def mainForecast(){
 			put_settings()
 		}
 		selectionsF.each{Map measurement->
-			String mvar=sMs(measurement,'var')
-			if((settings["${mvar}_display"]==null) || (settings["${mvar}_display"]==true)){
+			String mvar=sMs(measurement,sVAR)
+			if((settings["${mvar}_display"]==null) || gtSetB("${mvar}_display")){
 
-				List defs=[ measurement.font, ((String)measurement.font_weight).toInteger(), "#ffffff", false, true, s1, (String)measurement.imperial ]
-				Integer i
-				i=0
+				List defs=[ measurement.font, sMs(measurement,'font_weight').toInteger(), sWHT, false, true, s1, sMs(measurement,sIMPERIAL) ]
+				Integer i; i=0
 				for( String ts1 in [ "_font", "_font_weight", "_color", "_color_transparent", "_display_units", "_decimal", "_units" ]){
 					String s= mvar+ts1
 					def v=settings[s]
@@ -10460,9 +10469,9 @@ Map getOptions_forecast(){
 	initFields()
 
 	selectionsF.each{ Map measurement->
-		String var=sMs(measurement,'var')
-		String outUnits=settings["${var}_units"] ? settings["${var}_units"] : ((String)measurement.imperial ?: sNONE)
-		String decimals=measurement.decimal == "yes" ? (settings["${var}_decimal"] != 1 ? settings["${var}_decimal"] :1): sNONE
+		String var=sMs(measurement,sVAR)
+		String outUnits=gtSetStr("${var}_units") ?: (sMs(measurement,sIMPERIAL) ?: sNONE)
+		String decimals=sMs(measurement,'decimal') == sYES ? (settings["${var}_decimal"] != 1 ? gtSetStr("${var}_decimal") :s1): sNONE
 
 		(List)options.measurements << [ "name": var,
 										"openweather": measurement.ow,
@@ -10536,7 +10545,7 @@ String defineHTML_CSS_forecast(){
 	html+= """
 		grid-gap: 0px;
 		align-items: center;
-		background-color: ${getRGBA(background_color, background_opacity)};
+		background-color: ${getRGBA(gtSetStr('background_color'), background_opacity)};
 	}
 
 	.grid-container > div{
@@ -10546,11 +10555,11 @@ String defineHTML_CSS_forecast(){
 
 	//current_row=2 //leave top row blank
 	selectionsF.each{Map item->
-		String var=sMs(item,'var')
-		if(settings["${var}_display"]){
+		String var=sMs(item,sVAR)
+		if(gtSetB("${var}_display")){
 			String font=settings["${var}_font"] ?: item.font
 			def weight=settings["${var}_font_weight"] ?: item.font_weight
-			String color=settings["${var}_color"] ?: "#FFFFFF"
+			String color=settings["${var}_color"] ?: sWHT
 			def row_start=item.baseline_row
 			def row_end=item.baseline_row + item.h
 			def column_start=item.baseline_column
@@ -10602,11 +10611,11 @@ String defineHTML_Tile_forecast(){
 	<div class="grid-container">
 	"""
 	selectionsF.each{Map item->
-		String var=sMs(item,'var')
+		String var=sMs(item,sVAR)
 		html += """<div class="${var}">"""
 
 		//Left Icon
-		if(item.icon != sNONE && item.icon_loc == "left"){
+		if(item.icon != sNONE && item.icon_loc == sLEFT){
 			//log.debug(item.icon)
 			html+="""<span class="mdi ${item.icon}">${item.icon_space}</span>"""
 		}
@@ -10615,13 +10624,13 @@ String defineHTML_Tile_forecast(){
 		html += """<span id="${var}"></span>"""
 
 		//Units
-		String un=settings["${var}_units"] ?: item.imperial
+		String un=gtSetStr("${var}_units") ?: sMs(item,sIMPERIAL)
 		String units=getAbbrev(un)
-		Boolean disu=settings["${var}_display_units"]!=null ? settings["${var}_display_units"] : true
-		if(disu && item.imperial != sNONE && units != "unknown") html+="""<span>${units}</span>"""
+		Boolean disu=settings["${var}_display_units"]!=null ? gtSetB("${var}_display_units") : true
+		if(disu && sMs(item,sIMPERIAL) != sNONE && units != "unknown") html+="""<span>${units}</span>"""
 
 		//Right Icon
-		if(item.icon != sNONE && item.icon_loc == "right"){
+		if(item.icon != sNONE && item.icon_loc == sRIGHT){
 			html+="""<span>${item.icon_space}</span>"""
 			html+="""<span class="mdi ${item.icon}"></span>"""
 		}
@@ -10666,7 +10675,7 @@ String getGraph_forecast(){
 //oauth endpoints
 
 String getData_forecast(){
-	def data= parent.getWData() // getPWSData()
+	Map data= (Map)parent.getWData() // getPWSData()
 	//String tdata=parent.getOpenWeatherData() // TODO parent.getWData()
 	//if(isEric())myDetail null,"getData_forecast: $data",iN2
 	return JsonOutput.toJson(data)
@@ -10686,7 +10695,7 @@ String getData_forecast(){
 def mainLongtermstorage(){
 
 	dynamicPage(name: "mainPage"){
-		List container
+		List<String> container
 		hubiForm_section(tDesc()+" Options", 1, "tune", sBLK){
 			container=[]
 			container << hubiForm_page_button("Select Device/Data", "deviceSelectionPage", "100%", "vibration")
@@ -10707,7 +10716,7 @@ def deviceLongtermstorage(){
 
 	dynamicPage(name: "deviceSelectionPage", nextPage:"attributeConfigurationPage"){
 
-		List container
+		List<String> container
 		hubiForm_section("Login Information", 1, sBLK, sBLK){
 			if(settings["hpmSecurity"]==null){
 				settings["hpmSecurity"]=true
@@ -10716,16 +10725,16 @@ def deviceLongtermstorage(){
 
 			container=[]
 			container << hubiForm_switch ((sTIT): "<b>Use Hubitat Security?</b>",
-					(sNM): "hpmSecurity", default: true, submit_on_change: true)
+					(sNM): "hpmSecurity", (sDEFLT): true, (sSUBONCHG): true)
 
 			hubiForm_container(container, 1)
 
-			if((Boolean)settings["hpmSecurity"]){
-				input "username", "string",(sTIT): "Hub Security username", required: false, submitOnChange: true
-				input "password", "password",(sTIT): "Hub Security password", required: false, submitOnChange: true
+			if(gtSetB("hpmSecurity")){
+				input "username", "string",(sTIT): "Hub Security username", (sREQ): false, (sSUBOC): true
+				input "password", "password",(sTIT): "Hub Security password", (sREQ): false, (sSUBOC): true
 			}
 		}
-		if((Boolean)settings["hpmSecurity"] && !login()){
+		if(gtSetB("hpmSecurity") && !login()){
 			hubiForm_section("Login Error", 1, sBLK, sBLK){
 				container=[]
 				container << hubiForm_text("""<b>CANNOT LOGIN</b><br>If you have Hub Security Enabled, please put in correct login credentials<br>
@@ -10736,7 +10745,7 @@ def deviceLongtermstorage(){
 		}else{
 			hubiForm_section("Sensor and Attribute Selection", 1, sBLK, sBLK){
 
-				input "sensors", "capability.*",(sTIT): "<b>Sensor Selection for Long Term Storage</b>", multiple: true, submitOnChange: true
+				input "sensors", "capability.*",(sTIT): "<b>Sensor Selection for Long Term Storage</b>", (sMULTP): true, (sSUBOC): true
 
 				if(sensors){
 
@@ -10761,7 +10770,7 @@ def deviceLongtermstorage(){
 						}
 						String sensor_name=gtLbl(sensor)
 						input( (sTYPE): sENUM, (sNM): "${gtSensorId(sensor)}_attributes",(sTIT): "${sensor_name} attribute(s) to Store",
-								required: true, multiple: true, options: final_attrs, submitOnChange: false)
+								(sREQ): true, (sMULTP): true, options: final_attrs, (sSUBOC): false)
 					}
 				}
 			}
@@ -10790,14 +10799,14 @@ def optionsLongtermstorage(){
 
 						String s="${sid}_${attr}".toString()
 						input( (sTYPE): sENUM, (sNM): s+"_time_every",(sTIT): "Attempt to Store Data Every X Hours",
-								required: true, multiple: false, options: hoursEnum, submitOnChange: false, defaultValue: 1)
+								(sREQ): true, (sMULTP): false, options: hoursEnum, (sSUBOC): false, (sDEFV): 1)
 
 						input( (sTYPE): "time", (sNM): s+"_time",(sTIT): "Time to Start Storing Data",
-								required: false, multiple: false, submitOnChange: false, defaultValue: "00:00")
+								(sREQ): false, (sMULTP): false, (sSUBOC): false, (sDEFV): "00:00")
 
 						//quantInput(sid,attr)
 
-						List container
+						List<String> container
 						container=[]
 
 						List<Map> events=getAllDataLimit(sensor, attribute, 60)
@@ -10862,8 +10871,8 @@ def optionsLongtermstorage(){
 def graphLongtermstorage(){
 	dynamicPage(name: "graphSetupPage"){
 		if(sensors){
-			List container
-			List subcontainer
+			List<String> container
+			List<String> subcontainer
 			hubiForm_section("Current Attribute Storage", 1, sBLK, sBLK){
 				container=[]
 				subcontainer=[]
@@ -11002,11 +11011,11 @@ void setupCron(sensor, String attribute){
 
 	String sid=gtSensorId(sensor)
 	String attr=attribute.replaceAll(sSPC, "_")
-	Date date=wtimeToday( (String)settings["${sid}_${attr}_time"], mTZ())
-	//Date date=Date.parse(dateFormat, (String)settings["${sid}_${attr}_time"])
+	Date date=wtimeToday( gtSetStr("${sid}_${attr}_time"), mTZ())
+	//Date date=Date.parse(dateFormat, gtSetStr("${sid}_${attr}_time"))
 //error "object: ${describeObject(settings["${sid}_${attr}_time_every"])}",null
 //log.warn myObj(settings["${sid}_${attr}_time_every"])
-	Integer repeat=((String)settings["${sid}_${attr}_time_every"]).toInteger()
+	Integer repeat= gtSetStr("${sid}_${attr}_time_every").toInteger()
 //log.warn "$date $repeat ${sensor.id}"
 	addToSched(hrs: date.getHours(), mins: date.getMinutes(), repeatHrs: repeat, sid: sid, (sATTR): attribute)
 	//schedule("0 ${date.getMinutes()} ${date.getHours()}/${repeat} ? * * *", updateData, [overwrite: false, data: [id: sid, attribute: attribute]])
@@ -11025,9 +11034,9 @@ private void clearSch(){
 private addToSched(Map data){
 	if(isEric())myDetail null,"addToSched",i1
 
-	Integer hrs=data.hrs
-	Integer mins=data.mins
-	Integer repeatHrs=data.repeatHrs
+	Integer hrs=(Integer)data.hrs
+	Integer mins=(Integer)data.mins
+	Integer repeatHrs=(Integer)data.repeatHrs
 	String sid=data.sid
 	String attribute=sMs(data,sATTR)
 
@@ -11093,10 +11102,10 @@ private runNextSched(Map a=[:]){
 	for(i=0; i< sched.size(); i++){
 		Map s=sched[i]
 		Long nextRun
-		nextRun=s.nextRun
-		Integer hrs=s.hrs
-		Integer mins=s.mins
-		Integer repeatHrs=s.repeatHrs
+		nextRun=(Long)s.nextRun
+		Integer hrs=(Integer)s.hrs
+		Integer mins=(Integer)s.mins
+		Integer repeatHrs=(Integer)s.repeatHrs
 		String sid=s.sid
 		String attribute=s[sATTR]
 		if(nextRun < wnow()){
@@ -11350,7 +11359,7 @@ def storageLimitInput(String sid, String attribute, String defl="7", String varn
 
 	String s= varn ?: (sid+'_'+attribute+'_storage')
 	input( (sTYPE): sENUM, (sNM): s,(sTIT): "Duration of Storage to Maintain",
-			required: false, multiple: false, options: storageEnum, submitOnChange: false, defaultValue: defl)
+			(sREQ): false, (sMULTP): false, options: storageEnum, (sSUBOC): false, (sDEFV): defl)
 }
 
 
@@ -11393,7 +11402,7 @@ List<Map> getEvents(Map map){
 
 		//TODO remove date
 		List<Map> respEvents
-		respEvents=(List<Map>)sensor.statesSince(attribute, then, [max: 2000]).collect{ [ (sDT): it.date, (sVAL): it.value, (sT): ((Date)it.date).getTime()] }
+		respEvents=(List<Map>)sensor.statesSince(attribute, then, [(sMAX): 2000]).collect{ [ (sDT): it.date, (sVAL): it.value, (sT): ((Date)it.date).getTime()] }
 		respEvents=respEvents.flatten() as List<Map>
 		respEvents=respEvents.reverse() as List<Map>
 
@@ -11408,7 +11417,7 @@ List<Map> getEvents(Map map){
 
 
 Boolean login(){
-	if((Boolean)settings["hpmSecurity"]){
+	if(gtSetB("hpmSecurity")){
 		Boolean result
 		result=false
 		try{
@@ -11725,7 +11734,7 @@ List<Map>getAllData(sensor,String attribute, Integer mindays=1461, Boolean add=t
 	//warn "then is $then",null
 	Boolean lts
 	lts=false
-	if( (sMs(settings,sGRAPHT)==sLONGTS && isStorage(sid,attribute)) || (Boolean)parent.ltsAvailable(sid,attribute)){
+	if( (gtSetStr(sGRAPHT)==sLONGTS && isStorage(sid,attribute)) || (Boolean)parent.ltsAvailable(sid,attribute)){
 //		if(fileExists(sensor,attribute)){
 		parse_data=getFileData(sensor, attribute)
 		//Get the most Current Data
@@ -11772,7 +11781,7 @@ void appendFile_LTS(sensor, String attribute, String fname=sNL){
 
 	String sid=gtSensorId(sensor)
 
-	Integer storage=(String)settings["${sid}_${attr}_storage"] as Integer
+	Integer storage= gtSetStr("${sid}_${attr}_storage").toInteger()
 	List<Map> write_data
 	write_data=getAllData(sensor,attribute,storage,true,false)
 
@@ -11818,7 +11827,7 @@ static List<Map> convertToList(List<Map>json){
 			t= (Long)data[sT]
 		}else if(data[sDT]){
 			String dateFormat="yyyy-MM-dd'T'HH:mm:ssX"
-			Date date=Date.parse(dateFormat, (String)data[sDT])
+			Date date=Date.parse(dateFormat, sMs(data,sDT))
 			t= date.getTime()
 		}else if(data[sI]){
 			t= (Long)data[sI]
@@ -11967,7 +11976,7 @@ Map getCurrentDailyStorage(sensor, String attribute, String fname=sNL){
 
 		try{
 			Integer storage
-			storage=(String)settings["${gtSensorId(sensor)}_${attribute}_storage"] as Integer
+			storage= gtSetStr("${gtSensorId(sensor)}_${attribute}_storage").toInteger()
 			storage=storage ?: 30
 			List<Map> respEvents=getEvents(sensor: sensor, (sATTR): attribute, days: storage)
 
@@ -12045,28 +12054,28 @@ static String round(num){
 
 def mainFuelstream(){
 	dynamicPage(name: "mainPage",(sTIT): "Settings", uninstall: true, install: true){
-		if( !((Boolean)settings.useFiles && (Boolean)state.useFiles) ){
+		if( !(gtSetB('useFiles') && (Boolean)state.useFiles) ){
 			section('Use HE files for data storage'){
 				input( (sTYPE): sBOOL, (sNM): "useFiles",(sTIT): "Use HE files for fuelstream storage?",
-						required: false, multiple: false, submitOnChange: true, defaultValue: false)
+						(sREQ): false, (sMULTP): false, (sSUBOC): true, (sDEFV): false)
 			}
 		}
 
-		if((Boolean)settings.useFiles || (Boolean)state.useFiles){
+		if(gtSetB('useFiles') || (Boolean)state.useFiles){
 			section('Security'){
 				if(settings["hpmSecurity"]==null){
 					settings["hpmSecurity"]=true
-					app.updateSetting("hpmSecurity", [(sTYPE): sBOOL, (sVAL): "true"])
+					app.updateSetting("hpmSecurity", [(sTYPE): sBOOL, (sVAL): sTRUE])
 				}
 				input( (sTYPE): sBOOL, (sNM): "hpmSecurity",(sTIT): "Use Hubitat Security",
-						required: false, multiple: false, submitOnChange: true, defaultValue: true)
+						(sREQ): false, (sMULTP): false, (sSUBOC): true, (sDEFV): true)
 
-				if((Boolean)settings["hpmSecurity"]){
-					input "username", "string",(sTIT): "Hub Security username", required: false, submitOnChange: true
-					input "password", "password",(sTIT): "Hub Security password", required: false, submitOnChange: true
+				if(gtSetB("hpmSecurity")){
+					input "username", "string",(sTIT): "Hub Security username", (sREQ): false, (sSUBOC): true
+					input "password", "password",(sTIT): "Hub Security password", (sREQ): false, (sSUBOC): true
 				}
 			}
-			if((Boolean)settings["hpmSecurity"] && settings.password && !login()){
+			if(gtSetB("hpmSecurity") && settings.password && !login()){
 				section('Login Error'){
 					paragraph("""<b>CANNOT LOGIN</b><br>If you have Hub Security Enabled, please put in correct login credentials<br> If not, please deselect <b>Use Hubitat Security</b>""" )
 				}
@@ -12074,18 +12083,18 @@ def mainFuelstream(){
 		}
 
 		section('Storage Limits'){
-			input "maxSize", "number",(sTIT): "Max size of this fuelStream data in KB", defaultValue: 95
+			input "maxSize", "number",(sTIT): "Max size of this fuelStream data in KB", (sDEFV): 95
 // Maxsize or n days (ie both limits hold)
-			//input "storage_days", "number",(sTIT): "Max # of days of data in this fuelStream", defaultValue: 1461
+			//input "storage_days", "number",(sTIT): "Max # of days of data in this fuelStream", (sDEFV): 1461
 			storageLimitInput(sNL, sNL,"1461",'storage_days')
 		}
 
 		List<Map> a
 		a=getFuelStreamDBData(false)
-		state.useFiles= (Boolean)settings.useFiles && !(a)
+		state.useFiles= gtSetB('useFiles') && !(a)
 		section('Storage'){
 
-			if((Boolean)settings.useFiles){
+			if(gtSetB('useFiles')){
 				String attribute=fuelNattr()
 				def sensor=app
 				Boolean fexists
@@ -12094,15 +12103,15 @@ def mainFuelstream(){
 				if(a){
 					paragraph("Found DB Storage in use, with use files selected")
 					input( (sTYPE): sBOOL, (sNM): "convertToFile",(sTIT): "Convert to File storage",
-							required: false, multiple: false, submitOnChange: true, defaultValue: false)
+							(sREQ): false, (sMULTP): false, (sSUBOC): true, (sDEFV): false)
 
-					if((Boolean)settings.convertToFile){
+					if(gtSetB('convertToFile')){
 						if(!fexists){
 							if(writeFile(sensor, attribute, a,fuelName())){
 								state.remove('fuelStreamData')
 								info "Converted to file",null
 								fexists=true
-								state.useFiles= (Boolean)settings.useFiles
+								state.useFiles= gtSetB('useFiles')
 
 							}else{
 								error "conversion to file failed",null
@@ -12111,19 +12120,19 @@ def mainFuelstream(){
 						}else{
 							paragraph("Found file exists with DB storage in use")
 						}
-						app.updateSetting("convertToFile", [(sTYPE): sBOOL, (sVAL): "false"])
+						app.updateSetting("convertToFile", [(sTYPE): sBOOL, (sVAL): sFALSE])
 					}
 				}
 			}
 
 			Map storage=getCurrentDailyStorageFS()
-			if(!(Boolean)settings.useFiles || !(Boolean)state.useFiles){
+			if(!gtSetB('useFiles') || !(Boolean)state.useFiles){
 				paragraph("Using HE DB as storage")
 			}
-			if((Boolean)settings.useFiles && (Boolean)state.useFiles){
+			if(gtSetB('useFiles') && (Boolean)state.useFiles){
 				paragraph("Using HE Files as storage")
 			}
-			Integer max=iMs(settings,'maxSize') ?: 95
+			Integer max=gtSetI('maxSize') ?: 95
 			paragraph("Storage Limit: ${max}KB")
 			paragraph("Current storage usage is ${convertStorageSize(storage.size)}")
 			Integer storageSize=state.toString().size()
@@ -12144,7 +12153,7 @@ public void createStream(settings){
 }
 
 /**
- * Called to get list of streams in this app instance
+ * Called by parent to get list of streams in this app instance
  *  Can be filtered to fuelstreams only, or fuel and LTS.  Graphs have no stream
  *  Typical fuelstreams have 1 data set, LTS may have many data sets (each returned as a stream)
  * @return
@@ -12152,7 +12161,7 @@ public void createStream(settings){
 public List getFuelStreams(Boolean includeLTS){
 	List<Map> res
 	res = []
-	if(includeLTS && sMs(settings,sGRAPHT)==sLONGTS){
+	if(includeLTS && gtSetStr(sGRAPHT)==sLONGTS){
 		if(sensors){
 			for(sensor in (List)sensors){
 				String sid=gtSensorId(sensor)
@@ -12161,7 +12170,8 @@ public List getFuelStreams(Boolean includeLTS){
 					for(String attribute in att){
 						//make up stream descriptions
 						String ltsdesc= sid+'_'+attribute
-						res << [(sI):ltsdesc, (sC): 'LTS', (sN):ltsdesc,w:1,(sT): getFormattedDate(new Date())]
+						String nm= gtLbl(sensor)+'_'+attribute
+						res << [(sI):ltsdesc, (sC): 'LTS', (sN):nm,w:1,(sT): getFormattedDate(new Date())]
 					}
 				}
 			}
@@ -12175,7 +12185,9 @@ public List getFuelStreams(Boolean includeLTS){
 	res
 }
 
-/** fuel stream or LTS only - called by main webCoRE for webCoRE console to get data in stream -> returns webCoRE IDE format */
+/**
+ * fuel stream or LTS only - called by main webCoRE for webCoRE console to get data in stream -> returns webCoRE IDE format
+ */
 public List<Map> listFuelStreamData(String streamid){
 	if(isEric())myDetail null,"listFuelStreamData $streamid",iN2
 
@@ -12184,7 +12196,7 @@ public List<Map> listFuelStreamData(String streamid){
 	List<Map> res
 
 	// if we are LTS, need to find proper stream based on id
-	if(sMs(settings,sGRAPHT)==sLONGTS){
+	if(gtSetStr(sGRAPHT)==sLONGTS){
 		String[] tname = streamid.split('_')
 		String id =tname[0]
 		String attribute= tname[1]
@@ -12478,7 +12490,7 @@ def hubiForm_container(List<String> containers, Integer inumPerRow=1, Boolean sa
 		style="""style="margin: 0 !important; padding: 0 !important;"""
 		numPerRow=1
 	}else{
-		style=""
+		style=sBLK
 	}
 
 	String html_
@@ -12531,14 +12543,14 @@ static String hubiForm_subcontainer(Map map){
 }
 
 List hubiForm_help(){
-	List container; container=[]
-	container << hubiForm_text_input ("Horizontal Axis Format", "graph_h_format", sBLK, true)
-	if(graph_h_format){
+	List<String> container; container=[]
+	container << hubiForm_text_input ("Horizontal Axis Format", 'graph_h_format', sBLK, true)
+	if(gtSetStr('graph_h_format')){
 		Date today=new Date()
-		container << hubiForm_text("""<i><small><b>Horizontal Axis Sample:</b> ${today.format(graph_h_format)}</small></i>""")
+		container << hubiForm_text("""<i><small><b>Horizontal Axis Sample:</b> ${today.format(gtSetStr('graph_h_format'))}</small></i>""")
 	}
-	container << hubiForm_switch	((sTIT): "Show String Formatting Help", (sNM): "dummy", default: false, submit_on_change: true)
-	if((Boolean)settings.dummy){
+	container << hubiForm_switch	((sTIT): "Show String Formatting Help", (sNM): 'dummy', (sDEFLT): false, (sSUBONCHG): true)
+	if(gtSetB('dummy')){
 		List<List<String>> rows=[]
 		List<String> header=["<small>Name", "Format", "Result"]
 		rows << ["Year", "Y", "2022"]
@@ -12644,9 +12656,9 @@ static String hubiForm_text(String text, String link=null){
 static String hubiForm_text_format(Map map){
 
 	String text=sMs(map,'text')
-	String halign=map.horizontal_align ? "text-align: ${map.horizontal_align};" : ""
-	//String valign=map.vertical_align ? "vertical-align: ${map.vertical_align}; " : ""
-	String size=map.sz ? "font-size: ${map.sz}px;" : ""
+	String halign=map.horizontal_align ? "text-align: ${map.horizontal_align};" : sBLK
+	//String valign=map.vertical_align ? "vertical-align: ${map.vertical_align}; " : sBLK
+	String size=map.sz ? "font-size: ${map.sz}px;" : sBLK
 	String html_="""<p style="$halign padding-top:20px; $size">$text</p>"""
 
 	return cleanHtml(html_)
@@ -12674,7 +12686,7 @@ ${title}
 
 def hubiForm_section(String title, Integer pos, String icon, String suffix, Closure code){
 
-	String id=title.replace(' ', '_').replace('(', '').replace(')','')
+	String id=title.replace(' ', '_').replace('(', sBLK).replace(')',sBLK)
 	String title_=title.replace("'", "").replace("`", "")
 
 	String titleHTML="""
@@ -12724,7 +12736,7 @@ String hubiForm_enum(Map map){
 	String title=sMs(map,sTIT)
 	String var=sMs(map,sNM)
 	List<String> list=(List<String>)map.list
-	String defaultVal=sMs(map,'default')
+	String defaultVal=sMs(map,sDEFLT)
 	Boolean submit_on_change=map.submit_on_change
 
 	if(settings[var] == null){
@@ -12857,9 +12869,9 @@ String hubiForm_font_size(Map map){
 
 	String title=sMs(map,sTIT)
 	String varname=sMs(map,sNM)
-	Integer default_=iMs(map,'default')
-	Integer min=iMs(map,'min')
-	Integer max=iMs(map,'max')
+	Integer default_=iMs(map,sDEFLT)
+	Integer min=iMs(map,sMIN)
+	Integer max=iMs(map,sMAX)
 	Boolean submit_on_change=map.submit_on_change
 	String baseId=varname
 
@@ -12907,9 +12919,9 @@ String hubiForm_fontvx_size(Map map){
 
 	String title=sMs(map,sTIT)
 	String varname=sMs(map,sNM)
-	Integer default_=iMs(map,'default')
-	Integer min=iMs(map,'min')
-	Integer max=iMs(map,'max')
+	Integer default_=iMs(map,sDEFLT)
+	Integer min=iMs(map,sMIN)
+	Integer max=iMs(map,sMAX)
 	Boolean submit_on_change=map.submit_on_change
 	String baseId=varname
 	String weight=map.weight ? "font-weight: ${map.weight} !important;" : sBLK
@@ -12983,9 +12995,9 @@ String hubiForm_line_size(Map map){
 
 	String title=sMs(map,sTIT)
 	String varname=sMs(map,sNM)
-	Integer default_=iMs(map,'default')
-	Integer min=iMs(map,'min')
-	Integer max=iMs(map,'max')
+	Integer default_=iMs(map,sDEFLT)
+	Integer min=iMs(map,sMIN)
+	Integer max=iMs(map,sMAX)
 	Boolean submit_on_change=map.submit_on_change
 	String baseId=varname
 
@@ -13038,10 +13050,10 @@ String hubiForm_slider(Map map){
 
 	String title=sMs(map,sTIT)
 	String varname=sMs(map,sNM)
-	Integer default_=iMs(map,'default')
-	Integer min=iMs(map,'min')
-	Integer max=iMs(map,'max')
-	String units=sMs(map,'units')
+	Integer default_=iMs(map,sDEFLT)
+	Integer min=iMs(map,sMIN)
+	Integer max=iMs(map,sMAX)
+	String units=sMs(map,sUNITS)
 	Boolean submit_on_change=map.submit_on_change
 
 	//def fontSize
@@ -13100,7 +13112,7 @@ String hubiForm_color(String title, String varname, String defaultColorValue, Bo
 	//settings[varnameColor]= settings[varnameColor] ?: defaultColorValue
 	if(!settings[varnameColor]) app.updateSetting(varnameColor, defaultColorValue)
 
-	Boolean curTransparent= settings[varnameTransparent]!=null ? settings[varnameTransparent] : defaultTransparentValue
+	Boolean curTransparent= settings[varnameTransparent]!=null ? gtSetB(varnameTransparent) : defaultTransparentValue
 	//settings[varnameTransparent]=settings[varnameTransparent] ?: defaultTransparentValue
 	if(settings[varnameTransparent]!=curTransparent) app.updateSetting(varnameTransparent, curTransparent)
 
@@ -13185,7 +13197,7 @@ String hubiForm_graph_preview(){
 
 }
 
-static String hubiForm_sub_section(String myText=""){
+static String hubiForm_sub_section(String myText=sBLK){
 
 	String id=myText.replaceAll("[^a-zA-Z0-9]", sBLK)
 	String newText=myText.replaceAll("'", "").replaceAll("`", "")
@@ -13224,14 +13236,14 @@ static String hubiForm_cell(List containers, Integer numPerRow){
 	return cleanHtml(html_)
 } */
 
-def hubiForm_list_reorder(String var, String var_color, String solid_background=""){
+def hubiForm_list_reorder(String var, String var_color, String solid_background=sBLK){
 
 	Boolean result_; result_=null
 
 //	TODO
 	List<Map> dataSources=gtDataSources()
 
-	String v=sMs(settings,var)
+	String v=gtSetStr(var)
 	if(v){
 		List<Map> list_=hubiTools_get_order(v)
 
@@ -13240,7 +13252,7 @@ def hubiForm_list_reorder(String var, String var_color, String solid_background=
 	}
 
 	String nres
-	nres=sMs(settings,var)
+	nres=gtSetStr(var)
 	if(!result_ && var){
 		settings["${var}"]=null
 		nres=sNL
@@ -13261,7 +13273,7 @@ def hubiForm_list_reorder(String var, String var_color, String solid_background=
 				String sid=sMs(ent,sID)
 				String attribute=sMs(ent,sA)
 				//settings["${var}"] += /"attribute_${sid}_${attribute}",/
-				nres += ((nres.length()>1 ? ',' : '') + /"attribute_${sid}_${attribute}"/ )
+				nres += ((nres.length()>1 ? ',' : sBLK) + /"attribute_${sid}_${attribute}"/ )
 				String tvar= "attribute_${sid}_${attribute}_${var_color}_color".toString()
 				if(settings[tvar] == null){
 					String cl='color'
@@ -13292,7 +13304,7 @@ def hubiForm_list_reorder(String var, String var_color, String solid_background=
 		String deviceName_=hubiTools_get_name_from_id(sMs(device_,sID))
 		title_="""<b>${deviceName_}</b><br><p style="float: right;">${device_[sATTR]}</p>"""
 		title_.replace("'", "").replace("`", "")
-		list_data << [(sTIT): title_, var: "attribute_${device_[sID]}_${device_[sATTR]}"]
+		list_data << [(sTIT): title_, (sVAR): "attribute_${device_[sID]}_${device_[sATTR]}"]
 	}
 
 	String var_val_=nres.replace('"', '&quot;')
@@ -13340,9 +13352,9 @@ void hubiTool_create_tile(){
 	if(isInf()) info "Checking webCoRE Child Tile Device",null,iN2
 
 	String dname
-	dname=device_name
+	dname=gtSetStr('device_name')
 	if(!dname){
-		dname= app_name ?: tDesc()
+		dname= gtSetStr('app_name') ?: tDesc()
 		dname += ' Tile'
 	}
 
@@ -13435,7 +13447,7 @@ void hubiTools_validate_order(List<String> all){
 
 static String hubiTools_rotating_colors(Integer c){
 
-	String ret="#FFFFFF" // WHITE
+	String ret=sWHT
 	Integer color=c % 13
 	switch (color){
 		case 0: return hubiTools_get_color_code("RED")
@@ -13460,10 +13472,10 @@ static String hubiTools_get_color_code(String input_color){
 	String new_color=input_color.toUpperCase()
 	switch (new_color){
 
-		case "WHITE" :	return "#FFFFFF"
-		case "SILVER" :	return "#C0C0C0"
+		case "WHITE" :	return sWHT
+		case "SILVER" :	return sSILVER
 		case "GRAY" :	return "#808080"
-		case "BLACK" :	return "#000000"
+		case "BLACK" :	return sBLACK
 
 		case "RED" :	return "#FF0000"
 		case "GREEN" :	return "#008000"
@@ -13500,7 +13512,7 @@ String hubiTools_get_name_from_id(String id){ //, sensors){
 
 List<Map> hubiTools_get_order(String order){
 	if(isEric())myDetail(null,"_get_order ${order}",i1)
-	List<String> split_=order.replace('"', '').replace('[', '').replace(']', '').replace("attribute_", sBLK).split(',')
+	List<String> split_=order.replace('"', sBLK).replace('[', sBLK).replace(']', sBLK).replace("attribute_", sBLK).split(',')
 	List<Map> list_=[]
 	split_.each{ String device->
 		List<String> sub_=device.split('_')
@@ -13513,12 +13525,12 @@ List<Map> hubiTools_get_order(String order){
 Boolean hubiTools_check_list(List<Map> dataSources, List<Map> list_){
 	if(isEric())myDetail null,"_check_list $dataSources $list_",i1
 
-	Boolean result
-	result=true
+	Boolean result; result=true
 	Integer count_; count_=0
-	Boolean inner_result
 	//check for addition/changes
 	if(dataSources){
+		Boolean inner_result
+		Integer i
 		for(Map ent in dataSources){
 
 			String sid=sMs(ent,sID)
@@ -13526,7 +13538,6 @@ Boolean hubiTools_check_list(List<Map> dataSources, List<Map> list_){
 
 			count_++
 			inner_result=false
-			Integer i
 			for(i=0; i<list_.size(); i++){
 				if(sMs(list_[i],sID) == sid && sMs(list_[i],sATTR) == attribute){
 					inner_result=true
@@ -13538,11 +13549,10 @@ Boolean hubiTools_check_list(List<Map> dataSources, List<Map> list_){
 	}
 
 	//check for smaller
-	Boolean count_result
-	count_result=false
-	if(list_.size() == count_){
+	Boolean count_result; count_result=false
+	if(list_.size() == count_)
 		count_result=true
-	}
+
 	if(isEric())myDetail null,"_check_list $result $count_result"
 	return (result && count_result)
 }
@@ -14133,6 +14143,10 @@ void settingUpdate(String name, value, String type=sNL){
 }
 private gtSetting(String nm){ return settings."${nm}" }
 
+private String gtSetStr(String nm){ return (String)settings[nm] }
+private Boolean gtSetB(String nm){ return (Boolean)settings[nm] }
+private Integer gtSetI(String nm){ return (Integer)settings[nm] }
+
 private gtSt(String nm){ return state."${nm}" }
 private gtAS(String nm){ return atomicState."${nm}" }
 /** assign to state  */
@@ -14152,13 +14166,13 @@ public Map getSettingsAndStateMap(){
 	def vv
 	String sk,typ
 
-	((Map)settings).keySet().each{ String theKey->
+	((Map<String,Object>)settings).keySet().each{ String theKey->
 		sk= theKey
 		typ=getSettingType(sk)
 		vv= settings[sk]
 		if(setObjs[sk]!=null) warn "overwriting ${setObjs[sk]} with ${typ}",null
 		if(typ=='time')
-			vv= dateTimeFmt(wtoDateTime(vv), "HH:mm")
+			vv= dateTimeFmt(wtoDateTime((String)vv), "HH:mm")
 		if(typ.startsWith('capability')){
 			typ= 'capability'
 			vv= vv instanceof List ? ((List)vv)?.collect{ it?.id?.toString() } : vv?.id?.toString()
