@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update January 24, 2023 for Hubitat
+ * Last update January 25, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -7153,8 +7153,9 @@ void doStaysProcess(Map r9,List<Map>schedules,String co,Map cndtn,Integer cndNm,
 				if(lg)s+= " no timer found creating timer "
 				schd=true
 			}else{
-				if(lg)s+= " with timer active cancel timer "
+				if(lg)s+= " with timer active cancel timer and create new timer"
 				canc=true
+				schd=true
 			}
 		}else{
 			//cancel any schedule
