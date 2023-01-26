@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update January 25, 2023 for Hubitat
+ * Last update January 26, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -6381,16 +6381,19 @@ private Long vcmd_saveStateLocally(Map r9,device,List prms,Boolean global=false)
 			r9.globalStore=wgetGStore()
 			r9.initGStore=true
 		}
-		if(overwrite || (global ? (r9.globalStore[n]==null):(r9[sSTORE][n]==null))){
-			def value; value=getDeviceAttributeValue(r9,device,attr)
-			if(attr==sHUE && value!=null && value!=sBLK) value=devHue2WcHue(value as Integer)
+		def value; value=getDeviceAttributeValue(r9,device,attr,true)
+		if(attr==sHUE && value!=null && value!=sBLK) value=devHue2WcHue(value as Integer)
+		def curVal= global ? r9.globalStore[n] : r9[sSTORE][n]
+		if(overwrite || curVal==null){
 			if(global){
 				r9.globalStore[n]=value
 				LinkedHashMap cache= (LinkedHashMap)r9.gvStoreCache ?: [:] as LinkedHashMap
 				cache[n]=value
 				r9.gvStoreCache=cache
 			}else r9[sSTORE][n]=value
-		}
+			if(isEric(r9))doLog(sINFO, "stored ${gtLbl(device)} $attr ($value) to ${global ? 'global': 'local'} store $n curVal: $curVal")
+		} else
+			warn "Could not store ${gtLbl(device)} $attr ($value) to ${global ? 'global': 'local'} store $n curVal: $curVal",r9
 	}
 	return lZ
 }
@@ -6423,7 +6426,10 @@ private Long vcmd_loadStateLocally(Map r9,device,List prms,Boolean global=false)
 				r9.gvStoreCache=cache
 			}else a=mMs(r9,sSTORE).remove(n)
 		}
-		if(value==null)continue
+		if(value==null){
+			warn "Could not load ${gtLbl(device)} $attr ($value) from ${global ? 'global': 'local'} store $n",r9
+			continue
+		}
 
 		if(attr==sHUE && value!=sBLK) value=devHue2WcHue(value as Integer)
 		if(attr in [sSWITCH,sLVL,sSATUR,sHUE,sCLRTEMP]) svd[attr]=value
@@ -6444,21 +6450,25 @@ private Long vcmd_loadStateLocally(Map r9,device,List prms,Boolean global=false)
 	String scheduleDevice= hashD(r9,device)
 	Long del; del=lZ
 	if((chgLvl || chgCtemp) && isOn==false){
+		if(lg)debug "Turning on ${gtLbl(device)}",r9
 		executePhysicalCommand(r9,device,sON)
 		isOn=true
 		del=1500L
 	}
 	if(chgHSL){
+		if(lg)debug "Restoring setColor ${gtLbl(device)}",r9
 		executePhysicalCommand(r9,device,sSTCLR,[(sHUE):svd[sHUE],(sSATUR):svd[sSATUR],(sLVL):svd[sLVL]],del,scheduleDevice)
 		del+=l100
 	}
 	if(chgLvl){
 		List larg=[svd[sLVL]]
+		if(lg)debug "Restoring level ${gtLbl(device)}",r9
 		executePhysicalCommand(r9,device,sSTLVL,larg,del,scheduleDevice)
 		del+=l100
 	}
 	if(chgCtemp){
 		List larg=[svd[sCLRTEMP]]
+		if(lg)debug "Restoring color Temperature ${gtLbl(device)}",r9
 		executePhysicalCommand(r9,device,sSTCLRTEMP,larg,del,scheduleDevice)
 		del+=l100
 	}
@@ -6472,7 +6482,7 @@ private Long vcmd_loadStateLocally(Map r9,device,List prms,Boolean global=false)
 		exactCommand=sNL
 		fuzzyCommand=sNL
 		fuzzyCommand1=sNL
-		t0="Restoring attribute '$attr' to value '$value'".toString()
+		t0="Restoring ${gtLbl(device)} : '$attr' to value '$value'".toString()
 		for(command in PhysicalCommands()){
 			if(sMa(command.value)==attr){
 				if(command.value.v==null) fuzzyCommand=(String)command.key
