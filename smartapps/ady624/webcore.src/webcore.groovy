@@ -2689,7 +2689,7 @@ Map getWData(){
 	if(storageApp){
 		t0=storageApp.getWData()
 	}
-	return t0
+	return t0 ?: [:]
 }
 
 String getOpenWeatherData(){

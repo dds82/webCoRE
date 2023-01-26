@@ -139,12 +139,12 @@ def installed(){
 	log.debug "Installed with settings: ${settings}"
 	state[sDBGLVL]=iZ
 	state[sLOGNG]=iZ
-	if(gtSetB('duplicateFlag') && !(Boolean)state.dupPendingSetup){
+	if(gtSetB('duplicateFlag') && !gtStB('dupPendingSetup')){
 		Boolean maybeDup= ((String)app?.getLabel())?.contains(' (Dup)')
 		state.dupPendingSetup= true
 		runIn(2, "processDuplication")
 		if(maybeDup) info "installed found maybe a dup... ${gtSetB('duplicateFlag')}",null
-	}else if(!(Boolean)state.dupPendingSetup){
+	}else if(!gtStB('dupPendingSetup')){
 		if(gtSetStr('app_name')) app.updateLabel(gtSetStr('app_name'))
 	}
 }
@@ -211,8 +211,8 @@ def updated(){
 	Boolean maybeDup= ((String)app?.getLabel())?.contains(' (Dup)')
 	if(maybeDup) info "updated found maybe a dup... ${gtSetB('duplicateFlag')}",null
 	if(gtSetB('duplicateFlag')){
-		if((Boolean)state.dupOpenedByUser){ state.dupPendingSetup= false }
-		if((Boolean)state.dupPendingSetup){
+		if(gtStB('dupOpenedByUser')){ state.dupPendingSetup= false }
+		if(gtStB('dupPendingSetup')){
 			info dupMSGFLD,null
 			return
 		}
@@ -433,7 +433,7 @@ String tDesc(){
 
 
 def checkDup(){
-	Boolean dup= (gtSetB('duplicateFlag') && (Boolean)state.dupPendingSetup)
+	Boolean dup= (gtSetB('duplicateFlag') && gtStB('dupPendingSetup'))
 	if(dup){
 		state.dupOpenedByUser= true
 		section(){ paragraph "This Graph was created from an existing graph.<br><br>Please review the settings and save to activate...<br>${state.badMode ?: sBLK}" }
@@ -464,7 +464,7 @@ def mainPage(){
 			}
 			stuff += [(par.key): par.value.desc]
 		}
-		dynamicPage(name: "mainPage"){
+		dynamicPage((sNM): "mainPage"){
 			section(){
 				input sGRAPHT,sENUM,(sTIT):'Graph Type',options:stuff,(sREQ):true,(sSUBOC):true
 			}
@@ -587,7 +587,7 @@ private void enableOauth(){
 }
 
 def enableAPIPage(){
-	dynamicPage(name: "enableAPIPage",(sTIT): sBLK){
+	dynamicPage((sNM): "enableAPIPage",(sTIT): sBLK){
 		section(){
 			if(!state.endpoint) initializeAppEndpoint()
 			if(!state.endpoint){
@@ -600,7 +600,7 @@ def enableAPIPage(){
 }
 
 def disableAPIPage(){
-	dynamicPage(name: "disableAPIPage"){
+	dynamicPage((sNM): "disableAPIPage"){
 		section(){
 			if(state.endpoint){
 				try{
@@ -951,7 +951,7 @@ List<Map> createDataSources(Boolean multiple){
 
 	List<Map> dataSources
 	dataSources=[]
-	state.hasFuel=false
+	assignSt('hasFuel',false)
 
 	Boolean hq= hasQuants()
 	def sl= gtSetting(varn)
@@ -1425,7 +1425,7 @@ def mainShare1(String instruct, String okSet,Boolean multiple=true){
 	if(!state.dataSources) wremoveSetting(okSet)
 	if(instruct) state.devInstruct=instruct
 
-	dynamicPage(name: "mainPage"){
+	dynamicPage((sNM): "mainPage"){
 
 		checkDup()
 		if(!state.endpoint){
@@ -1464,7 +1464,7 @@ def mainShare1(String instruct, String okSet,Boolean multiple=true){
 def deviceShare1(Boolean multiple=true, Boolean ordered=false,Boolean allowLastActivity=false){
 
 	if(isEric())myDetail null,"deviceShare1: $ordered",iN2
-	dynamicPage(name: "deviceSelectionPage", nextPage:"attributeConfigurationPage"){
+	dynamicPage((sNM): "deviceSelectionPage", nextPage:"attributeConfigurationPage"){
 		if(state.devInstruct){
 			List<String> container
 			hubiForm_section("Directions", 1, "directions", sBLK){
@@ -1487,7 +1487,7 @@ def attributeShare1(Boolean ordered=false, String var_color=sBACKGRND){
 
 	List<Map> dataSources= createDataSources(true)
 
-	dynamicPage(name: "attributeConfigurationPage", nextPage:"graphSetupPage"){
+	dynamicPage((sNM): "attributeConfigurationPage", nextPage:"graphSetupPage"){
 
 		if(ordered){
 			hubiForm_section("Graph Order", 1, "directions", sBLK){
@@ -1511,7 +1511,7 @@ def attributeShare1(Boolean ordered=false, String var_color=sBACKGRND){
 			hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}${hint}", 1, "directions", sid+attribute){
 				if(typ=='Sensor'){
 					String tvar="var_"+sa+"_lts"
-					if((Boolean)parent.ltsAvailable(rid, attribute)){
+					if(isLtsAvailable(rid, attribute)){
 						container << hubiForm_sub_section("Long Term Storage in use")
 
 					}else{
@@ -1822,7 +1822,7 @@ def deviceGauge(){
 def attributeGauge(){
 	List<Map> dataSources= createDataSources(false)
 
-	dynamicPage(name: "attributeConfigurationPage", nextPage:"graphSetupPage"){
+	dynamicPage((sNM): "attributeConfigurationPage", nextPage:"graphSetupPage"){
 		List<String> container
 		def val
 		String dn
@@ -1850,7 +1850,7 @@ def attributeGauge(){
 
 					if(typ=='Sensor'){
 						String tvar="var_"+sa+"_lts"
-						if((Boolean)parent.ltsAvailable(rid, attribute)){
+						if(isLtsAvailable(rid, attribute)){
 							hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}", 1, "directions", sid+attribute){
 								container=[]
 								container << hubiForm_sub_section("Long Term Storage in use")
@@ -1888,11 +1888,11 @@ def graphGauge(){
 
 	Integer num_
 
-	dynamicPage(name: "graphSetupPage"){
+	dynamicPage((sNM): "graphSetupPage"){
 		List<String> container
 		hubiForm_section("General Options", 1, sBLK, sBLK){
 			container=[]
-			if((Boolean)state.hasFuel)
+			if(gtStB('hasFuel'))
 				inputGraphUpdateRate()
 			else
 				app.updateSetting("graph_update_rate", '0')
@@ -2260,7 +2260,7 @@ def inputGraphUpdateRate(){
 	defl=s0
 	List opt
 	opt=rateEnum
-	if((Boolean)state.hasFuel){
+	if(gtStB('hasFuel')){
 		stToPoll()
 		defl="600000"
 		opt=rateEnumF
@@ -2349,7 +2349,7 @@ def deviceBar(){
 def attributeBar(){
 	List<Map> dataSources= createDataSources(true)
 
-	dynamicPage(name: "attributeConfigurationPage", nextPage:"graphSetupPage"){
+	dynamicPage((sNM): "attributeConfigurationPage", nextPage:"graphSetupPage"){
 		List<String> container
 
 		hubiForm_section("Graph Order", 1, "directions", sBLK){
@@ -2376,7 +2376,7 @@ def attributeBar(){
 
 					if(typ=='Sensor'){
 						String tvar="var_"+sa+"_lts"
-						if((Boolean)parent.ltsAvailable(rid, attribute)){
+						if(isLtsAvailable(rid, attribute)){
 							container=[]
 							container << hubiForm_sub_section("Long Term Storage in use")
 							hubiForm_container(container, 1)
@@ -2427,7 +2427,7 @@ def attributeBar(){
 
 def graphBar(){
 
-	dynamicPage(name: "graphSetupPage"){
+	dynamicPage((sNM): "graphSetupPage"){
 		List<String> container
 		hubiForm_section("General Options", 1, sBLK, sBLK){
 			container=[]
@@ -2893,7 +2893,7 @@ Map getSubscriptions_bar(){
 	Map colors=[:]
 
 	Boolean isPoll
-	isPoll=(Boolean)state.hasFuel
+	isPoll=gtStB('hasFuel')
 
 //	TODO
 	List<Map> dataSources=gtDataSources()
@@ -3050,7 +3050,7 @@ def attributeTimeline(){
 	List<Map> dataSources= createDataSources(true)
 
 	//state.count_=0
-	dynamicPage(name: "attributeConfigurationPage", nextPage:"graphSetupPage"){
+	dynamicPage((sNM): "attributeConfigurationPage", nextPage:"graphSetupPage"){
 		List<String> container
 		hubiForm_section("Directions", 1, "directions", sBLK){
 			container=[]
@@ -3088,7 +3088,7 @@ def attributeTimeline(){
 
 					if(typ=='Sensor'){
 						String tvar="var_"+sa+"_lts"
-						if((Boolean)parent.ltsAvailable(rid, attribute)){
+						if(isLtsAvailable(rid, attribute)){
 							container=[]
 							container << hubiForm_sub_section("Long Term Storage in use")
 
@@ -3126,7 +3126,7 @@ def graphTimeline(){
 	List<Map<String,String>> lOpts= [["0":"Never"], ["10000":"10 Seconds"], ["30000":"30 seconds"], ["60000":"1 Minute"], ["120000":"2 Minutes"], ["180000":"3 Minutes"], ["240000":"4 Minutes"], ["300000":"5 Minutes"], ["600000":"10 Minutes"],
 			 ["1200000":"20 Minutes"], ["1800000":"30 Minutes"], ["3600000":"1 Hour"], ["6400000":"2 Hours"], ["9600000":"3 Hours"], ["13200000":"4 Hours"], ["16800000":"5 Hours"], ["20400000":"6 Hours"]]
 
-	dynamicPage(name: "graphSetupPage"){
+	dynamicPage((sNM): "graphSetupPage"){
 		List<String> container
 		hubiForm_section("General Options", 1, "directions", sBLK){
 			inputGraphUpdateRate()
@@ -3706,7 +3706,7 @@ Map getSubscriptions_timeline(){
 	Map labels=[:]
 
 	Boolean isPoll
-	isPoll=(Boolean)state.hasFuel
+	isPoll=gtStB('hasFuel')
 
 //	TODO
 	List<Map> dataSources=gtDataSources()
@@ -3775,7 +3775,7 @@ def graphTimegraph(){
 			["86400000":"1 Day"], ["259200000":"3 Days"], ["604800000":"1 Week"], ["1209600000":"2 Weeks"],
 			["2629800000":"1 Month"]]
 
-	dynamicPage(name: "graphSetupPage"){
+	dynamicPage((sNM): "graphSetupPage"){
 
 		List<String> container
 		container=[]
@@ -5131,7 +5131,7 @@ Map getSubscriptions_timegraph(){
 	Map states_=[:]
 
 	Boolean isPoll
-	isPoll=(Boolean)state.hasFuel
+	isPoll=gtStB('hasFuel')
 
 //	TODO
 	List<Map> dataSources=gtDataSources()
@@ -5290,7 +5290,7 @@ def graphHeatmap(){
 	}
 	app.updateSetting ("attribute_count", count_)
 
-	dynamicPage(name: "graphSetupPage"){
+	dynamicPage((sNM): "graphSetupPage"){
 		List<String> container
 		hubiForm_section("General Options", 1, sBLK, sBLK){
 
@@ -5968,7 +5968,7 @@ Map getSubscriptions_heatmap(){
 	Map gradients=[:]
 
 	Boolean isPoll
-	isPoll=(Boolean)state.hasFuel
+	isPoll=gtStB('hasFuel')
 
 //	TODO
 	List<Map> dataSources=gtDataSources()
@@ -6053,7 +6053,7 @@ def graphLinegraph(){
 			["86400000":"1 Day"], ["259200000":"3 Days"], ["604800000":"1 Week"]
 	]
 
-	dynamicPage(name: "graphSetupPage"){
+	dynamicPage((sNM): "graphSetupPage"){
 
 		Boolean non_numeric
 		non_numeric=false
@@ -6887,7 +6887,7 @@ Map getSubscriptions_linegraph(){
 	Map non_num_=[:]
 
 	Boolean isPoll
-	isPoll=(Boolean)state.hasFuel
+	isPoll=gtStB('hasFuel')
 
 //	TODO
 	List<Map> dataSources=gtDataSources()
@@ -6974,7 +6974,7 @@ def attributeRangebar(){
 
 	List<Map> dataSources= createDataSources(true)
 	//state.count_=0
-	dynamicPage(name: "attributeConfigurationPage", nextPage:"graphSetupPage"){
+	dynamicPage((sNM): "attributeConfigurationPage", nextPage:"graphSetupPage"){
 		List<String> container
 
 		hubiForm_section("Graph Order", 1, "directions", sBLK){
@@ -6999,7 +6999,7 @@ def attributeRangebar(){
 
 					if(typ=='Sensor'){
 						String tvar="var_"+sa+"_lts"
-						if((Boolean)parent.ltsAvailable(rid, attribute)){
+						if(isLtsAvailable(rid, attribute)){
 							container << hubiForm_sub_section("Long Term Storage in use")
 
 						}else{
@@ -7032,7 +7032,7 @@ def graphRangebar(){
 
 	List timespanEnum1=[[0:"Live"], [1:"Hourly"], [2:"Daily"], [3:"Every Three Days"], [4:"Weekly"]]
 
-	dynamicPage(name: "graphSetupPage"){
+	dynamicPage((sNM): "graphSetupPage"){
 		List<String> container
 		hubiForm_section("General Options", 1, sBLK, sBLK){
 			container=[]
@@ -7619,7 +7619,7 @@ Map getSubscriptions_rangebar(){
 	Map colors=[:]
 
 	Boolean isPoll
-	isPoll=(Boolean)state.hasFuel
+	isPoll=gtStB('hasFuel')
 
 //	TODO
 	List<Map> dataSources=gtDataSources()
@@ -7708,7 +7708,7 @@ def tileRadar(){
 	List<Map<String,String>> tempEnum =	[[(sFAHR): "Fahrenheit (°F)"],
 							 [(sCELS) : "Celsius (°C)"]]
 
-	dynamicPage(name: "graphSetupPage"){
+	dynamicPage((sNM): "graphSetupPage"){
 
 		List<String> container
 
@@ -7787,7 +7787,7 @@ def tileRadar(){
 
 
 def mainRadar(){
-	dynamicPage(name: "mainPage"){
+	dynamicPage((sNM): "mainPage"){
 
 		checkDup()
 		List<String> container
@@ -7916,7 +7916,7 @@ document.getElementById("windy2").height=height+"px";
 
 def tileWeather2(){
 
-	dynamicPage(name: "graphSetupPage"){
+	dynamicPage((sNM): "graphSetupPage"){
 
 		hubiForm_section("General Options", 1, sBLK, sBLK){
 			input( (sTYPE): sENUM, (sNM): "openweather_refresh_rate",(sTIT): "<b>Select OpenWeather Update Rate</b>", (sMULTP): false, (sREQ): true, options: updateEnum, (sDEFV): "300000")
@@ -7961,7 +7961,7 @@ def tileWeather2(){
 def deviceWeather2(){
 	List<Map> final_attrs
 
-	dynamicPage(name: "deviceSelectionPage"){
+	dynamicPage((sNM): "deviceSelectionPage"){
 		List<String> container
 		hubiForm_section("Device Selection", 1, sBLK, sBLK){
 			container=[]
@@ -8499,7 +8499,7 @@ def mainWeather2(){
 	//atomicState.newTileDialog=sBLK
 	state.newTileDialog=typeList.sort()
 
-	dynamicPage(name: "mainPage"){
+	dynamicPage((sNM): "mainPage"){
 
 		checkDup()
 		List<String> container
@@ -10288,7 +10288,7 @@ def tileForecast(){
 
 	initFields()
 
-	dynamicPage(name: "graphSetupPage"){
+	dynamicPage((sNM): "graphSetupPage"){
 
 		List<String> container
 		Map map=parent.openWeatherConfig()
@@ -10411,7 +10411,7 @@ def tileForecast(){
 
 def mainForecast(){
 	initFields()
-	dynamicPage(name: "mainPage"){
+	dynamicPage((sNM): "mainPage"){
 
 		checkDup()
 		List<String> container
@@ -10694,7 +10694,7 @@ String getData_forecast(){
 
 def mainLongtermstorage(){
 
-	dynamicPage(name: "mainPage"){
+	dynamicPage((sNM): "mainPage"){
 		List<String> container
 		hubiForm_section(tDesc()+" Options", 1, "tune", sBLK){
 			container=[]
@@ -10714,27 +10714,28 @@ def deviceLongtermstorage(){
 		log.debug("Username and Password set")
 	}
 
-	dynamicPage(name: "deviceSelectionPage", nextPage:"attributeConfigurationPage"){
+	dynamicPage((sNM): "deviceSelectionPage", nextPage:"attributeConfigurationPage"){
 
+		String s='hpmSecurity'
 		List<String> container
 		hubiForm_section("Login Information", 1, sBLK, sBLK){
-			if(settings["hpmSecurity"]==null){
-				settings["hpmSecurity"]=true
-				app.updateSetting("hpmSecurity", true)
+			if(settings[s]==null){
+				settings[s]=true
+				app.updateSetting(s, true)
 			}
 
 			container=[]
 			container << hubiForm_switch ((sTIT): "<b>Use Hubitat Security?</b>",
-					(sNM): "hpmSecurity", (sDEFLT): true, (sSUBONCHG): true)
+					(sNM): s, (sDEFLT): true, (sSUBONCHG): true)
 
 			hubiForm_container(container, 1)
 
-			if(gtSetB("hpmSecurity")){
+			if(gtSetB(s)){
 				input "username", "string",(sTIT): "Hub Security username", (sREQ): false, (sSUBOC): true
 				input "password", "password",(sTIT): "Hub Security password", (sREQ): false, (sSUBOC): true
 			}
 		}
-		if(gtSetB("hpmSecurity") && !login()){
+		if(gtSetB(s) && !login()){
 			hubiForm_section("Login Error", 1, sBLK, sBLK){
 				container=[]
 				container << hubiForm_text("""<b>CANNOT LOGIN</b><br>If you have Hub Security Enabled, please put in correct login credentials<br>
@@ -10784,7 +10785,7 @@ def optionsLongtermstorage(){
 
 //	def df=new DecimalFormat("#0.0")
 
-	dynamicPage(name: "attributeConfigurationPage"){
+	dynamicPage((sNM): "attributeConfigurationPage"){
 		for(sensor in (List)sensors){
 			String sid=gtSensorId(sensor)
 			List<String> att=(List<String>)settings["${sid}_attributes"]
@@ -10869,7 +10870,7 @@ def optionsLongtermstorage(){
 }
 
 def graphLongtermstorage(){
-	dynamicPage(name: "graphSetupPage"){
+	dynamicPage((sNM): "graphSetupPage"){
 		if(sensors){
 			List<String> container
 			List<String> subcontainer
@@ -10927,20 +10928,14 @@ def graphLongtermstorage(){
 	}
 }
 
-
-
-
-// TODO not used?
-/** LTS only called by parent is LTS stream with quant enabled?*/
-Boolean isQuant(id, String attribute){
-	if(isStorage(id,attribute)){
-		def sensor=sensors?.find{it.id == id}
-		String s= "${gtSensorId(sensor)}_${attribute}_quantization"
-		String ts1= s+"_function"
-		return !(settings[ts1]==sNONE || settings[s]==null || settings[s]==s0)
-	}
-	return false
+/**
+ * called by graph apps to know if LTS for id, attribute is available
+ * it ends up calling isStorage in LTS app
+ */
+Boolean isLtsAvailable(id, String attribute){
+	return (Boolean)parent.ltsAvailable(id, attribute)
 }
+
 
 /** LTS only called by parent is LTS stream enabled? */
 Boolean isStorage(id, String attribute){
@@ -10948,6 +10943,18 @@ Boolean isStorage(id, String attribute){
 	if(sensor != null){
 		List<String> att=(List<String>)settings["${id}_attributes"]
 		return att.find{ it == attribute } != null
+	}
+	return false
+}
+
+
+/** LTS only called by parent is LTS stream with quant enabled?*/
+Boolean isQuant(id, String attribute){
+	if(isStorage(id,attribute)){
+		def sensor=sensors?.find{it.id == id}
+		String s= "${gtSensorId(sensor)}_${attribute}_quantization"
+		String ts1= s+"_function"
+		return !(settings[ts1]==sNONE || settings[s]==null || settings[s]==s0)
 	}
 	return false
 }
@@ -11417,7 +11424,7 @@ List<Map> getEvents(Map map){
 
 
 Boolean login(){
-	if(gtSetB("hpmSecurity")){
+	if(gtSetB('hpmSecurity')){
 		Boolean result
 		result=false
 		try{
@@ -11518,6 +11525,7 @@ Map readFile(sensor, String attribute, String fname=sNL){
 			headers: [ "Cookie": state.cookie, "Accept": 'application/octet-stream' ]
 	]
 
+	// byte[] downloadHubFile(String fileName)
 	try{
 		httpGet(params){ resp ->
 			if(resp.status==200 && resp.data){
@@ -11734,7 +11742,7 @@ List<Map>getAllData(sensor,String attribute, Integer mindays=1461, Boolean add=t
 	//warn "then is $then",null
 	Boolean lts
 	lts=false
-	if( (gtSetStr(sGRAPHT)==sLONGTS && isStorage(sid,attribute)) || (Boolean)parent.ltsAvailable(sid,attribute)){
+	if( (gtSetStr(sGRAPHT)==sLONGTS && isStorage(sid,attribute)) || isLtsAvailable(sid,attribute)){
 //		if(fileExists(sensor,attribute)){
 		parse_data=getFileData(sensor, attribute)
 		//Get the most Current Data
@@ -11896,6 +11904,7 @@ Boolean writeFile(sensor, String attribute, List<Map> events, String fname=sNL){
 			return true
 		}
 
+		// void uploadHubFile(String fileName, byte[] bytes)
 		Date d=new Date()
 		String encodedString="thebearmay$d".bytes.encodeBase64().toString()
 		try{
@@ -12053,29 +12062,31 @@ static String round(num){
  */
 
 def mainFuelstream(){
-	dynamicPage(name: "mainPage",(sTIT): "Settings", uninstall: true, install: true){
-		if( !(gtSetB('useFiles') && (Boolean)state.useFiles) ){
+	dynamicPage((sNM): "mainPage",(sTIT): "Settings", uninstall: true, install: true){
+		String uf='useFiles'
+		if( !(gtSetB(uf) && gtStB(uf)) ){
 			section('Use HE files for data storage'){
-				input( (sTYPE): sBOOL, (sNM): "useFiles",(sTIT): "Use HE files for fuelstream storage?",
+				input( (sTYPE): sBOOL, (sNM): uf,(sTIT): "Use HE files for fuelstream storage?",
 						(sREQ): false, (sMULTP): false, (sSUBOC): true, (sDEFV): false)
 			}
 		}
 
-		if(gtSetB('useFiles') || (Boolean)state.useFiles){
+		if(gtSetB(uf) || gtStB(uf)){
+			String s='hpmSecurity'
 			section('Security'){
-				if(settings["hpmSecurity"]==null){
-					settings["hpmSecurity"]=true
-					app.updateSetting("hpmSecurity", [(sTYPE): sBOOL, (sVAL): sTRUE])
+				if(settings[s]==null){
+					settings[s]=true
+					app.updateSetting(s, [(sTYPE): sBOOL, (sVAL): sTRUE])
 				}
-				input( (sTYPE): sBOOL, (sNM): "hpmSecurity",(sTIT): "Use Hubitat Security",
+				input( (sTYPE): sBOOL, (sNM): s,(sTIT): "Use Hubitat Security",
 						(sREQ): false, (sMULTP): false, (sSUBOC): true, (sDEFV): true)
 
-				if(gtSetB("hpmSecurity")){
+				if(gtSetB(s)){
 					input "username", "string",(sTIT): "Hub Security username", (sREQ): false, (sSUBOC): true
 					input "password", "password",(sTIT): "Hub Security password", (sREQ): false, (sSUBOC): true
 				}
 			}
-			if(gtSetB("hpmSecurity") && settings.password && !login()){
+			if(gtSetB(s) && settings.password && !login()){
 				section('Login Error'){
 					paragraph("""<b>CANNOT LOGIN</b><br>If you have Hub Security Enabled, please put in correct login credentials<br> If not, please deselect <b>Use Hubitat Security</b>""" )
 				}
@@ -12091,10 +12102,10 @@ def mainFuelstream(){
 
 		List<Map> a
 		a=getFuelStreamDBData(false)
-		state.useFiles= gtSetB('useFiles') && !(a)
+		state[uf]= gtSetB(uf) && !(a)
 		section('Storage'){
 
-			if(gtSetB('useFiles')){
+			if(gtSetB(uf)){
 				String attribute=fuelNattr()
 				def sensor=app
 				Boolean fexists
@@ -12111,7 +12122,7 @@ def mainFuelstream(){
 								state.remove('fuelStreamData')
 								info "Converted to file",null
 								fexists=true
-								state.useFiles= gtSetB('useFiles')
+								state[uf]= gtSetB(uf)
 
 							}else{
 								error "conversion to file failed",null
@@ -12126,10 +12137,10 @@ def mainFuelstream(){
 			}
 
 			Map storage=getCurrentDailyStorageFS()
-			if(!gtSetB('useFiles') || !(Boolean)state.useFiles){
+			if(!gtSetB(uf) || !gtStB(uf)){
 				paragraph("Using HE DB as storage")
 			}
-			if(gtSetB('useFiles') && (Boolean)state.useFiles){
+			if(gtSetB(uf) && gtStB(uf)){
 				paragraph("Using HE Files as storage")
 			}
 			Integer max=gtSetI('maxSize') ?: 95
@@ -12306,7 +12317,7 @@ String fuelNattr(){
 public List<Map> getFuelStreamData(Map req,Boolean init=true){
 	if(isEric())myDetail null,"getFuelStreamData $req $init",iN2
 	// [[ date: Date, value, v, (sT): long]]
-	if(!(Boolean)state.useFiles){
+	if(!gtStB('useFiles')){
 		return getFuelStreamDBData(init)
 	}else return getFuelStreamFData()
 }
@@ -12330,7 +12341,7 @@ List<Map> getFuelStreamDBData(Boolean init=true){
 List<Map> getFuelStreamFData(){
 	// [[ date: Date, (sVAL): v, t: long]]
 	if(isEric())myDetail null,"getFuelStreamFData",iN2
-	if((Boolean)state.useFiles){
+	if(gtStB('useFiles')){
 		String attribute=fuelNattr()
 		def sensor=app
 		List<Map> stream= getFileData(sensor, attribute, fuelName())
@@ -12408,7 +12419,7 @@ void storeFuelUpdate(List<Map>istream,Map req,Boolean frc=false){
 	//[date: date, (sVAL): v, t: t]
 
 	stream= rtnFileData(stream)
-	if(!(Boolean)state.useFiles){
+	if(!gtStB('useFiles')){
 		res=storeFuelDBData(stream)
 	}else res=storeFuelFileData(stream,frc)
 	if(!res) warn "storeFuelUpdate failed",null
@@ -12417,7 +12428,7 @@ void storeFuelUpdate(List<Map>istream,Map req,Boolean frc=false){
 /** fuel stream only - receives file format, stores in HE DB */
 Boolean storeFuelDBData(List<Map>stream){
 	if(isEric())myDetail null,"storeFuelDBData $stream",iN2
-	if(!(Boolean)state.useFiles){
+	if(!gtStB('useFiles')){
 		state.fuelStreamData=stream
 		return true
 	}
@@ -12427,7 +12438,7 @@ Boolean storeFuelDBData(List<Map>stream){
 /** fuel stream only - receives file format, stores in file */
 Boolean storeFuelFileData(List<Map>istream,Boolean frc){
 	if(isEric())myDetail null,"storeFuelFileData $istream $frc",iN2
-	if((Boolean)gtSt('useFiles')){
+	if(gtStB('useFiles')){
 		String attribute=fuelNattr()
 		def sensor=app
 		List<Map>stream=istream
@@ -14147,6 +14158,7 @@ private String gtSetStr(String nm){ return (String)settings[nm] }
 private Boolean gtSetB(String nm){ return (Boolean)settings[nm] }
 private Integer gtSetI(String nm){ return (Integer)settings[nm] }
 
+private Boolean gtStB(String nm){ return (Boolean)state[nm] }
 private gtSt(String nm){ return state."${nm}" }
 private gtAS(String nm){ return atomicState."${nm}" }
 /** assign to state  */

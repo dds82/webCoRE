@@ -6093,6 +6093,7 @@ private Boolean readFile(Map r9,List prms,Boolean data){
 
 	if(data)readDataFLD[pNm]=sBLK else readTmpFLD[pNm]=sBLK
 
+	// byte[] downloadHubFile(String fileName)
 	String cookie; cookie=sNL
 	if(user && pass) cookie=securityLogin(user,pass).cookie
 	String uri= "http://${location.hub.localIP}:8080/local/${name}".toString()
@@ -6188,6 +6189,7 @@ private Boolean writeFile(Map r9,List prms){
 	//String user=sLi(prms,i2)
 	//String pass=sLi(prms,i3)
 
+	// void uploadHubFile(String fileName, byte[] bytes)
 	Date d=new Date()
 	String encodedString= "thebearmay$d".bytes.encodeBase64().toString()
 	try{
@@ -6229,6 +6231,7 @@ private Long vcmd_writeFile(Map r9,device,List prms){
 	return lZ
 }
 
+// void deleteHubFile(String fileName)
 private Boolean deleteFile(Map r9, List prms){
 	String fName= sLi(prms,iZ)
 	String bodyText = JsonOutput.toJson(name:"$fName",type:"file")
@@ -7153,7 +7156,7 @@ void doStaysProcess(Map r9,List<Map>schedules,String co,Map cndtn,Integer cndNm,
 				if(lg)s+= " no timer found creating timer "
 				schd=true
 			}else{
-				if(lg)s+= " with timer active cancel timer and create new timer"
+				if(lg)s+= " with timer active, cancel timer and create new timer"
 				canc=true
 				schd=true
 			}
