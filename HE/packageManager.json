@@ -1,13 +1,13 @@
 {
   "packageName": "webCoRE",
   "author": "imnot_bob",
-  "version": "1.0.70",
+  "version": "1.0.71",
   "minimumHEVersion": "2.3.2",
   "licenseFile": "https://raw.githubusercontent.com/imnotbob/webCoRE/hubitat-patches/LICENSE",
-  "releaseNotes": "Matchup to latest built-in code -  UI updates, improved tracking trigger monitoring bug fixes, cleanups",
+  "releaseNotes": "Cleanup stays unchanged, NP fix, improved tracking trigger monitoring bug fixes, cleanups",
   "documentationLink": "https://wiki.webcore.co",
   "communityLink": "https://community.hubitat.com/t/webcore-for-hubitat-updates/11967",
-  "dateReleased": "2023-01-15",
+  "dateReleased": "2023-01-27",
   "apps": [
     {
       "id": "cb649f7b-d33d-42b8-82c3-79d1d2101fea",
