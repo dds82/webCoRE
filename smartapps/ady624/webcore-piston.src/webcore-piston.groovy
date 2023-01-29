@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update January 28, 2023 for Hubitat
+ * Last update January 29, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -9169,15 +9169,14 @@ private Map<String,Object> getVariable(Map r9,String name, Boolean rtnL=false){
 	String tn,mySt,rt
 	tn=sanitizeVariableName(var[sNM])
 //	if(eric())doLog(sDBG,"getVariable ${name} ${tn} ${var}")
-	mySt=sBLK
+
+	mySt="get Variable '${tn}' ${var} ${name} "
 	Boolean lg=isEric(r9)
-	if(lg){
-		mySt="getVariable ${tn} ${var} ${name} "
-		myDetail r9,mySt,i1
-	}
+	if(lg) myDetail r9,mySt,i1
 	Map<String,Object> res
 	if(tn==sNL){
 		res=rtnMapE('Invalid empty variable name')
+		error mySt+sMv(res),r9
 		if(lg)myDetail r9,mySt+"result:$res"
 		return res
 	}
@@ -9278,7 +9277,9 @@ private Map<String,Object> getVariable(Map r9,String name, Boolean rtnL=false){
 			}
 		}
 	}
-	rt= res!=null ? sMt(res):sNL
+	if(res==null)res=err
+
+	rt= sMt(res)
 	if(rt.endsWith(sRB)){
 		rtnLCL=false
 		String sindx=sMs(var,sINDX)
@@ -9304,10 +9305,14 @@ private Map<String,Object> getVariable(Map r9,String name, Boolean rtnL=false){
 		}
 	}
 	def v; v=oMv(res)
-	rt=sMt(res)
-	if(rt==sDEC && v instanceof BigDecimal)v=v.toDouble()
-	res=rtnMap(rt,v) + ((rtnVarN ? [vn: tn] : [:]) as Map<String, Object>)
-	res= res + ((rtnLCL ? [ic: isConst, fx: isFixed] : [:]) as Map<String, Object>)
+	if(isTrc(r9) && isErr(res)){ // some apps handle missing variable, so require trace or higher to log error
+		error sMv(res),r9
+	}else{
+		rt=sMt(res)
+		if(rt==sDEC && v instanceof BigDecimal)v=v.toDouble()
+		res=rtnMap(rt,v) + ((rtnVarN ? [vn: tn] : [:]) as Map<String, Object>)
+		res= res + ((rtnLCL ? [ic: isConst, fx: isFixed] : [:]) as Map<String, Object>)
+	}
 	if(lg)myDetail r9,mySt+"result:$res (${myObj(v)})"
 	res
 }
@@ -9315,15 +9320,18 @@ private Map<String,Object> getVariable(Map r9,String name, Boolean rtnL=false){
 @CompileStatic
 private Map setVariable(Map r9,String name,value){
 	Map<String,String> var=parseVariableName(name)
-	String tn
+	String tn,mySt
 	tn=sanitizeVariableName(var[sNM])
+	mySt="set Variable '${tn}' "
+	Map res; res=null
+	Map err; err=rtnMapE(mySt+'Invalid variable ')
 	Boolean lg=isEric(r9)
 	if(tn==sNL){
-		if(lg)myDetail r9,"setVariable ${tn} value: ${value} INVALID NAME",iN2
-		return rtnMapE('Invalid empty variable name')
+		res=rtnMapE(mySt+'Invalid empty variable name')
+		error sMv(res),r9
+		return res
 	}
-	if(lg)myDetail r9,"setVariable ${tn} value: ${value} (${myObj(value)})",iN2
-	Map err=rtnMapE('Invalid variable')
+	if(lg)myDetail r9,mySt+"value: ${value} (${myObj(value)})",iN2
 	if(tn.startsWith(sAT)){
 		if(tn.startsWith(sAT2)){
 			tn=var[sNM] // allow spaces
@@ -9341,7 +9349,6 @@ private Map setVariable(Map r9,String name,value){
 				}
 				if(wctyp){ // if we know current type
 					Map ta=fixHeGType(true,wctyp,value)
-					Map res; res=null
 					for(t in ta){
 						typ=(String)t.key
 						vl=t.value
@@ -9424,13 +9431,18 @@ private Map setVariable(Map r9,String name,value){
 						if(nvalue instanceof List){
 							if(lg)myDetail r9,"setVariable list found ${variable} value: ${nvalue}",iN2
 							variable[sV]= nvalue // this modifies r9[sLOCALV]
-						}else return err
+						}else {
+							if(isInf(r9))error sMv(err),r9
+							return err
+						}
 					}
 				}
 			}else{
 				def v=(value instanceof GString)? "$value".toString():value
 				if(!sMs(variable,sA)) // cannot change const; sNL means dynamic, sS means static/const
 					variable[sV]=matchCast(r9,v,t) ? v:cast(r9,v,t) // this modifies r9[sLOCALV]
+				else
+					warn sMv(err)+'attempting to set const',r9
 			}
 			if(!bIs(variable,sF) || !sMs(variable,sA)){ // save local variables except constants
 				updateVariable(r9,tn,variable)
@@ -9438,6 +9450,7 @@ private Map setVariable(Map r9,String name,value){
 			return variable
 		}
 	}
+	error sMv(err),r9 // if you are trying to set something that does not exist, log error
 	return err
 }
 
