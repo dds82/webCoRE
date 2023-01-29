@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update January 26, 2023 for Hubitat
+ * Last update January 28, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -707,7 +707,7 @@ void clear1(Boolean ccache=false,Boolean some=true,Boolean most=false,Boolean al
 		Boolean act=isAct(tRtData)
 		Boolean dis=!isEnbl(tRtData)
 		String pNm=sMs(tRtData,snId)
-		readDataFLD.put(pNm,sNL); readTmpFLD.put(pNm,sNL)
+		readDataFLD.put(pNm,sNL); readTmpFLD.put(pNm,sNL); readTmpBFLD.put(pNm,null)
 		fuelDataFLD.put(pNm,[])
 		tRtData=null
 		state.put(sCACHE,[:])
@@ -1038,7 +1038,7 @@ Map activity(lastLogTimestamp){
 		(sST): mMs(t0,sST),
 		(sLOGS): lidx>iZ ? logs[iZ..lidx-i1]:[],
 		(sTRC): mMs(t0,sTRC),
-		(sLOCALV): mMs(t0,sVARS),// not reporting global or system variable changes
+		(sLOCALV): mMs(t0,sVARS), // not reporting global or system variable changes
 		memory: sMs(t0,sMEM),
 		(sLEXEC): lMs(t0,sLEXEC),
 		(sNSCH): lMs(t0,sNSCH),
@@ -2258,7 +2258,7 @@ private LinkedHashMap getTemporaryRunTimeData(Long startTime=wnow()){
 }
 
 @CompileStatic
-private LinkedHashMap getRunTimeData(LinkedHashMap ir9=null,LinkedHashMap retSt=null,Boolean fetchWrappers=false,Boolean shorten=true,Boolean inMem=false){
+private LinkedHashMap getRunTimeData(LinkedHashMap ir9=null,LinkedHashMap retSt=null,Boolean doit=false,Boolean shorten=true,Boolean inMem=false){
 	LinkedHashMap r9,piston,m1
 	r9=ir9
 	Long started=wnow()
@@ -2309,11 +2309,11 @@ private LinkedHashMap getRunTimeData(LinkedHashMap ir9=null,LinkedHashMap retSt=
 
 	r9[sPIS]=piston
 
-	getLocalVariables(r9,aS)
+	getLocalVariables(r9,aS,doit)
 	piston=null
 
-	if(doSubScribe || fetchWrappers){
-		subscribeAll(r9,fetchWrappers,inMem)
+	if(doSubScribe || doit){
+		subscribeAll(r9,doit,inMem)
 		String pNm=sMs(r9,snId)
 		Map pData
 		pData=mMs(thePistonCacheFLD,pNm)
@@ -2853,8 +2853,8 @@ private Boolean executeEvent(Map r9,Map event){
 
 		Map es=(Map)event[sSCH]
 		if(es!=null && evntName==sTIME){ // this is a resume timer, try to put back original event
-			targs=es[sARGS]!=null && es[sARGS] instanceof Map ? mMs(es,sARGS):targs
 			srcEvent=mMs(es,'evt')
+			targs=es[sARGS]!=null && es[sARGS] instanceof Map ? mMs(es,sARGS):targs
 			Map tMap=mMs(es,sSTACK)
 			if(tMap!=null){
 				Map<String,Map>sysV=(Map<String,Map>)r9[sSYSVARS]
@@ -2865,7 +2865,7 @@ private Boolean executeEvent(Map r9,Map event){
 				r9[sJSON]=tMap[sJSON] ?: [:]
 				r9[sRESP]=tMap[sRESP] ?: [:]
 				index=(Integer)srcEvent?.index ?: iZ
-// more to restore here?
+// more to restore here? toResume
 			}
 		}
 		stSysVarVal(r9,sDARGS,targs)
@@ -2906,9 +2906,14 @@ private Boolean executeEvent(Map r9,Map event){
 			mEvt[sPHYS]=!!srcEvent[sPHYS]
 			mEvt.isResume=true
 		}else{
+			// this is a new run starting from top, so setup local variables that have initial values
 			String pNm=sMs(r9,snId)
-			readDataFLD[pNm]=sNL; readTmpFLD[pNm]=sNL
+			readDataFLD.put(pNm,sNL); readTmpFLD.put(pNm,sNL); readTmpBFLD.put(pNm,null)
 			fuelDataFLD[pNm]=[]
+			Map aS
+			aS=getCachedMaps('executeEvent glv')
+			aS=aS!=null?aS:[:]
+			getLocalVariables(r9,aS,true)
 		}
 		pEvt=(Map)gtSt(sLEVT)
 		if(pEvt==null)pEvt=[:]
@@ -3299,7 +3304,7 @@ private void processSchedules(Map r9,Boolean scheduleJob=false){
 		if(nextT==lZ){
 			if(lMs(r9,sNSCH)!=lZ)wunschedule(sTIMHNDR)
 			String pNm=sMs(r9,snId)
-			readDataFLD[pNm]=sNL; readTmpFLD[pNm]=sNL
+			readDataFLD.put(pNm,sNL); readTmpFLD.put(pNm,sNL); readTmpBFLD.put(pNm,null)
 			fuelDataFLD[pNm]=[]
 		}
 		chgNextSch(r9,nextT)
@@ -4092,7 +4097,7 @@ private static String gTCP(Map statement){ return sMs(statement,sTCP) ?: sC }
 @CompileStatic
 private static List<Integer> svCS(Map r9,Map statement){
 	// cancel on "" == c- condition state change (def), p- piston state change, b- condition or piston state change, sN- never cancel
-	List<Integer> cs=(List<Integer>)[]+ (gTCP(statement) in [sB,sC] ? (List<Integer>)mMs(r9,sSTACK)[sCS]:(List<Integer>)[] ) // task cancelation policy
+	List<Integer> cs=(List<Integer>)[]+ (gTCP(statement) in [sB,sC] ? (List<Integer>)mMs(r9,sSTACK)[sCS]:(List<Integer>)[] ) // task cancelation policy TCP
 	cs.removeElement(iZ)
 	return cs
 }
@@ -6082,8 +6087,12 @@ private Map securityLogin(String u, String p){
 	return [result: res, cookie: cookie]
 }
 
+// used to avoid blowing stack
 @Field static Map<String,String> readTmpFLD=[:]
+@Field static Map<String,byte[]> readTmpBFLD=[:]
 @Field static Map<String,String> readDataFLD=[:]
+
+@Field static String minFwVersion = "2.3.4.132"
 
 private Boolean readFile(Map r9,List prms,Boolean data){
 	String name=sLi(prms,iZ)
@@ -6093,41 +6102,57 @@ private Boolean readFile(Map r9,List prms,Boolean data){
 
 	if(data)readDataFLD[pNm]=sBLK else readTmpFLD[pNm]=sBLK
 
-	// byte[] downloadHubFile(String fileName)
-	String cookie; cookie=sNL
-	if(user && pass) cookie=securityLogin(user,pass).cookie
-	String uri= "http://${location.hub.localIP}:8080/local/${name}".toString()
-
-	Map params=[
-		uri: uri,
-		(sCONTENTT): "text/plain; charset=UTF-8",
-		textParser: true,
-		headers: ["Cookie": cookie, "Accept": 'application/octet-stream']
-	]
-
+	Boolean res; res=false
+	Boolean fwOk= ((String)location.hub.firmwareVersionString >= minFwVersion)
 	try{
-		httpGet(params){ resp ->
-			if(resp.status==i200 && resp.data){
-				Integer i
-				char c
-				i=resp.data.read()
-				while(i!=-1){
-					c=(char)i
-					if(data) readDataFLD[pNm]+=c
-					else readTmpFLD[pNm]+=c
+		if(fwOk){
+			readTmpBFLD[pNm]=null
+			readTmpBFLD[pNm]= (byte[])downloadHubFile(name)
+			if(readTmpBFLD[pNm].size()){
+				if(data) readDataFLD[pNm]=new String(readTmpBFLD[pNm])
+				else readTmpFLD[pNm]=new String(readTmpBFLD[pNm])
+				readTmpBFLD[pNm]=null
+			}
+			res=true
+
+		}else{
+			String cookie; cookie=sNL
+			if(user && pass) cookie=securityLogin(user,pass).cookie
+			String uri= "http://${location.hub.localIP}:8080/local/${name}".toString()
+
+			Map params=[
+				uri: uri,
+				(sCONTENTT): "text/plain; charset=UTF-8",
+				textParser: true,
+				headers: ["Cookie": cookie, "Accept": 'application/octet-stream']
+			]
+
+			httpGet(params){ resp ->
+				if(resp.status==i200 && resp.data){
+					Integer i
+					char c
 					i=resp.data.read()
+					while(i!=-1){
+						c=(char)i
+						if(data) readDataFLD[pNm]+=c
+						else readTmpFLD[pNm]+=c
+						i=resp.data.read()
+					}
+					res=true
+					//doLog(sWARN,"pNm: ${pNm} data: ${data}  file: ${readDataFLD[pNm]}")
+				}else{
+					error "Read Response status $resp.status",r9
 				}
-				//doLog(sWARN,"pNm: ${pNm} data: ${data}  file: ${readDataFLD[pNm]}")
-			}else{
-				error "Read Response status $resp.status",r9
 			}
 		}
-		return true
+
+		if(res) return true
 	}catch(e){
 		String s="Error reading file $name: "
 		if( ((String)e.message).contains("Not Found") ){
 			error s+"Not found",r9
 		}else error s,r9,iN2,e
+		readTmpBFLD[pNm]=null
 	}
 	if(data)readDataFLD[pNm]=sNL else readTmpFLD[pNm]=sNL
 	return false
@@ -6165,22 +6190,28 @@ private Long vcmd_appendFile(Map r9,device,List prms){
 }
 
 private Boolean fileExists(Map r9,String name){
-	String uri="http://${location.hub.localIP}:8080/local/${name}".toString()
-	Map params=[uri: uri]
-
 	Boolean res; res=false
+	Boolean fwOk= ((String)location.hub.firmwareVersionString >= minFwVersion)
+	String pNm=sMs(r9,snId)
 	try{
-		httpGet(params){ resp ->
-			Boolean b= (resp.status==i200)
-			if(eric())doLog(sINFO,"File Exists $name: $b")
-			res=b
+		if(fwOk){
+			readTmpBFLD[pNm]= (byte[])downloadHubFile(name)
+			res= true
+		}else{
+			String uri="http://${location.hub.localIP}:8080/local/${name}".toString()
+			Map params=[uri: uri]
+
+			httpGet(params){ resp ->
+				Boolean b= (resp.status==i200)
+				res=b
+			}
 		}
 	}catch(e){
-		if( ((String)e.message).contains("Not Found") ){
-			//error "Error file exists $name: ${e}",r9
-		}else error "Error file exists $name: ",r9,iN2,e
-		if(eric())doLog(sINFO,"File Exist excptn: false")
+		if( !((String)e.message).contains("Not Found") )
+			error "Error file exists $name: ",r9,iN2,e
+		readTmpBFLD[pNm]=null
 	}
+	if(eric())doLog(sINFO,"File Exists $name: $res")
 	return res
 }
 
@@ -6189,16 +6220,25 @@ private Boolean writeFile(Map r9,List prms){
 	//String user=sLi(prms,i2)
 	//String pass=sLi(prms,i3)
 
-	// void uploadHubFile(String fileName, byte[] bytes)
-	Date d=new Date()
-	String encodedString= "thebearmay$d".bytes.encodeBase64().toString()
+	String pNm=sMs(r9,snId)
+	Boolean fwOk= ((String)location.hub.firmwareVersionString >= minFwVersion)
+	Boolean res; res=false
 	try{
-		Map params= [
-			uri		: 'http://127.0.0.1:8080',
-			path	: '/hub/fileManager/upload',
-			query	: ['folder': '/'],
-			headers	: ['Content-Type': "multipart/form-data; boundary=$encodedString"],
-			body	: """--${encodedString}
+		if(fwOk){
+			readTmpBFLD[pNm]= sLi(prms,i1).getBytes()
+			uploadHubFile(name, readTmpBFLD[pNm])
+			readTmpBFLD[pNm]=null
+			res=true
+
+		}else{
+			Date d=new Date()
+			String encodedString= "thebearmay$d".bytes.encodeBase64().toString()
+			Map params= [
+				uri		: 'http://127.0.0.1:8080',
+				path	: '/hub/fileManager/upload',
+				query	: ['folder': '/'],
+				headers	: ['Content-Type': "multipart/form-data; boundary=$encodedString"],
+				body	: """--${encodedString}
 Content-Disposition: form-data; name="uploadFile"; filename="${name}"
 contentType: "text/plain; charset=UTF-8"
 
@@ -6209,19 +6249,22 @@ Content-Disposition: form-data; name="folder"
 
 
 --${encodedString}--""",
-			timeout	: 300,
-			ignoreSSLIssues: true
-		]
-		//data=sNL
-		httpPost(params){ resp ->
-			if(resp.status!=i200){
-				error "Write Response status $resp.status",r9
+				timeout	: 300,
+				ignoreSSLIssues: true
+			]
+			//data=sNL
+			httpPost(params){ resp ->
+				if(resp.status!=i200){
+					error "Write Response status $resp.status",r9
+				} else res=true
 			}
 		}
-		return true
-	}
-	catch(e){
+
+		if(res) return true
+
+	}catch(e){
 		error "Error writing file $name: ${e}",r9,iN2,e
+		readTmpBFLD[pNm]=null
 	}
 	return false
 }
@@ -6231,26 +6274,34 @@ private Long vcmd_writeFile(Map r9,device,List prms){
 	return lZ
 }
 
-// void deleteHubFile(String fileName)
 private Boolean deleteFile(Map r9, List prms){
 	String fName= sLi(prms,iZ)
-	String bodyText = JsonOutput.toJson(name:"$fName",type:"file")
-	Map params= [
-		uri: "http://127.0.0.1:8080",
-		path: "/hub/fileManager/delete",
-		contentType:'text/plain',
-		requestContentType: sAPPJSON,
-		body: bodyText
-	]
+
+	Boolean fwOk= ((String)location.hub.firmwareVersionString >= minFwVersion)
+	Boolean res; res=false
 	try{
-		httpPost(params) { resp ->
-			if(resp.status!=i200){
-				error "Delete Response status $resp.status",r9
+		if(fwOk){
+			deleteHubFile(fName)
+			res=true
+		}else{
+			String bodyText = JsonOutput.toJson(name:"$fName",type:"file")
+			Map params= [
+				uri: "http://127.0.0.1:8080",
+				path: "/hub/fileManager/delete",
+				contentType:'text/plain',
+				requestContentType: sAPPJSON,
+				body: bodyText
+			]
+
+			httpPost(params) { resp ->
+				if(resp.status!=i200){
+					error "Delete Response status $resp.status",r9
+				} else res=true
 			}
 		}
-		return true
-	}
-	catch(e){
+		if(res)	return true
+
+	}catch(e){
 		error "Error deleting file $fName: ${e}",r9,iN2,e
 	}
 	return false
@@ -7918,6 +7969,11 @@ void updTrkrs(Map r9){
 }
  */
 
+/**
+ * modify piston for subscriptions, warnings if !inMem, tracking in use devices, setup tracking trigger variables
+ * @param doit - do subscriptions
+ * @param inMem
+ */
 private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 	String s='subscribeAll '
 	Boolean lge=isEric(r9)
@@ -8352,10 +8408,10 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 								Map v=prms[iZ]
 								String vn=sMs(v,sX)
 								if(sMt(v)==sX && vn){
-									//get variable {t:type,v:value, ic: isConst, fx: isFixed}
+									//get variable {t:type,v:value, ic: isConst, fx: isFixed, vn: name}
 									Map a=getVariable(r9,vn,true)
 									String m= bIs(a,'ic') ? 'const' : ( bIs(a,'fx') ? 'pre initialized' : sNL)
-									if(m) addWarning(node,'Found Set variable to a '+m+" variable: $vn num: ${stmtNum(k)}")
+									if(!inMem && m) addWarning(node,'Found Set variable to a '+m+" variable: $vn num: ${stmtNum(k)}")
 								}
 							}
 
@@ -9208,8 +9264,9 @@ private Map<String,Object> getVariable(Map r9,String name, Boolean rtnL=false){
 			if(!tlocV)res=err
 			else{
 				rtnLCL= rtnL
-				isConst=sMs(tlocV,sA)==sS
-				isFixed=bIs(tlocV,sF)
+				rtnVarN=true
+				isConst=sMs(tlocV,sA)==sS // const
+				isFixed=bIs(tlocV,sF) // fixed value
 				res=rtnMap(sMt(tlocV),oMv(tlocV))
 				def tmp=oMv(res)
 				if(tmp instanceof List)
@@ -9372,27 +9429,43 @@ private Map setVariable(Map r9,String name,value){
 				}
 			}else{
 				def v=(value instanceof GString)? "$value".toString():value
-				if(!(String)variable[sA]) // cannot change const; sNL means dynamic, sS means static/const
+				if(!sMs(variable,sA)) // cannot change const; sNL means dynamic, sS means static/const
 					variable[sV]=matchCast(r9,v,t) ? v:cast(r9,v,t) // this modifies r9[sLOCALV]
 			}
-			if(!(Boolean)variable[sF]){ // don't save across runs changes to preset variables (fixed); (includes const)
-				Map vars
-				Map t0=getCachedMaps(sSTVAR)
-				if(t0!=null)vars=mMs(t0,sVARS)
-				else vars=isPep(r9) ? (Map)gtAS(sVARS):(Map)gtSt(sVARS)
-
-				vars[tn]=oMv(variable)
-				mb()
-
-				if(isPep(r9))assignAS(sVARS,vars)
-				else assignSt(sVARS,vars)
-
-				if(t0!=null)updateCacheFld(r9,sVARS,vars,sV,false)
+			if(!bIs(variable,sF) || !sMs(variable,sA)){ // save local variables except constants
+				updateVariable(r9,tn,variable)
 			}
 			return variable
 		}
 	}
 	return err
+}
+
+/**
+ *  unpersist local variable value
+ */
+private void clearVariable(Map r9,String n){
+	updateVariable(r9,n,[:],true)
+}
+
+/**
+ *  persist local variable value
+ */
+@CompileStatic
+private void updateVariable(Map r9,String n, Map variable, Boolean clear=false){
+	Map vars
+	Map t0=getCachedMaps(sSTVAR)
+	if(t0!=null)vars=mMs(t0,sVARS)
+	else vars=isPep(r9) ? (Map)gtAS(sVARS):(Map)gtSt(sVARS)
+
+	if(clear) def a=vars.remove(n)
+	else vars[n]=oMv(variable)
+	mb()
+
+	if(isPep(r9))assignAS(sVARS,vars)
+	else assignSt(sVARS,vars)
+
+	if(t0!=null)updateCacheFld(r9,sVARS,vars,sV,false)
 }
 
 @CompileStatic
@@ -12505,29 +12578,43 @@ Long getSkew(Long t4,String ttyp){
 	return addr.toLong()
 }
 
+/**
+ * load local variables
+ * @param frc - if has initial value, use it
+ */
 @CompileStatic
-private void getLocalVariables(Map r9,Map aS){
+private void getLocalVariables(Map r9,Map aS, Boolean frc=true){
 	r9[sLOCALV]=[:]
-	String t,n
-	def v
+	String t
 	Map values=mMs(aS,sVARS)
 	List<Map>l=(List<Map>)oMv(mMs(r9,sPIS))
 	if(!l)return
+	Boolean lg=isDbg(r9)
 	for(Map var in l){
 		t=sMt(var)
-		n=sMs(var,sN)
-		v= values ? values[n]:null
-		def tmp= oMv(var)
+		String tn=sanitizeVariableName(sMs(var,sN))
+		Map ival= mMv(var) // initialize value for variable
+		def v
+		v= values ? values[tn]:null // stored value for variable
+		Boolean hasival= ival!=null
+		Boolean isconst= hasival && sMa(var)==sS && !t.endsWith(sRB)
+		Boolean useival= hasival && (v==null || frc || isconst)
+		if(useival && v!=null){ // clean out any updated value
+			clearVariable(r9,tn)
+			if(lg)debug 'Reinitializing preset variable: '+tn,r9
+		}
+
 		Map variable=[
 			(sT):t,
-			(sV): tmp!=null ? tmp : (t.endsWith(sRB) ? (v instanceof Map || v instanceof List ? v:[:]) : (matchCast(r9,v,t) ? v:cast(r9,v,t))),
-			(sF): !!tmp //f means fixed value; do not save to state
+			(sV): useival ? ival : (t.endsWith(sRB) ? (v instanceof Map || v instanceof List ? v:[:]) : (matchCast(r9,v,t) ? v:cast(r9,v,t))),
+			(sF): hasival //f means fixed value; ie we can warn they are overwriting it
 		]
-		if(tmp!=null && sMa(var)==sS && !t.endsWith(sRB)){ // variable.a sS -> const  sD-> dynamic
+
+		if(isconst){  // variable.a sS -> const  sD-> dynamic
 			variable[sV]=oMv(evaluateExpression(r9,mevaluateOperand(r9,mMv(var)),t))
 			variable[sA]=sS
 		}
-		((Map)r9[sLOCALV])[n]=variable
+		((Map)r9[sLOCALV])[tn]=variable
 	}
 }
 

@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update January 25, 2023 for Hubitat
+ *  Last update January 28, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -196,6 +196,8 @@ def uninstalled(){
 		parent.resetFuelStreamList()
 		fuelFLD=null
 		readTmpFLD= [:]
+		readTmpBFLD= [:]
+		writeTmpFLD= [:]
 	}
 }
 
@@ -233,6 +235,8 @@ def updated(){
 
 	if(typ && (typ in ['fuelstream',sLONGTS])){
 		readTmpFLD= [:] // clear memory file cache
+		readTmpBFLD= [:]
+		writeTmpFLD= [:]
 		fuelFLD=null // clear list of fuel streams cache
 	}
 
@@ -10708,34 +10712,38 @@ def mainLongtermstorage(){
 	}
 }
 
-def deviceLongtermstorage(){
+@Field static String minFwVersion = "2.3.4.132"
 
-	if(password && username){
-		log.debug("Username and Password set")
-	}
+def deviceLongtermstorage(){
 
 	dynamicPage((sNM): "deviceSelectionPage", nextPage:"attributeConfigurationPage"){
 
 		String s='hpmSecurity'
-		List<String> container
-		hubiForm_section("Login Information", 1, sBLK, sBLK){
-			if(settings[s]==null){
-				settings[s]=true
-				app.updateSetting(s, true)
+		Boolean fwOk= ((String)location.hub.firmwareVersionString >= minFwVersion)
+		if(!fwOk){
+			if(password && username){
+				log.debug("Username and Password set")
 			}
+			List<String> container
+			hubiForm_section("Login Information", 1, sBLK, sBLK){
+				if(settings[s]==null){
+					settings[s]=true
+					app.updateSetting(s, true)
+				}
 
-			container=[]
-			container << hubiForm_switch ((sTIT): "<b>Use Hubitat Security?</b>",
-					(sNM): s, (sDEFLT): true, (sSUBONCHG): true)
+				container=[]
+				container << hubiForm_switch ((sTIT): "<b>Use Hubitat Security?</b>",
+						(sNM): s, (sDEFLT): true, (sSUBONCHG): true)
 
-			hubiForm_container(container, 1)
+				hubiForm_container(container, 1)
 
-			if(gtSetB(s)){
-				input "username", "string",(sTIT): "Hub Security username", (sREQ): false, (sSUBOC): true
-				input "password", "password",(sTIT): "Hub Security password", (sREQ): false, (sSUBOC): true
+				if(gtSetB(s)){
+					input "username", "string",(sTIT): "Hub Security username", (sREQ): false, (sSUBOC): true
+					input "password", "password",(sTIT): "Hub Security password", (sREQ): false, (sSUBOC): true
+				}
 			}
 		}
-		if(gtSetB(s) && !login()){
+		if(!fwOk && gtSetB(s) && !login()){
 			hubiForm_section("Login Error", 1, sBLK, sBLK){
 				container=[]
 				container << hubiForm_text("""<b>CANNOT LOGIN</b><br>If you have Hub Security Enabled, please put in correct login credentials<br>
@@ -11487,6 +11495,7 @@ Boolean fileExists(sensor, String attribute, String fname=sNL){
 }
 
 @Field volatile static Map<String,String> readTmpFLD=[:]
+@Field volatile static Map<String,byte[]> readTmpBFLD=[:]
 
 /**
  * returns Map that has internal format in map.data
@@ -11502,6 +11511,7 @@ Map readFile(sensor, String attribute, String fname=sNL){
 
 	String filename_=fname ?: getFileName(sensor, attribute)
 	String pNm=filename_
+
 	if(readTmpFLD[pNm]==sNL){ readTmpFLD[pNm]=sBLK; readTmpFLD= readTmpFLD }
 	try{
 		Integer sz=readTmpFLD[pNm].size()
@@ -11515,33 +11525,46 @@ Map readFile(sensor, String attribute, String fname=sNL){
 		}
 	} catch(ignored){}
 
+
 	readTmpFLD[pNm]=sBLK
 	readTmpFLD= readTmpFLD
-	String uri="http://${location.hub.localIP}:8080/local/${filename_}"
-	Map params=[
-			uri: uri,
-			contentType: "text/plain; charset=UTF-8",
-			textParser: true,
-			headers: [ "Cookie": state.cookie, "Accept": 'application/octet-stream' ]
-	]
 
-	// byte[] downloadHubFile(String fileName)
 	try{
-		httpGet(params){ resp ->
-			if(resp.status==200 && resp.data){
-				Integer i
-				char c
-				i=resp.data.read()
-				while(i!=-1){
-					c=(char)i
-					readTmpFLD[pNm]+=c
+		if((String)location.hub.firmwareVersionString >= minFwVersion){
+			readTmpBFLD[pNm]=null
+			readTmpBFLD[pNm]= (byte[])downloadHubFile(filename_)
+			if(readTmpBFLD[pNm].size()){
+				readTmpFLD[pNm]=new String(readTmpBFLD[pNm])
+				readTmpBFLD[pNm]=null
+				readTmpBFLD= readTmpBFLD
+			}
+
+		}else{
+			String uri="http://${location.hub.localIP}:8080/local/${filename_}"
+			Map params=[
+				uri: uri,
+				contentType: "text/plain; charset=UTF-8",
+				textParser: true,
+				headers: [ "Cookie": state.cookie, "Accept": 'application/octet-stream' ]
+			]
+
+			httpGet(params){ resp ->
+				if(resp.status==200 && resp.data){
+					Integer i
+					char c
 					i=resp.data.read()
+					while(i!=-1){
+						c=(char)i
+						readTmpFLD[pNm]+=c
+						i=resp.data.read()
+					}
+					//log.warn "pNm: ${pNm} data: ${data} file: ${readDataFLD[pNm]}"
+				}else{
+					error "Read Response status $resp.status",null
 				}
-				//log.warn "pNm: ${pNm} data: ${data} file: ${readDataFLD[pNm]}"
-			}else{
-				error "Read Response status $resp.status",null
 			}
 		}
+
 		readTmpFLD= readTmpFLD
 		Integer sz
 		sz=readTmpFLD[pNm].size()
@@ -11572,6 +11595,8 @@ Map readFile(sensor, String attribute, String fname=sNL){
 		}else{
 			error "Read File Data"+ts1+" :: Exception: ",null,iN2,e
 		}
+		readTmpBFLD[pNm]=null
+		readTmpBFLD= readTmpBFLD
 	}
 	readTmpFLD[pNm]=sNL
 	readTmpFLD= readTmpFLD
@@ -11871,44 +11896,59 @@ static List<Map> rtnFileData(List<Map> events){
 	return file_data
 }
 
+@Field volatile static Map<String,String> writeTmpFLD=[:]
+
 /** shared (LTS & fuel) only method - save different formats to file format */
 Boolean writeFile(sensor, String attribute, List<Map> events, String fname=sNL){
 
 	String s= "writeFile $sensor $attribute $fname"
 	if(isEric())myDetail null,s,i1
 
-	if(login()){
+	String filename_=fname ?: getFileName(sensor, attribute)
+	String pNm=filename_
 
-		String filename_=fname ?: getFileName(sensor, attribute)
-		String pNm=filename_
+	List<Map> file_data
+	file_data=rtnFileData(events)
+	writeTmpFLD[pNm]=file_data ? JsonOutput.toJson(file_data) : sBLK
+	file_data=null
 
-		List<Map> file_data
-		file_data=rtnFileData(events)
-		String contents=file_data ? JsonOutput.toJson(file_data) : sBLK
-		file_data=null
+	Boolean fwOk= ((String)location.hub.firmwareVersionString >= minFwVersion)
+
+	if(fwOk || login()){
 
 		if(readTmpFLD[pNm]==sNL){ readTmpFLD[pNm]=sBLK; readTmpFLD= readTmpFLD }
 		Integer sz= readTmpFLD[pNm].size()
-/*		Integer sz1= contents.size()
+/*		Integer sz1= writeTmpFLD[pNm].size()
 		myDetail null,"pNm: ${pNm} cache sz: $sz  new data: ${sz1}",iN2
 		if(sz){
 			String sc=readTmpFLD[pNm]
 			String st=sc[sz-1]
 			if(st=='\n') myDetail null, 'FOUND NEWLINE',iN2
 			myDetail null,"last char CACHE DATA is ${sc[sz-1]}",iN2
-			myDetail null,"last char NEW DATA is ${contents[sz1-1]}",iN2
+			myDetail null,"last char NEW DATA is ${writeTmpFLD[pNm][sz1-1]}",iN2
 		} */
-		if(sz> 4 && sz==contents.size() && contents==readTmpFLD[pNm]){
+		if(sz> 4 && sz==writeTmpFLD[pNm].size() && writeTmpFLD[pNm]==readTmpFLD[pNm]){
+			writeTmpFLD[pNm]=sBLK; writeTmpFLD= writeTmpFLD
 			if(isEric()) trace "writeFile no changes",null
 			if(isEric())myDetail null,s+" TRUE"
 			return true
 		}
 
-		// void uploadHubFile(String fileName, byte[] bytes)
-		Date d=new Date()
-		String encodedString="thebearmay$d".bytes.encodeBase64().toString()
 		try{
-			Map params=[
+			Boolean res; res=false
+			if(fwOk){
+				readTmpBFLD[pNm]= writeTmpFLD[pNm].getBytes()
+				uploadHubFile(filename_, readTmpBFLD[pNm])
+				readTmpBFLD[pNm]=null
+				readTmpFLD[pNm]=writeTmpFLD[pNm]
+				res=true
+
+			}else{
+
+				Date d=new Date()
+				String encodedString="thebearmay$d".bytes.encodeBase64().toString()
+
+				Map params=[
 					uri: "http://127.0.0.1:8080",
 					path: "/hub/fileManager/upload",
 					query: [ "folder": "/" ],
@@ -11920,7 +11960,7 @@ Boolean writeFile(sensor, String attribute, List<Map> events, String fname=sNL){
 Content-Disposition: form-data; name="uploadFile"; filename="${filename_}"
 Content-Type: "text/plain; charset=UTF-8"
 
-${contents}
+${writeTmpFLD[pNm]}
 
 --${encodedString}
 Content-Disposition: form-data; name="folder"
@@ -11929,19 +11969,19 @@ Content-Disposition: form-data; name="folder"
 --${encodedString}--""",
 					timeout: 300,
 					ignoreSSLIssues: true
-			]
-			Boolean res
-			res=false
-			httpPost(params){ resp ->
-				if(resp.status!=200){
-					error "Write Response status $resp.status",null
-					readTmpFLD[pNm]=sNL
-				}else{
-					readTmpFLD[pNm]=contents
-					res=true
+				]
+				httpPost(params){ resp ->
+					if(resp.status!=200){
+						error "Write Response status $resp.status",null
+						readTmpFLD[pNm]=sNL
+					}else{
+						readTmpFLD[pNm]=writeTmpFLD[pNm]
+						res=true
+					}
 				}
 			}
 			readTmpFLD= readTmpFLD
+			writeTmpFLD[pNm]=sBLK; writeTmpFLD= writeTmpFLD
 			if(res){
 				if(isEric())myDetail null,s+" TRUE"
 				return true
@@ -11950,8 +11990,9 @@ Content-Disposition: form-data; name="folder"
 			String sensor_name=gtLbl(sensor)
 			error "Write File ${sensor_name} (${attribute}) ($filename_} :: Exception: ",null,iN2,e
 		}
-		readTmpFLD[pNm]=sNL
-		readTmpFLD= readTmpFLD
+		readTmpBFLD[pNm]=null
+		readTmpFLD[pNm]=sNL; readTmpFLD= readTmpFLD
+		writeTmpFLD[pNm]=sBLK; writeTmpFLD= writeTmpFLD
 	}
 	if(isEric())myDetail null,s+" FALSE"
 	return false
