@@ -2946,10 +2946,10 @@ private Boolean executeEvent(Map r9,Map event){
 			List<Map> r=liMs(pis,sR)
 			// piston restriction
 			Boolean allowed=!r || r.size()==iZ || evaluateConditions(r9,pis,sR,true)
-			Boolean restr=!gtPOpt(r9,'aps') && !allowed //allowPreScheduled tasks to execute during restrictions
+			Boolean restr=!gtPOpt(r9,'aps') && !allowed //allowPreScheduled tasks to execute during restrictions iN1, iN3, iN5
 			r9.restricted=restr
 
-			if(allowed || currun(r9)<iN1){ // iN3 iN5 iN9 (allow save runs), no iN1 every block, 0 runs, or ffwds >1 (resume) if restricted
+			if(allowed || currun(r9)!=iZ /* <iN1 */){ // iN3 iN5 iN9 (allow save runs), iN1 every block, ffwds >1 (resume); no 0 runs if restricted
 				switch(currun(r9)){
 					case iN3:
 						//device related time schedules
@@ -3402,6 +3402,7 @@ private static Boolean prun(Map r9){ bIs(r9,sRUN) }
 /**  ffto != 0 */
 @CompileStatic
 private static Boolean ffwd(Map r9){ !prun(r9) }
+/** get ffto */
 @CompileStatic
 private static Integer currun(Map r9){ iMs(r9,sFFT) }
 @CompileStatic
