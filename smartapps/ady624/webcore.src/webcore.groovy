@@ -31,8 +31,8 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230113_HE'
-@Field static final String sHVERSTR='v0.3.114.20230113_HE - January 28, 2023'
+@Field static final String sHVER='v0.3.114.20230129_HE'
+@Field static final String sHVERSTR='v0.3.114.20230129_HE - January 29, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -2442,8 +2442,8 @@ private api_intf_variable_set(){
 				if(name && !value){
 					//deleting a variable
 					globalVars.remove(name)
-					chgd=true
 					result=[(sNM): name, (sVAL): null, type: null]
+					chgd=true
 				}else if(value && value[sN]){
 					if(!name || name!=vln ){
 						//add a new variable
@@ -5245,6 +5245,7 @@ Map getChildComparisons(){
 	power			: [ (sT): sDEC,						],
 	sqr				: [ (sT): sDEC,						],
 	sqrt			: [ (sT): sDEC,						],
+	setvariable		: [ (sT): sBOOLN,	(sD): "setVariable",			],
 	dewpoint		: [ (sT): sDEC,	(sD): "dewPoint",	],
 	fahrenheit		: [ (sT): sDEC,						],
 	celsius			: [ (sT): sDEC,						],

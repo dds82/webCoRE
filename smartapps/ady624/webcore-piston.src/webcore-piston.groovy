@@ -32,7 +32,7 @@
 //file:noinspection GroovyAssignabilityCheck
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230113_HE'
+@Field static final String sHVER='v0.3.114.20230129_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -1221,7 +1221,6 @@ private Integer msetIds(Boolean shorten,Boolean inMem,Map node,Integer mId=iZ,Ma
 	//Boolean lg= eric() && settings[sLOGNG]?.toInteger()>i2
 	if(!ListCmd)ListCmd=fill_CMD()
 	if(nodeT in ListCmd){
-		//noinspection GroovyAssignabilityCheck
 		Integer id
 		id=iMs(node,sDLR)?:iZ
 		if(id==iZ || existingIds[id.toString()]!=null) Boolean a=requiringIds.push(node)
@@ -3947,7 +3946,7 @@ private Boolean executeAction(Map r9,Map statement,Boolean async){
 }
 
 @Field static List<String> LWCMDS
-private static List<String> fill_WCMDS(){ return [sSTLVL,sSTIFLVL,sSTHUE,sSTSATUR,sSTCLRTEMP,sSTCLR,'setAdjustedColor','setAdjustedHSLColor','setLoopDuration','setVideoLength',sSTVAR] }
+private static List<String> fill_WCMDS(){ return [sSTLVL,sSTIFLVL,sSTHUE,sSTSATUR,sSTCLRTEMP,sSTCLR,'setAdjustedColor','setAdjustedHSLColor','setLoopDuration','setVideoLength'] }
 
 private Boolean executeTask(Map r9,List devices,Map statement,Map task,Boolean async,String data){
 	Long t=wnow()
@@ -4916,12 +4915,6 @@ private Long cmd_setVideoLength(Map r9,device,List prms){
 	return lZ
 }
 
-private Long cmd_setVariable(Map r9,device,List prms){
-	def var=prms[i1]
-	executePhysicalCommand(r9,device,sSTVAR,var)
-	return lZ
-}
-
 /* virtual commands */
 
 private Long vcmd_log(Map r9,device,List prms){
@@ -5093,7 +5086,6 @@ private Long vcmd_waitForDateTime(Map r9,device,List prms){
 }
 
 private Long vcmd_setSwitch(Map r9,device,List prms){
-	//noinspection GroovyAssignabilityCheck
 	executePhysicalCommand(r9,device,bcast(r9,prms[iZ]) ? sON:sOFF)
 	return lZ
 }
@@ -5545,10 +5537,6 @@ private Long vcmd_setVariable(Map r9,device,List prms){
 	String name=sLi(prms,iZ)
 	def value=prms[i1]
 	Map t0=setVariable(r9,name,value)
-	if(isErr(t0)){
-		String message=sMv(t0)+sSPC+name
-		error message,r9
-	}
 	return lZ
 }
 
@@ -5556,7 +5544,6 @@ private Long vcmd_executePiston(Map r9,device,List prms){
 	String selfId=sMs(r9,sID)
 	String pistonId=sLi(prms,iZ)
 	List<String> arguments=(prms[i1] instanceof List ? (List<String>)prms[i1]:prms[i1].toString().tokenize(sCOMMA)).unique()
-	//noinspection GroovyAssignabilityCheck
 	Boolean wait; wait=prms.size()>i2 ? bcast(r9,prms[i2]):false
 	String desc="webCoRE: Piston ${gtAppN()} requested execution of piston $pistonId".toString()
 	Map data=[:]
@@ -6424,7 +6411,6 @@ private String canisterS(Map r9,device,List prms){ return (prms.size()>i1 ? scas
 private Long vcmd_saveStateLocally(Map r9,device,List prms,Boolean global=false){
 	List<String> attributes=scast(r9,prms[iZ]).tokenize(sCOMMA)
 	String canister=canisterS(r9,device,prms)
-	//noinspection GroovyAssignabilityCheck
 	Boolean overwrite=!(prms.size()>i2 ? bcast(r9,prms[i2]):false)
 	for(String attr in attributes){
 		String n=canister+attr
@@ -6454,7 +6440,6 @@ private Long vcmd_saveStateGlobally(Map r9,device,List prms){ return vcmd_saveSt
 private Long vcmd_loadStateLocally(Map r9,device,List prms,Boolean global=false){
 	List<String> attributes=scast(r9,prms[iZ]).tokenize(sCOMMA)
 	String canister=canisterS(r9,device,prms)
-	//noinspection GroovyAssignabilityCheck
 	Boolean empty=prms.size()>i2 ? bcast(r9,prms[i2]):false
 
 	Map svd=[:]
@@ -8685,7 +8670,6 @@ private List<String> expandDeviceList(Map r9,List<String> devs,Boolean localVars
 					}else{
 						Map var=getVariable(r9,deviceId)
 						if(sMt(var)==sDEV)
-							//noinspection GroovyAssignabilityCheck
 							res+=(oMv(var) instanceof List) ? liMv(var):[]
 						else{
 							//if(oMv(var) && eric())doLog(sDBG,"expandDeviceListl checking variable isMv(var): ${sMv(var)}")
@@ -8784,7 +8768,6 @@ private static gtThreeAxisVal(ixyz, String attr){
 	}
 }
 
-@SuppressWarnings('GroovyAssignabilityCheck')
 private static String getThreeAxisOrientation(Map m /*, Boolean getIndex=false */){
 	if(m && m[sX]!=null && m[sY]!=null && m[sZ]!=null){
 		Integer dx,dy,dz,x,y,z,side
@@ -9170,17 +9153,17 @@ private Map<String,Object> getVariable(Map r9,String name, Boolean rtnL=false){
 	tn=sanitizeVariableName(var[sNM])
 //	if(eric())doLog(sDBG,"getVariable ${name} ${tn} ${var}")
 
-	mySt="get Variable '${tn}' ${var} ${name} "
+	mySt="get Variable '${tn}' "
 	Boolean lg=isEric(r9)
 	if(lg) myDetail r9,mySt,i1
 	Map<String,Object> res
 	if(tn==sNL){
 		res=rtnMapE('Invalid empty variable name')
 		error mySt+sMv(res),r9
-		if(lg)myDetail r9,mySt+"result:$res"
+		if(lg)myDetail r9,mySt+"${var} ${name} "+"result:$res"
 		return res
 	}
-	Map err=rtnMapE("Variable '$tn' not found".toString())
+	Map err=rtnMapE(mySt+"not found".toString())
 
 	Boolean rtnVarN,rtnLCL,isConst,isFixed
 	rtnVarN=false // return variable name
@@ -9269,10 +9252,8 @@ private Map<String,Object> getVariable(Map r9,String name, Boolean rtnL=false){
 				res=rtnMap(sMt(tlocV),oMv(tlocV))
 				def tmp=oMv(res)
 				if(tmp instanceof List)
-				//noinspection GroovyAssignabilityCheck
 					res[sV]=[]+(List)tmp //make a local copy of the list
 				if(tmp instanceof Map)
-				//noinspection GroovyAssignabilityCheck
 					res[sV]=[:]+mMv(res) //make a local copy of the map
 			}
 		}
@@ -9324,7 +9305,7 @@ private Map setVariable(Map r9,String name,value){
 	tn=sanitizeVariableName(var[sNM])
 	mySt="set Variable '${tn}' "
 	Map res; res=null
-	Map err; err=rtnMapE(mySt+'Invalid variable ')
+	Map err; err=rtnMapE(mySt+'not found ')
 	Boolean lg=isEric(r9)
 	if(tn==sNL){
 		res=rtnMapE(mySt+'Invalid empty variable name')
@@ -9362,10 +9343,10 @@ private Map setVariable(Map r9,String name,value){
 						if(a){
 							res=rtnMap(wctyp,value)
 							if(lg)myDetail r9,"setVariable returning ${res} to webcore",iN2
-						}else err[sV]='setGlobal failed'
+						}else err[sV]=mySt+'setGlobal failed'
 					}
 					if(res)return res
-				}else err[sV]='setGlobal unknown wctyp'
+				}else err[sV]=mySt+'setGlobal unknown wctyp'
 			}
 		}else{
 			loadGlobalCache()
@@ -9439,10 +9420,15 @@ private Map setVariable(Map r9,String name,value){
 				}
 			}else{
 				def v=(value instanceof GString)? "$value".toString():value
-				if(!sMs(variable,sA)) // cannot change const; sNL means dynamic, sS means static/const
-					variable[sV]=matchCast(r9,v,t) ? v:cast(r9,v,t) // this modifies r9[sLOCALV]
-				else
-					warn sMv(err)+'attempting to set const',r9
+				if(!sMs(variable,sA)){ // cannot change const; sNL means dynamic, sS means static/const
+					variable[sV] = matchCast(r9, v, t) ? v : cast(r9, v, t) // this modifies r9[sLOCALV]
+					if(bIs(variable,sF) && isTrc(r9))
+						warn mySt + 'changing initialized variable', r9
+				}else{
+					err= rtnMapE(mySt+'attempting to set a const')
+					error sMv(err),r9
+					return err
+				}
 			}
 			if(!bIs(variable,sF) || !sMs(variable,sA)){ // save local variables except constants
 				updateVariable(r9,tn,variable)
@@ -9715,7 +9701,7 @@ private Map evaluateExpression(Map r9,Map express,String rtndataType=sNL){
 					//get variable {t:type,v:value}
 					Map var=getVariable(r9,sMs(expression,sX))
 					if(!isErr(var)){
-						if(sMt(var)==sDEV) //noinspection GroovyAssignabilityCheck
+						if(sMt(var)==sDEV)
 							deviceIds=liMv(var)
 						else{
 							def device=oMv(var) ? getDevice(r9,sMv(var)):null
@@ -10318,6 +10304,15 @@ private String buildDeviceAttributeList(Map r9,List<String> devices,String attr,
 	return buildList(list,suffix)
 }
 
+/** setVariable assigns a variable
+ * Usage: setVariable(variablename, value) */
+private Map func_setvariable(Map r9,List<Map> prms){
+	if(badParams(r9,prms,i2))return rtnErr('setVariable(variablename,value)')
+	Map t0=setVariable(r9,strEvalExpr(r9,prms[iZ]),oMv(evaluateExpression(r9,prms[i1])))
+	if(!isErr(t0)) return rtnMapB(true)
+	rtnErr(sMv(t0))
+}
+
 /** dewPoint returns the calculated dew point temperature
  * Usage: dewPoint(temperature,relativeHumidity[, scale]) */
 private Map func_dewpoint(Map r9,List<Map> prms){
@@ -10731,7 +10726,6 @@ private Map func_title(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnErr('title(string)')
 	String res; res=sBLK
 	for(Map prm in prms) res+=strEvalExpr(r9,prm)
-	//noinspection GroovyAssignabilityCheck
 	rtnMapS(res.tokenize(sSPC)*.toLowerCase()*.capitalize().join(sSPC))
 }
 
@@ -11759,7 +11753,6 @@ private static Boolean bcast(Map r9,ival){
 	Map rr=dataT(ival,sNL)
 	String srcDt=sMs(rr,sS)
 	def value=oMv(rr)
-	//noinspection GroovyAssignabilityCheck
 	return (Boolean)com_cast(r9,value,sBOOLN,srcDt)
 }
 
@@ -11904,7 +11897,6 @@ private Object cast(Map r9,ival,String dataTT,String isrcDT=sNL){
 			}
 			return "$value".toString()
 		case sBOOLN:
-			//noinspection GroovyAssignabilityCheck
 			return (Boolean)com_cast(r9,value,dataType,srcDt)
 		case sINT:
 			return (Integer)com_cast(r9,value,dataType,srcDt)
@@ -11938,7 +11930,7 @@ private Object cast(Map r9,ival,String dataTT,String isrcDT=sNL){
 			}
 			return d
 		case sVEC:
-			if(srcDt==sSTR) value= fixVector(value)
+			if(srcDt==sSTR) value= fixVector((String)value)
 			return value instanceof Map && value!=null && value[sX]!=null && value[sY]!=null && value[sZ]!=null ? value:[(sX):iZ,(sY):iZ,(sZ):iZ]
 		case sORIENT:
 			return value instanceof Map ? getThreeAxisOrientation(value):value
@@ -12996,7 +12988,6 @@ static String myObj(obj){
 private static Boolean isWcDev(String dev){ return (dev && dev.size()==34 && dev.startsWith(sCLN) && dev.endsWith(sCLN)) }
 
 /** Converts v to either webCoRE or hubitat hub variable types and values */
-@SuppressWarnings('GroovyAssignabilityCheck')
 @CompileStatic
 Map fixHeGType(Boolean toHubV,String typ,v){
 	Map ret; ret=[:]
