@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update January 29, 2023 for Hubitat
+ * Last update January 30, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -31,8 +31,8 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230129_HE'
-@Field static final String sHVERSTR='v0.3.114.20230129_HE - January 29, 2023'
+@Field static final String sHVER='v0.3.114.20230130_HE'
+@Field static final String sHVERSTR='v0.3.114.20230130_HE - January 30, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -4819,7 +4819,7 @@ Map getChildCommands(){
 	setCode				: [ (sN): "Set Code...",				(sD): "Set code {0} to {1} {2}",						(sP): [[(sN):"Code Position", (sT):sINT], [(sN):"Pin", (sT):sSTR], [(sN):"Name", (sT):sSTR]],							],
 	setCodeLength		: [ (sN): "Set Code Max Length...",		(sD): "Set code length to {0}",						(sP): [[(sN):"Code Length", (sT):sINT]],						],
 	setColor			: [ (sN): "Set color...",		(sI): 'palette', is: sL,	(sD): "Set color to {0}{1}",			(sA): sCOLOR,				(sP): [[(sN):sCCOLOR, (sT):sCOLOR], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],							],
-	setColorTemperature	: [ (sN): "Set color temperature...",		(sD): "Set color temperature to {0}°K{1}",			(sA): "colorTemperature",			(sP): [[(sN):"Color Temperature", (sT):"colorTemperature"], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY],[(sN):"Level", (sT):sLVL],[(sN):"Transition duration (seconds)", (sT):sINT,(sD):" over {v} seconds"]]	],
+	setColorTemperature	: [ (sN): "Set color temperature...",		(sD): "Set color temperature to {0}°K{1}",			(sA): "colorTemperature",			(sP): [[(sN):"Color Temperature", (sT):"colorTemperature"], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY],[(sN):"Level", (sT):sLVL],[(sN):"Transition duration (seconds)", (sT):"number",(sD):" over {v} seconds"]]	],
 	setConsumableStatus	: [ (sN): "Set consumable status...",		(sD): "Set consumable status to {0}",								(sP): [[(sN):"Status", (sT):"consumable"]],		],
 	setCoolingSetpoint	: [ (sN): "Set cooling point...",			(sD): "Set cooling point at {0}{T}",			(sA): "thermostatCoolingSetpoint",		(sP): [[(sN):"Desired temperature", (sT):"thermostatSetpoint"]],	],
 	setEffect			: [ (sN): "Set Light Effect...",			(sD): "Set light effect to {0}",									(sP): [[(sN):"Effect number", (sT):sINT]],				],
@@ -4828,7 +4828,7 @@ Map getChildCommands(){
 	setHeatingSetpoint	: [ (sN): "Set heating point...",			(sD): "Set heating point at {0}{T}",			(sA): "thermostatHeatingSetpoint",		(sP): [[(sN):"Desired temperature", (sT):"thermostatSetpoint"]],																	],
 	setHue				: [ (sN): "Set hue...",		(sI): 'palette', is: sL,	(sD): "Set hue to {0}°{1}",			(sA): "hue",				(sP): [[(sN):"Hue", (sT):"hue"], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],								],
 	setInfraredLevel	: [ (sN): "Set infrared level...",	(sI): 'signal',	(sD): "Set infrared level to {0}%{1}",			(sA): "infraredLevel",			(sP): [[(sN):"Level", (sT):"infraredLevel"], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],					],
-	setLevel			: [ (sN): "Set level...",		(sI): 'signal',	(sD): "Set level to {0}%{2}{1}",				(sA): sLVL,				(sP): [[(sN):"Level", (sT):sLVL], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY],[(sN):"Transition duration (seconds)", (sT):sINT,(sD):" over {v} seconds"]],							],
+	setLevel			: [ (sN): "Set level...",		(sI): 'signal',	(sD): "Set level to {0}%{2}{1}",				(sA): sLVL,				(sP): [[(sN):"Level", (sT):sLVL], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY],[(sN):"Transition duration (seconds)", (sT):"number",(sD):" over {v} seconds"]],							],
 	setNextEffect		: [ (sN): "Set next light effect",																					],
 	setPreviousEffect	: [ (sN): "Set previous light effect",																					],
 	setPosition			: [ (sN): "Move to position",			(sD): "Set position to {0}",				(sA): "position",				(sP): [[(sN):"Position", (sT):"position"]],		],

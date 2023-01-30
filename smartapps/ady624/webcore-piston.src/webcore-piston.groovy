@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update January 29, 2023 for Hubitat
+ * Last update January 30, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 //file:noinspection GroovyAssignabilityCheck
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230129_HE'
+@Field static final String sHVER='v0.3.114.20230130_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -1328,7 +1328,7 @@ private void cleanCode(Map i,Boolean inMem){
 			if(item[sA]!=null)a=item.remove(sA)
 
 			// task parameters (sP) without types, but have devices
-			if(item[sD] instanceof List && item[sD]) item[sD] = []
+			if(item[sD] instanceof List && item[sD]) item[sD]=[]
 
 			if(item[sD] instanceof List && !item[sD]){
 				//if(item.size()==i5 && item[sC]!=null) a=item.remove(sC)
@@ -4800,21 +4800,22 @@ private Long do_setLevel(Map r9,device,List prms,String cmd,Integer val=null){
 	Integer psz=prms.size()
 	String mat=psz>i1 ? sLi(prms,i1):sNL
 	if(ntMatSw(r9,mat,device,cmd))return lZ
-	Integer delay; delay=iN1
+	Double delay; delay=-d1
 	Boolean a
-	List larg=[arg]
+	List<Object> larg
+	larg= [arg] as List<Object>
 	if(cmd==sSTLVL){ // setLevel takes seconds duration argument (optional)
-		delay=psz>i2 ? icast(r9,prms[i2]):iN1
+		delay=psz>i2 ? dcast(r9,prms[i2]):-d1
 	}else if(cmd==sSTCLRTEMP){ // setColorTemp takes level and seconds duration arguments (optional)
 		if(psz>i2){
 			Integer lvl=prms[i2]!=null ? icast(r9,prms[i2]):null
 			a=larg.push(lvl)
-			delay=psz>i3 ? icast(r9,prms[i3]):iN1
+			delay=psz>i3 ? dcast(r9,prms[i3]):-d1
 		}
 	}
-	if(delay>=iZ)a=larg.push(delay)
+	if(delay>=dZ)a=larg.push(delay.toBigDecimal())
 	executePhysicalCommand(r9,device,cmd,larg)
-	//if(delay>=iZ)return Math.round(delay*d1000)
+	//if(delay>=dZ)return Math.round(delay*d1000)
 	return lZ
 }
 
@@ -6079,7 +6080,7 @@ private Map securityLogin(String u, String p){
 @Field static Map<String,byte[]> readTmpBFLD=[:]
 @Field static Map<String,String> readDataFLD=[:]
 
-@Field static String minFwVersion = "2.3.4.132"
+@Field static String minFwVersion="2.3.4.132"
 
 private Boolean readFile(Map r9,List prms,Boolean data){
 	String name=sLi(prms,iZ)
@@ -6271,7 +6272,7 @@ private Boolean deleteFile(Map r9, List prms){
 			deleteHubFile(fName)
 			res=true
 		}else{
-			String bodyText = JsonOutput.toJson(name:"$fName",type:"file")
+			String bodyText=JsonOutput.toJson(name:"$fName",type:"file")
 			Map params= [
 				uri: "http://127.0.0.1:8080",
 				path: "/hub/fileManager/delete",
@@ -6280,7 +6281,7 @@ private Boolean deleteFile(Map r9, List prms){
 				body: bodyText
 			]
 
-			httpPost(params) { resp ->
+			httpPost(params){ resp ->
 				if(resp.status!=i200){
 					error "Delete Response status $resp.status",r9
 				} else res=true
@@ -6927,7 +6928,7 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 				mv=getVariable(r9,operX+(hasI ? sLB+sMs(operand,sXI)+sRB:sBLK))+movt
 				if(operX && operX.startsWith(sAT)){
 					if(operX.startsWith(sAT2)){
-						String vn = operX.substring(i2)
+						String vn=operX.substring(i2)
 						nodeI=sVARIABLE+sCLN+vn
 					}else{
 						nodeI= sMs(r9,sINSTID)+sDOT+operX
@@ -7525,7 +7526,7 @@ private Boolean valueWas(Map r9,Map comparisonValue,Map rightValue,Map rightValu
 	Integer i; i=i1
 	String comp_t=sMt(cv)
 	def v
-	for(Map stte in states) {
+	for(Map stte in states){
 		v= stte[sVAL]
 		if(nattr==sTHREAX && nattr!=attr) v= gtThreeAxisVal(v,attr)
 		if(!(i==i1 && thisEventWokeUs)){
@@ -8753,7 +8754,7 @@ private static gtThreeAxisVal(ixyz, String attr){
 	if(ixyz instanceof String){
 		String s; s=ixyz
 		xyz= fixVector(s)
-	} else xyz = ixyz instanceof Map ? (Map)ixyz : [:]
+	} else xyz= ixyz instanceof Map ? (Map)ixyz : [:]
 	switch(attr){
 		case sORIENT:
 			return getThreeAxisOrientation(xyz)
@@ -8813,7 +8814,6 @@ private getDeviceAttributeValue(Map r9,device,String attr,Boolean skipCurEvt=fal
 			result= device.getStatus()
 		}else if(nattr==sTHREAX){
 			def xyz
-			//try { xyz= !skipCurEvt && r9EvN==sTHREAX && r9EdID && ce && ce[sVAL] ? ce[sVAL] :null } catch(ignored){}
 			xyz= !skipCurEvt && r9EvN==sTHREAX && r9EdID && ce && ce[sVAL] ? ce[sVAL] :null
 			if(isEric(r9) && xyz)myDetail r9,s+" event $xyz (${myObj(xyz)})",iN2
 			Boolean errmsg; errmsg=false
@@ -9412,7 +9412,7 @@ private Map setVariable(Map r9,String name,value){
 						if(nvalue instanceof List){
 							if(lg)myDetail r9,"setVariable list found ${variable} value: ${nvalue}",iN2
 							variable[sV]= nvalue // this modifies r9[sLOCALV]
-						}else {
+						}else{
 							if(isInf(r9))error sMv(err),r9
 							return err
 						}
@@ -9421,9 +9421,9 @@ private Map setVariable(Map r9,String name,value){
 			}else{
 				def v=(value instanceof GString)? "$value".toString():value
 				if(!sMs(variable,sA)){ // cannot change const; sNL means dynamic, sS means static/const
-					variable[sV] = matchCast(r9, v, t) ? v : cast(r9, v, t) // this modifies r9[sLOCALV]
+					variable[sV]=matchCast(r9,v,t) ? v : cast(r9,v,t) // this modifies r9[sLOCALV]
 					if(bIs(variable,sF) && isTrc(r9))
-						warn mySt + 'changing initialized variable', r9
+						warn mySt+'changing initialized variable', r9
 				}else{
 					err= rtnMapE(mySt+'attempting to set a const')
 					error sMv(err),r9
@@ -13353,8 +13353,8 @@ private void wremoveAllInUseGlobalVar(){
 }
 
 private void wappUpdateLabel(String s){ app.updateLabel(s) }
-private void wappUpdateSetting(String s,Map m) { app.updateSetting(s,m) }
-private void wappRemoveSetting(String s) { app.removeSetting(s) }
+private void wappUpdateSetting(String s,Map m){ app.updateSetting(s,m) }
+private void wappRemoveSetting(String s){ app.removeSetting(s) }
 
 private void wunschedule(String m=sNL){ if(m)unschedule(m) else unschedule() }
 private void wunsubscribe(){ unsubscribe() }
