@@ -717,9 +717,9 @@ config.controller('piston', ['$scope', '$rootScope', 'dataService', 'colorScheme
 	});
 
 	$scope.formatVariableValue = function(variable, name) {
-		if ((variable.v == null) && !!name && $scope.localVars) {
+		if ((variable.v == null || variable.n in $scope.localVars) && !!name && $scope.localVars) {
 			variable = $scope.copy(variable);
-            variable.v = $scope.localVars[name];
+			variable.v = $scope.localVars[name];
 		}
 		return formatValue(name, variable.v, variable);
 	};
