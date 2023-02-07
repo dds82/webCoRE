@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update February 2, 2023 for Hubitat
+ * Last update February 6, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20230130_HE'
-@Field static final String sHVERSTR='v0.3.114.20230130_HE - February 2, 2023'
+@Field static final String sHVERSTR='v0.3.114.20230130_HE - February 6, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -176,6 +176,11 @@ private static Boolean graphsOn(){ return true }
 @Field static final String sV='v'
 @Field static final String sZ='z'
 
+@Field static final String sLCLFS='localFuelStreams'
+
+/** m.string  */
+@CompileStatic
+private static String sMs(Map m,String v){ (String)m.get(v) }
 
 /******************************************************************************/
 /*** CONFIGURATION PAGES													***/
@@ -222,7 +227,7 @@ def pageMain(){
 	}
 	//webCoRE main page
 	dynamicPage((sNM): "pageMain", (sTIT): sBLK, install: true, uninstall: false){
-		if(!(Boolean)settings.agreement){
+		if(!gtSetB('agreement')){
 			pageSectionDisclaimer()
 		}else{
 			section(){
@@ -472,7 +477,7 @@ def pageSettings(){
 			String defaultLoc,defaultLoc1,zipDesc,zipDesc1
 			defaultLoc=sNL
 			defaultLoc1=sNL
-			String mreq=settings.weatherType ? (String)settings.weatherType : sNL
+			String mreq= gtSetStr('weatherType') ?: sNL
 			zipDesc=sNL
 			zipDesc1=sNL
 			if(mreq){
@@ -505,9 +510,9 @@ def pageSettings(){
 		}
 
 		section(sectionTitleStr("Fuel Streams")){
-			Boolean lfs = (Boolean)settings.localFuelStreams
+			Boolean lfs = gtSetB(sLCLFS)
 			Boolean deft= lfs!=(Boolean)null ? lfs : true
-			input "localFuelStreams", sBOOL, (sTIT): "Use local fuel streams?", defaultValue: deft, submitOnChange: true
+			input sLCLFS, sBOOL, (sTIT): "Use local fuel streams?", defaultValue: deft, submitOnChange: true
 			if(deft){
 				href "pageFuelStreams", (sTIT): "Fuel Streams", (sDESC): "Tap to manage fuel streams", state: b
 			}
@@ -554,11 +559,12 @@ def pageSettings(){
 		section(sectionTitleStr("Advanced - Custom Endpoints")){
 			paragraph "Custom Endpoints allows use of a local webserver for webCoRE IDE pages and local hub API endpoint address. webCoRE servers are still used for instance registration, non-local backup / restore / import, send email, NFL, store media, and optionally fuel streams"
 			input "customEndpoints", sBOOL, submitOnChange: true, (sTIT): "Use custom endpoints?", default: false, (sREQ): true
-			if((Boolean)settings.customEndpoints){
+			if(gtSetB('customEndpoints')){
 				Boolean req; req=false
-				if((Boolean)settings.localHubUrl) req=true
+				Boolean lhub=gtSetB('localHubUrl')
+				if(lhub) req=true
 				input "customWebcoreInstanceUrl", sSTR, (sTIT): "Custom webCoRE webserver (local webserver url different from dashboard.webcore.co)", default: null, (sREQ): req
-				if((Boolean)settings.localHubUrl && !(String)settings.customWebcoreInstanceUrl) paragraph "If you use a local hub IDE url you MUST use a custom webCoRE server url, as dashboard.webcore.co site is restricted to Hubitat cloud API access only"
+				if(lhub && !gtSetStr('customWebcoreInstanceUrl')) paragraph "If you use a local hub IDE url you MUST use a custom webCoRE server url, as dashboard.webcore.co site is restricted to Hubitat cloud API access only"
 				input "localHubUrl", sBOOL, (sTIT): "Use local hub URL for IDE access?", submitOnChange: true, default: false, (sREQ): false
 			}else{
 				app.removeSetting('localHubUrl')
@@ -671,8 +677,8 @@ private pageSectionAcctId(Boolean ins=false){
 	section('<b>Account/Location Identifiers</b>'){
 
 		String acctHash = getHubAccountHash()
-		Boolean setA; setA = (Boolean)settings.setACCT
-		String acct; acct = setA ? (String)gtSetting('acctID') : sNL
+		Boolean setA; setA = gtSetB('setACCT')
+		String acct; acct = setA ? gtSetStr('acctID') : sNL
 
 		if(!acctHash){
 			paragraph "Did not find hub account hash.  It is recommended to register all your hubs and use same account hash in webCoRE."
@@ -704,7 +710,7 @@ private pageSectionAcctId(Boolean ins=false){
 						paragraph span("NOTE changing these settings will require all pistons to be backed up again.  It may affect pistons calling each other and accessing apps like Homebridge V2 or Echo Speaks)",sCLRORG)
 					}
 					input "acctUpdate", sBOOL, (sTIT): "Update to hub account hash?", (sDESC): "Tap to change", defaultValue: false, submitOnChange: true, (sREQ): false
-					if((Boolean)settings.acctUpdate){
+					if(gtSetB('acctUpdate')){
 						app.updateSetting('properSID', [type: sBOOL, (sVAL): true])
 						app.updateSetting('setACCT', [type: sBOOL, (sVAL): true])
 						app.updateSetting('acctID', [type: sTXT, (sVAL): acctHash])
@@ -775,7 +781,7 @@ private pageChangePassword(){
 		section(){
 			href "pageClearTokens", (sTIT): "Clear all Browser Security Tokens", (sDESC): "Tap to clear all security tokens in use by browsers", state: "complete"
 		}
-		if(settings.PIN){
+		if(gtSetStr('PIN')){
 			section(){
 				paragraph "webCoRE uses an access token to allow communication with webCoRE via REST calls. You may choose to reset this token.", (sREQ): false
 				paragraph span( "NOTE resetting the access token will invalidate any remote access to pistons (the URLs they are using), and this will have to be re-enabled / setup once the new access token has been created.", sCLRORG)
@@ -907,9 +913,7 @@ def pageDumpGlob(){
 	List t0
 	t0=wgetChildApps().findAll{ (String)it.name==n }
 	def t1=t0[0]
-	Map<String,List> t2
-	if(t1!=null) t2= t1.gtGlobalVarsInUse()
-	else t2=[:]
+	Map<String,List> t2= t1!=null ? (Map<String,List>)t1.gtGlobalVarsInUse() : [:]
 	Map<String,Object> newMap
 	newMap=[:]
 	Map<String,Map> glbs=listAvailableVariables1()
@@ -946,7 +950,7 @@ def pageRemove(){
 		section('CAUTION'){
 			paragraph "You are about to completely remove webCoRE and all of its pistons.", (sREQ): true
 			paragraph "This action is irreversible.", (sREQ): true
-			paragraph "It is suggested save a hub backup prior to this delete", (sREQ): true
+			paragraph "It is suggested save a hub backup prior to this delete, or all piston backup to a file from the webCoRE IDE.", (sREQ): true
 			paragraph "If you are sure you want to do this, please tap on the Remove button below.", (sREQ): true
 		}
 	}
@@ -984,12 +988,14 @@ void updated(){
 	frcResub=false
 	verchg=false
 
-	if((Boolean)gtAS('disabled')!=(Boolean)settings.disabled){
-		assignAS('disabled',(Boolean)settings.disabled==true)
+	String dis='disabled'
+	if((Boolean)gtAS(dis)!=gtSetB(dis)){
+		assignAS(dis,gtSetB(dis)==true)
 		chg=true
 	}
-	if((Boolean)gtAS('lPE')!=(Boolean)settings.logPistonExecutions){
-		assignAS('lPE',(Boolean)settings.logPistonExecutions==true)
+	Boolean s=gtSetB('logPistonExecutions')
+	if((Boolean)gtAS('lPE')!=s){
+		assignAS('lPE',s==true)
 		chg=true
 	}
 	if(gtAS('doResub')){
@@ -997,16 +1003,21 @@ void updated(){
 		frcResub=true
 		verchg=true
 	}
-	if((String)gtAS('cV')!=sVER || (String)gtAS('hV')!=sHVER){
-		debug "Detected version change ${gtSt('cV')} ${sVER} ${gtSt('hV')} ${sHVER}"
-		assignAS('cV',sVER)
-		assignAS('hV',sHVER)
+	String cV='cV'
+	String hV='hV'
+	String scV=(String)gtAS(cV)
+	String shV=(String)gtAS(hV)
+	if(scV!=sVER || shV!=sHVER){
+		debug "Detected version change ${scV} ${sVER} ${shV} ${sHVER}"
+		assignAS(cV,sVER)
+		assignAS(hV,sHVER)
 		frcResub=true
 		chg=true
 		verchg=true
 	}
-	if((Boolean)gtAS('lFS')!=(Boolean)settings.localFuelStreams){
-		assignAS('lFS',(Boolean)settings.localFuelStreams==true)
+	Boolean ls= gtSetB(sLCLFS)
+	if((Boolean)gtAS('lFS')!=ls){
+		assignAS('lFS',ls==true)
 		chg=true
 	}
 	if(chg){
@@ -1143,21 +1154,22 @@ private void initialize(){
 	chg=false
 //	initT=false
 	Boolean reSub=(Boolean)gtAS('forceResub1')
+	String pS='properSID'
 	if(reSub==null){
 		assignAS('forceResub1',true)
-		assignAS('properSID',null)
+		assignAS(pS,null)
 		warn "SID reset requested"
 	}
 
 	String wName=sAppId()
 
-	Boolean prpSid=(Boolean)gtAS('properSID')
-	Boolean sprp= (Boolean)gtSetting('properSID')
+	Boolean prpSid=(Boolean)gtAS(pS)
+	Boolean sprp= gtSetB(pS)
 	if(prpSid==null || prpSid!=sprp){
 		Boolean t0=sprp!=null ?: true
-		assignAS('properSID',t0)
-		assignSt('properSID',t0)
-		app.updateSetting('properSID', [type: sBOOL, (sVAL): t0])
+		assignAS(pS,t0)
+		assignSt(pS,t0)
+		app.updateSetting(pS, [type: sBOOL, (sVAL): t0])
 		initTokens()
 		//initT=true
 		chg=true
@@ -1192,7 +1204,7 @@ private void initialize(){
 	checkWeather()
 
 	lastRecoveredFLD[wName]=0L
-	String recoveryMethod=(settings.recovery ?: 'Every 30 minutes').replace('Every ', 'Every').replace(' minute', 'Minute').replace(' hour', 'Hour')
+	String recoveryMethod=(gtSetStr('recovery') ?: 'Every 30 minutes').replace('Every ', 'Every').replace(' minute', 'Minute').replace(' hour', 'Hour')
 	if(recoveryMethod!='Never'){
 		try{
 			"run$recoveryMethod"(recoveryHandler)
@@ -1244,18 +1256,19 @@ Boolean checkSIDs(){
 }
 
 private void checkWeather(){
-	if(settings.weatherType || state.storAppOn){
-		Boolean t0=settings.weatherType && settings.apixuKey
+	String wTyp= gtSetStr('weatherType') ?: sNL
+	if(wTyp || state.storAppOn){
+		String apiK= gtSetStr('apixuKey')
+		Boolean t0=wTyp && apiK
 		def storageApp=getStorageApp(t0)
 		if(storageApp!=null){
 			state.storAppOn=true
-			String weatherTyp= settings.weatherType ? (String)settings.weatherType : sNL
-			storageApp.settingsToState("weatherType", weatherTyp)
-			storageApp.settingsToState("apixuKey", settings.apixuKey)
-			storageApp.settingsToState("zipCode", settings.zipCode)
+			storageApp.settingsToState("weatherType", wTyp)
+			storageApp.settingsToState("apixuKey", apiK)
+			storageApp.settingsToState("zipCode", gtSetStr('zipCode'))
 			if(weatherTyp=='OpenWeatherMap') {
-				storageApp.settingsToState("zipCode1", (String)settings.zipCode1)
-				storageApp.settingsToState("apiVer", (Boolean)settings.apiVer?:false)
+				storageApp.settingsToState("zipCode1", gtSetStr('zipCode1'))
+				storageApp.settingsToState("apiVer", gtSetB('apiVer')?:false)
 			}
 			if(t0){
 				storageApp.startWeather()
@@ -1432,7 +1445,7 @@ Boolean getTheLock(String meth=sNL){
 	Long waitT=1600L
 	Boolean wait; wait=false
 	Semaphore sema=theSerialLockFLD
-	while(!((Boolean)sema.tryAcquire())){
+	while(!sema.tryAcquire()){
 		// did not get the lock
 		Long t; t=lockTimeFLD
 		if(t==null){
@@ -1575,7 +1588,7 @@ private Map<String,Object> api_get_base_result(){
 			(sDEVVER): currentDeviceVersion,
 			coreVersion: sVER,
 			heVersion: sHVER,
-			enabled: !gtSetting('disabled'),
+			enabled: !gtSetB('disabled'),
 			settings: gtSt('settings') ?: [:],
 			lifx: gtSt('lifx') ?: [:],
 			virtualDevices: virtualDevices(),
@@ -1612,7 +1625,6 @@ private Map<String,Object> api_get_base_result(){
 
 private Map<String,Map> getFuelStreamUrls(String iid){
 	if(!useLocalFuelStreams()){
-	//if((Boolean)state.installed && (Boolean)settings.agreement){
 		String region=((String)state.endpointCloud).contains('graph-eu') ? 'eu' : 'us'
 		String baseUrl='https://api-' + region + '-' + iid[32] + '.webcore.co:9287/fuelStreams'
 		Map headers=[ 'Auth-Token' : iid ]
@@ -1623,7 +1635,6 @@ private Map<String,Map> getFuelStreamUrls(String iid){
 		]
 	}
 
-	//if((Boolean)state.installed && (Boolean)settings.agreement){
 	String baseUrl=isCustomEndpoint() && useLocalFuelStreams() ? customApiServerUrl(sDIV) : apiServerUrl("$hubUID/apps/${app.id}/".toString())
 
 	String params=baseUrl.contains((String)state.accessToken) ? sBLK : "access_token=${state.accessToken}".toString()
@@ -1635,7 +1646,8 @@ private Map<String,Map> getFuelStreamUrls(String iid){
 }
 
 Boolean useLocalFuelStreams(){
-	return (Boolean)settings.localFuelStreams!=null ? (Boolean)settings.localFuelStreams : true
+	Boolean b= gtSetB(sLCLFS)
+	return b!=null ? b : true
 }
 
 
@@ -1704,7 +1716,8 @@ private api_intf_dashboard_load(){
 		err=true
 		msg+=' security NOT ok'
 		if((String)params.pin!=sNL){
-			if(settings.PIN && md5('pin:'+(String)settings.PIN)==(String)params.pin){
+			String p=gtSetStr('PIN')
+			if(p && md5('pin:'+p)==(String)params.pin){
 				result=api_get_base_result()
 				result.instance.token=createSecurityToken()
 			}else{
@@ -1960,7 +1973,7 @@ private api_intf_dashboard_piston_get(){
 }
 
 private void checkResultSize(Map result, Boolean requireDb=false, String caller=sNL){
-	if(!isCustomEndpoint() || !(Boolean)settings.localHubUrl){
+	if(!isCustomEndpoint() || !gtSetB('localHubUrl')){
 		String jsonData; jsonData= JsonOutput.toJson(result)
 		//data saver for Hubitat ~100K limit
 		Integer responseLength,resl,svLength
@@ -2023,7 +2036,7 @@ private api_intf_dashboard_piston_backup(){
 				if(pd){
 					pd.instance=[(sID): getInstanceSid(), (sNM): myN]
 					Boolean a=result.pistons.push(pd)
-					if(!isCustomEndpoint() || !(Boolean)settings.localHubUrl){
+					if(!isCustomEndpoint() || !gtSetB('localHubUrl')){
 						String jsonData= JsonOutput.toJson(result)
 						Integer responseLength=jsonData.getBytes(sUTF8).length
 						if(responseLength > 110 * 1024){
@@ -2675,9 +2688,9 @@ Boolean ltsQuant(sensorId, String attribute){
 }
 
 Map openWeatherConfig(){ // used by graphs/fuel stream
-	String weatherTyp= settings.weatherType ? (String)settings.weatherType : sNL
+	String weatherTyp= gtSetStr('weatherType') ?: sNL
 	if( state.storAppOn && weatherTyp=='OpenWeatherMap') {
-		return [latitude: settings.zipCode, longitude: settings.zipCode1, apiVer: settings.apiVer, apiKey: settings.apixuKey, pollInterval: '30 Minutes']
+		return [latitude: gtSetStr('zipCode'), longitude: gtSetStr('zipCode1'), apiVer: gtSetB('apiVer'), apiKey: gtSetStr('apixuKey'), pollInterval: '30 Minutes']
 	}
 	return null
 }
@@ -3096,7 +3109,7 @@ def getWeatDev(){
 }
 
 private void cleanDashboardApp(){
-	if(!(Boolean)settings.enableDashNotifications){
+	if(!gtSetB('enableDashNotifications')){
 		String name=handle()+' Dashboard'
 		String myN= appName()
 		String label=myN+' (dashboard)'
@@ -3109,7 +3122,7 @@ private void cleanDashboardApp(){
 }
 
 private getDashboardApp(Boolean install=false){
-	if(!(Boolean)settings.enableDashNotifications) return null
+	if(!gtSetB('enableDashNotifications')) return null
 	String name=handle()+' Dashboard'
 	String myN= appName()
 	String label=myN+' (dashboard)'
@@ -3135,25 +3148,24 @@ private String customApiServerUrl(String ipath){
 	if(!path.startsWith(sDIV)){
 		path=sDIV + path
 	}
-	if( !(Boolean)settings.localHubUrl){
+	if( !gtSetB('localHubUrl')){
 		return apiServerUrl("$hubUID/apps/${app.id}".toString()) + path
 	}
 	return localApiServerUrl(sAppId()) + path
 }
 
 private Boolean isCustomEndpoint(){
-	(Boolean)settings.customEndpoints && (Boolean)settings.localHubUrl
+	gtSetB('customEndpoints') && gtSetB('localHubUrl')
 }
 
 String getDashboardUrl(){
-	if(!(String)state.endpoint) return sNL
+	if(!gtSetStr('endpoint')) return sNL
 
-	String aa= settings.customWebcoreInstanceUrl
-	if((Boolean)customEndpoints && aa){
+	String aa= gtSetStr('customWebcoreInstanceUrl')
+	if(gtSetB('customEndpoints') && aa){
 		if(aa.endsWith(sDIV)) return aa
 		else return aa + sDIV
 	}else{
-	//if((Boolean)state.installed && (Boolean)settings.agreement){
 		return "https://dashboard.${domain()}/".toString()
 	}
 }
@@ -3173,7 +3185,6 @@ private String getDashboardInitUrl(Boolean reg=false){
 		if(eric())debug "getDashboardInitUrl: regkey $regkey"
 		t0= t0+regkey
 	}else{
-		//if((Boolean)state.installed && (Boolean)settings.agreement){
 		if(eric())debug "getDashboardInitUrl: NOT isCustomEndpoint"
 		regkey= apiServerUrl(sBLK)
 
@@ -3192,7 +3203,6 @@ private String getDashboardInitUrl(Boolean reg=false){
 private String getDashboardRegistrationUrl(){
 	if((String)state.accessToken) updateEndpoint()
 	if(!(String)state.endpoint) return sNL
-	//if((Boolean)state.installed && (Boolean)settings.agreement){
 	return "https://api.${domain()}/dashboard/".toString()
 }
 
@@ -3492,7 +3502,7 @@ private String createSecurityToken(){
 	Map a= (Map)gtAS(sSECTOKENS)
 	LinkedHashMap<String,Long> tokens= (a ?: [:]) as LinkedHashMap<String,Long>
 	Long mexpiry; mexpiry=0L
-	String eo=((String)settings.expiry).toLowerCase().replace("every ", sBLK).replace("(recommended)", sBLK).replace("(not recommended)", sBLK).trim()
+	String eo=gtSetStr('expiry').toLowerCase().replace("every ", sBLK).replace("(recommended)", sBLK).replace("(not recommended)", sBLK).trim()
 	switch(eo){
 		case "hour": mexpiry=3600L; break
 		case "day": mexpiry=86400L; break
@@ -3535,7 +3545,7 @@ private String accountSid(){
 	String t='-A'
 	String accountStr
 	accountStr= hubUID.toString() + (useNew ? t : sNL)
-	if(acctANDloc()) accountStr= (String)gtSetting('acctID')
+	if(acctANDloc()) accountStr= gtSetStr('acctID')
 	//if(eric()) debug "instance acct: $accountStr"
 	return hashId(accountStr)
 }
@@ -3547,7 +3557,7 @@ private Boolean acctANDloc(){
 	String wName=sAppId()
 	Boolean t; t=acctlocFLD[wName]
 	if(t==null){
-		t= ((String)gtSetting('acctID') && (String)gtSetting('locID'))
+		t= (gtSetStr('acctID') && gtSetStr('locID'))
 		acctlocFLD[wName]=t
 	}
 	return t
@@ -3560,7 +3570,7 @@ private String locationSid(){
 	String t; t=locFLD[wName]
 	if(t==sNL){
 		//todo this is ambiguious
-		if(acctANDloc()) t= (String)gtSetting('acctID') + (String)gtSetting('locID') + sML
+		if(acctANDloc()) t= gtSetStr('acctID') + gtSetStr('locID') + sML
 		else{
 			Boolean stprp= (Boolean)gtSt('properSID')
 			Boolean useNew=stprp!=null ?: true
@@ -3612,10 +3622,9 @@ void testLifx1(Boolean first=false){
 @Field volatile static Map<String,Long> lastRegTryFLD= [:]
 
 private void registerInstance(Boolean force=true){
-	//if((Boolean)state.installed && (Boolean)settings.agreement && !isCustomEndpoint()){
 	String wName=sAppId()
 	Long lnow=wnow()
-	if((Boolean)state.installed && (Boolean)settings.agreement){
+	if((Boolean)state.installed && gtSetB('agreement')){
 		if(!force){
 			Long lastReg; lastReg=lastRegFLD[wName]
 			lastReg=lastReg ?: 0L
@@ -3791,6 +3800,10 @@ private List<Map> gtModes(){
 }
 
 private gtSetting(String nm){ return settings.get(nm) }
+private Boolean gtSetB(String nm){ return (Boolean)settings[nm] }
+private String gtSetStr(String nm){ return (String)settings[nm] }
+
+private Boolean gtStB(String nm){ return (Boolean)state[nm] }
 private gtSt(String nm){ return state.get(nm) }
 private gtAS(String nm){ return atomicState.get(nm) }
 private void assignSt(String nm,v){ state.put(nm,v) }
@@ -3864,13 +3877,13 @@ void updateRunTimeData(Map data, String wNi=sNL, String idi=sNL){
 		(sM): data[sMODFD],
 		(sB): data[sBIN],
 		(sN): (Long)((Map)data[sSTATS])[sNSCH],
-		(sZ): (String)((Map)data[sPIS])[sZ], //description
+		(sZ): sMs((Map)data[sPIS],sZ), //description
 		(sS): st,
 		heCached:(Boolean)data.Cached
 	]
 	//log.warn "data: $data piston: $piston old: ${pStateFLD[wName][id]}"
 	String wName= wNi ?: sAppId()
-	String id= idi ?: (String)data[sID]
+	String id= idi ?: sMs(data,sID)
 	ptMeta(wName,id,piston)
 	clearBaseResult(sURT,wName)
 
@@ -3984,7 +3997,7 @@ private String appName(){ return (String)app.label ?: (String)app.name }
 private void sendVariableEvent(Map variable, Boolean onlyChildren=false){
 	String myId=getInstanceSid()
 	String myLabel=appName()
-	String varN=(String)variable.name
+	String varN=sMs(variable,sNM)
 	if(varN.startsWith(sAT2)) return // TODO ERS
 	Map theEvent=[
 		(sVAL): varN, isStateChange: true, displayed: false,
@@ -4208,9 +4221,9 @@ private List<Map> getIncidents(){
 
 	Boolean b
 	for(Map myE in newAlerts){
-		String evNm = (String)myE[sNM]
-		String v= (String)myE[sV]
-		String desc= (String)myE.des
+		String evNm = sMs(myE,sNM)
+		String v= sMs(myE,sV)
+		String desc= sMs(myE,'des')
 		if(evNm=='hsmAlert'){
 			if(v.contains(intrusion)){
 				if(locStat!=sDISARMD) b= new2Alerts.push(myE)
@@ -4276,7 +4289,7 @@ def lifxHandler(response, Map cbkData){
 		Boolean fnd; fnd=false
 		if(data instanceof List){
 			state.lifx= state.lifx ?: [:]
-			switch ((String)cbkData.request){
+			switch (sMs(cbkData,'request')){
 			case 'scenes':
 				state.lifx.scenes= data.collectEntries{[(it.uuid): it.name]}
 				fnd=true
@@ -4307,7 +4320,7 @@ def lifxHandler(response, Map cbkData){
 /******************************************************************************/
 
 private Map<String,Boolean> getLogging(){
-	String lgging=settings.logging ? (String)settings.logging : sNL
+	String lgging=gtSetStr('logging') ?: sNL
 	return [
 		(sERR): true,
 		(sWARN): true,
@@ -4327,7 +4340,7 @@ private Map log(message, Integer shift=-2, err=null, String cmd=sNL){
 	if(message instanceof Map){
 		//shift=(Integer)message.s
 		merr=message[sE]
-		myMsg=(String)message[sM] + " (${lnow - (Long)message[sT]}ms)"
+		myMsg=sMs((Map)message,sM) + " (${lnow - (Long)message[sT]}ms)"
 	}else myMsg=message
 	String mcmd=cmd ? cmd : sDBG
 	Map<String,Boolean> myLog=getLogging()
@@ -5807,7 +5820,7 @@ private String hashId(id){
 	//String wName= parent ? parent.id.toString() : sAppId()
 	String wName= sAppId()
 	if(theHashMapVFLD[wName]==null){ theHashMapVFLD[wName]= [:]; theHashMapVFLD=theHashMapVFLD }
-	result=(String)theHashMapVFLD[wName][myId]
+	result=sMs(theHashMapVFLD[wName],myId)
 	if(result==sNL){
 		result=sCLN+md5('core.' + myId)+sCLN
 		theHashMapVFLD[wName][myId]=result
@@ -5821,7 +5834,7 @@ private String hashId(id){
 
 // Memory Barrier
 static void mb(String meth=sNL){
-	if((Boolean)theMBLockFLD.tryAcquire()){
+	if(theMBLockFLD.tryAcquire()){
 		theMBLockFLD.release()
 	}
 }
@@ -5984,7 +5997,7 @@ def pageDumpExecution(){
 	}
 	LinkedHashMap<String,Map> a; a=[:]
 	b.sort{ Map bb -> (bb[c]!= null ? -(Long)bb[c] : bb[c]) }.each { Map it ->
-		if((Long)it[c]) a= a+ [((String)it[sID]): [(sNM):it[sNM], (c): it[c]]] as LinkedHashMap<String, Map>
+		if((Long)it[c]) a= a+ [(sMs(it,sID)): [(sNM):it[sNM], (c): it[c]]] as LinkedHashMap<String, Map>
 	}
 	String message=getMapDescStr(a)
 	return dynamicPage((sNM):sPDPEXC,(sTIT):sBLK,uninstall:false){

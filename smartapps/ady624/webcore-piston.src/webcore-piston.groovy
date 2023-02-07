@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update February 2, 2023 for Hubitat
+ * Last update February 6, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -82,8 +82,6 @@ static Boolean eric1(){ return false }
 @Field static final String sDTIME='datetime'
 @Field static final String sTRUE='true'
 @Field static final String sFALSE='false'
-@Field static final String sTIME='time'
-@Field static final String sTIMER='timer'
 @Field static final String sDATE='date'
 @Field static final String sDEV='device'
 @Field static final String sDBL='double'
@@ -91,29 +89,55 @@ static Boolean eric1(){ return false }
 @Field static final String sFLOAT='float'
 @Field static final String sVARIABLE='variable'
 @Field static final String sMODE='mode'
+@Field static final String sINT32='int32'
+@Field static final String sINT64='int64'
+@Field static final String sBOOL='bool'
+@Field static final String sPHONE='phone'
+@Field static final String sURI='uri'
+@Field static final String sTEXT='text'
+@Field static final String sENUM='enum'
+@Field static final String sDURATION='duration'
+
 @Field static final String sNM='name'
 @Field static final String sREQ='required'
 @Field static final String sTYPE='type'
 @Field static final String sVAL='value'
 @Field static final String sTIT='title'
+
 @Field static final String sERROR='error'
 @Field static final String sINFO='info'
 @Field static final String sWARN='warn'
 @Field static final String sTRC='trace'
 @Field static final String sMEM='mem'
 @Field static final String sDBG='debug'
+
 @Field static final String sON='on'
 @Field static final String sOFF='off'
 @Field static final String sSWITCH='switch'
 @Field static final String sTRIG='trigger'
 @Field static final String sCONDITION='condition'
-@Field static final String sDURATION='duration'
 @Field static final String sDLLRINDX='$index'
 @Field static final String sDLLRDEVS='$devices'
 @Field static final String sDLLRDEVICE='$device'
-@Field static final String sTEXT='text'
-@Field static final String sENUM='enum'
+
+@Field static final String sTIME='time'
 @Field static final String sTHREAX='threeAxis'
+@Field static final String sORIENT='orientation'
+@Field static final String sAXISX='axisX'
+@Field static final String sAXISY='axisY'
+@Field static final String sAXISZ='axisZ'
+@Field static final String sRULE='rule'
+@Field static final String sHSMSTS='hsmStatus'
+@Field static final String sALRMSSTATUS='alarmSystemStatus'
+@Field static final String sALRMSYSALRT='alarmSystemAlert'
+@Field static final String sALRMSYSEVT='alarmSystemEvent'
+@Field static final String sHSMALRT='hsmAlert'
+@Field static final String sHSMSARM='hsmSetArm'
+@Field static final String sASYNCREP='wc_async_reply'
+@Field static final String sCLRC='clearc'
+@Field static final String sCLRL='clearl'
+@Field static final String sCLRA='cleara'
+
 @Field static final String sBLK=''
 @Field static final String sCOMMA=','
 @Field static final String sSPC=' '
@@ -153,13 +177,6 @@ static Boolean eric1(){ return false }
 @Field static final String sAT='@'
 @Field static final String sAT2='@@'
 @Field static final String sDLR='$'
-@Field static final String sRULE='rule'
-@Field static final String sHSMSTS='hsmStatus'
-@Field static final String sALRMSSTATUS='alarmSystemStatus'
-@Field static final String sALRMSYSALRT='alarmSystemAlert'
-@Field static final String sALRMSYSEVT='alarmSystemEvent'
-@Field static final String sHSMALRT='hsmAlert'
-@Field static final String sHSMSARM='hsmSetArm'
 @Field static final String sPEVDATE='$previousEventDate'
 @Field static final String sPEVDELAY='$previousEventDelay'
 @Field static final String sPEVDEV='$previousEventDevice'
@@ -180,11 +197,7 @@ static Boolean eric1(){ return false }
 @Field static final String sCURPHYS='$currentEventDevicePhysical'
 @Field static final String sAPPJSON='application/json'
 @Field static final String sAPPFORM='application/x-www-form-urlencoded'
-@Field static final String sASYNCREP='wc_async_reply'
 @Field static final String sCHNK='chunk:'
-@Field static final String sCLRC='clearc'
-@Field static final String sCLRL='clearl'
-@Field static final String sCLRA='cleara'
 @Field static final String sGET='GET'
 @Field static final String sDELETE='DELETE'
 @Field static final String sHEAD='HEAD'
@@ -215,8 +228,6 @@ static Boolean eric1(){ return false }
 @Field static final String sTEP='tep'
 @Field static final String sTSP='tsp'
 
-@Field static final String sCURACTN='curActn'
-@Field static final String sCURTSK='curTsk'
 @Field static final String sTASK='task'
 
 @Field static final String sLOGNG='logging'
@@ -235,12 +246,12 @@ static Boolean eric1(){ return false }
 @Field static final String sLOGS='logs'
 @Field static final String sSTACK='stack'
 @Field static final String sSTORE='store'
-@Field static final String sPIS='piston'
+@Field static final String sPISTN='piston'
 @Field static final String sCACHE='cache'
 @Field static final String sVARS='vars'
 @Field static final String sNSCH='nextSchedule'
+@Field static final String sTIMING='timing'
 @Field static final String sSCHS='schedules'
-@Field static final String sSCH='schedule'
 @Field static final String sLEVT='lastEvent'
 @Field static final String sLEXEC='lastExecuted'
 @Field static final String sSTMTL='stmtLvl'
@@ -259,26 +270,38 @@ static Boolean eric1(){ return false }
 @Field static final String sLSTPCQ='lastPCmdQ'
 @Field static final String sLSTPCSNT='lastPCmdSnt'
 @Field static final String sDBGLVL='debugLevel'
+@Field static final String sPREVEVT='previousEvent'
+@Field static final String sLOCMODEID='locationModeId'
+@Field static final String sLOCALV='localVars'
+@Field static final String sJSON='json'
+@Field static final String sRESP='response'
+@Field static final String sRESUMED='resumed'
+@Field static final String sTERM='terminated'
+@Field static final String sRESTRICD='restricted'
+@Field static final String sCURACTN='curActn'
+@Field static final String sCURTSK='curTsk'
+//@Field static final String sFOLLOWC='followCleanup'
+
 @Field static final String sLOCID='locationId'
 @Field static final String sUSELFUELS='useLocalFuelStreams'
 @Field static final String sSETTINGS='settings'
 @Field static final String sINCIDENTS='incidents'
-@Field static final String sPREVEVT='previousEvent'
-@Field static final String sSUBS='subscriptions'
-@Field static final String sOLD='old'
-@Field static final String sDV='dev'
-@Field static final String sNEW='new'
 @Field static final String sLOGHE='logsToHE'
 @Field static final String sINSTID='instanceId'
-@Field static final String sLO='lo'
-@Field static final String sLO2='lo2'
-@Field static final String sLO3='lo3'
-@Field static final String sRO='ro'
-@Field static final String sRO2='ro2'
-@Field static final String sTO='to'
-@Field static final String sTO2='to2'
-@Field static final String sLOCALV='localVars'
-@Field static final String sLOCMODEID='locationModeId'
+@Field static final String sENABLED='enabled'
+@Field static final String sALLLOC='allLocations'
+@Field static final String sNACCTSID='newAcctSid'
+
+@Field static final String sOLD='old'
+@Field static final String sNEW='new'
+@Field static final String sAUTONEW='autoNew'
+@Field static final String sPIS='pis'
+
+@Field static final String sDV='dev'
+
+@Field static final String sSUBS='subscriptions'
+@Field static final String sALLOWR='allowResume'
+
 @Field static final String sARGS='args'
 @Field static final String sDATA='data'
 @Field static final String sJSOND='jsonData'
@@ -292,7 +315,16 @@ static Boolean eric1(){ return false }
 @Field static final String sUNIT='unit'
 @Field static final String sINDX='index'
 @Field static final String sDELAY='delay'
-//@Field static final String sFOLLOWC='followCleanup'
+@Field static final String sSCH='schedule'
+
+@Field static final String sLO='lo'
+@Field static final String sLO2='lo2'
+@Field static final String sLO3='lo3'
+@Field static final String sRO='ro'
+@Field static final String sRO2='ro2'
+@Field static final String sTO='to'
+@Field static final String sTO2='to2'
+
 @Field static final String sCS='cs'
 @Field static final String sSS='ss'
 @Field static final String sPS='ps'
@@ -304,22 +336,20 @@ static Boolean eric1(){ return false }
 @Field static final String sRN='rn'
 @Field static final String sROP='rop'
 @Field static final String sEXP='exp'
+
 @Field static final String sINMEM='inMem'
+@Field static final String sTIMER='timer'
+@Field static final String sRESACT='resAct'
+
 @Field static final String sCONDITIONS='conditions'
 @Field static final String sTRIGGERS='triggers'
-@Field static final String sJSON='json'
-@Field static final String sRESP='response'
 @Field static final String sSTMTS='statements'
-@Field static final String sALLLOC='allLocations'
+
 @Field static final String sSTAYUNCH='stays_unchanged'
 @Field static final String sSTAYS='stays'
 @Field static final String sMATCHES='matches'
 @Field static final String sMATCHED='matched'
 @Field static final String sUNMATCHED='unmatched'
-@Field static final String sALLOWR='allowResume'
-@Field static final String sRESUMED='resumed'
-@Field static final String sTERM='terminated'
-@Field static final String sRESTRICD='restricted'
 
 @Field static final String sZ6='000000'
 @Field static final String sHTTPR='httpRequest'
@@ -352,16 +382,7 @@ static Boolean eric1(){ return false }
 @Field static final String sPLUS='+'
 @Field static final String sMINUS='-'
 @Field static final String sDOT='.'
-@Field static final String sORIENT='orientation'
-@Field static final String sAXISX='axisX'
-@Field static final String sAXISY='axisY'
-@Field static final String sAXISZ='axisZ'
 @Field static final String sEXPECTING='Expecting '
-@Field static final String sINT32='int32'
-@Field static final String sINT64='int64'
-@Field static final String sBOOL='bool'
-@Field static final String sPHONE='phone'
-@Field static final String sURI='uri'
 @Field static final String sSTOREM='storeMedia'
 @Field static final String sIFTTM='iftttMaker'
 @Field static final String sDARGS='$args'
@@ -474,7 +495,7 @@ private static Boolean isPep(Map m){ bIs(m,sPEP) }
 @CompileStatic
 private static Boolean isAct(Map m){ bIs(m,sACT) }
 @CompileStatic
-private static Boolean isEnbl(Map m){ bIs(m,'enabled') }
+private static Boolean isEnbl(Map m){ bIs(m,sENABLED) }
 @CompileStatic
 private static Boolean isBrk(Map m){ bIs(m,sBREAK) }
 
@@ -556,7 +577,7 @@ private static oMvv(Map m){ Map mv=mMv(m); oMv(mv) }
 
 @CompileStatic
 private static Integer gtPOpt(Map r9,String nm){
-	Map o=(Map)mMs(r9,sPIS)?.o
+	Map o=(Map)mMs(r9,sPISTN)?.o
 	if(o && o.containsKey(nm))return iMs(o,nm)
 	return null
 }
@@ -923,11 +944,11 @@ def pageDumpHelper(Integer i,String nm,String desc){
 			break
 	}
 	pis=recreatePiston(shorten,inMem,useCache)
-	r9[sPIS]=pis
+	r9[sPISTN]=pis
 	subscribeAll(r9,false,inMem)
 
 	pis=null
-	String message=getMapDescStr(mMs(r9,sPIS))
+	String message=getMapDescStr(mMs(r9,sPISTN))
 	r9=null
 	return dynamicPage((sNM):nm,(sTIT):sBLK,uninstall:false){
 		section(desc+'Piston dump'){
@@ -1015,7 +1036,7 @@ Map get(Boolean minimal=false){ // minimal is backup
 			(sACT): isAct(r9),
 			(sCTGRY): sMs(r9,sCTGRY)
 		],
-		(sPIS): (LinkedHashMap)r9[sPIS]
+		(sPISTN): (LinkedHashMap)r9[sPISTN]
 	]
 	if(!minimal){
 		Map mst=gtState()
@@ -1104,9 +1125,9 @@ private void clearMyPiston(String meth=sNL){
 	Boolean clrd; clrd=false
 	Map pData=mMs(thePistonCacheFLD,pNm)
 	if(pData!=null){
-		LinkedHashMap t0=(LinkedHashMap)pData.pis
+		LinkedHashMap t0=(LinkedHashMap)pData[sPIS]
 		if(t0){
-			thePistonCacheFLD[pNm].pis=null
+			thePistonCacheFLD[pNm][sPIS]=null
 			mb()
 			clrd=true
 		}
@@ -1122,11 +1143,11 @@ private LinkedHashMap recreatePiston(Boolean shorten=false,Boolean inMem=false,B
 		String pNm=sAppId()
 		Map pData; pData=mMs(thePistonCacheFLD,pNm)
 		if(pData==null || pData.cnt==null){
-			pData=[cnt:iZ,pis:null]
+			pData=[cnt:iZ,(sPIS):null]
 			thePistonCacheFLD[pNm]=pData
 			mb()
 		}
-		if(pData.pis!=null)return (LinkedHashMap)(pData.pis+[cached:true])
+		if(pData[sPIS]!=null)return (LinkedHashMap)(pData[sPIS]+[cached:true])
 	}
 
 	if(eric())debug "recreating piston shorten: $shorten inMem: $inMem useCache: $useCache",null
@@ -1191,7 +1212,7 @@ Map setup(LinkedHashMap data,Map<String,String>chunks){
 	wappUpdateSetting(sBIN,[(sTYPE):sTEXT,(sVAL):sMs(gtState(),sBIN) ?: sBLK])
 	wappUpdateSetting(sATHR,[(sTYPE):sTEXT,(sVAL):sMs(gtState(),sATHR) ?: sBLK])
 
-	assignSt(sPEP,!!gtPOpt([(sPIS):piston],sPEP))
+	assignSt(sPEP,!!gtPOpt([(sPISTN):piston],sPEP))
 
 	String lbl=sMs(data,sN)
 	if(lbl){
@@ -1209,7 +1230,7 @@ Map setup(LinkedHashMap data,Map<String,String>chunks){
 	assignSt(sTRC,[:])
 
 	Map r9; r9=[:]
-	r9[sPIS]=piston
+	r9[sPISTN]=piston
 	releaseTheLock(mSmaNm)
 	Integer i= iMs(gtState(),sBLD)
 	Boolean b= bIs(gtState(),sACT)
@@ -1632,7 +1653,7 @@ Map resume(LinkedHashMap piston=null,Boolean sndEvt=true){
 	LinkedHashMap tmpRtD,r9
 	tmpRtD=getTemporaryRunTimeData()
 	Map msg=timer 'Piston started',tmpRtD,iN1
-	if(piston!=null)tmpRtD[sPIS]=piston
+	if(piston!=null)tmpRtD[sPISTN]=piston
 	Boolean lg=isInf(tmpRtD)
 	if(lg)info 'Starting piston... ('+sHVER+')',tmpRtD,iZ
 	r9=getRunTimeData(tmpRtD,null,true,false,false) //performs subscribeAll; reinitializes cache variables
@@ -1667,7 +1688,7 @@ static Map shortRtd(Map r9){
 		(sSTATS):[
 			(sNSCH):lMs(r9,sNSCH)
 		],
-		(sPIS):[
+		(sPISTN):[
 			(sZ):sMs(r9,'pistonZ')
 		],
 		(sST):st,
@@ -1765,7 +1786,7 @@ Boolean getTheLockW(String qname,String meth=sNL,Boolean longWait=false){
 	Integer semaNum=semaNum(qname)
 	String semaSNum=semaNum.toString()
 	Semaphore sema=sema(semaNum)
-	while(!(sema.tryAcquire())){
+	while(!sema.tryAcquire()){
 		// did not get lock
 		Long t; t=lockTimesVFLD[semaSNum]
 		if(t==null){
@@ -2068,7 +2089,7 @@ private LinkedHashMap getDSCache(String meth,Boolean Upd=true){
 		Map mst=gtState()
 		if(mst[sPEP]==null){ // upgrades of older pistons
 			LinkedHashMap piston=recreatePiston()
-			assignSt(sPEP, !!gtPOpt([(sPIS):piston],sPEP) )
+			assignSt(sPEP, !!gtPOpt([(sPISTN):piston],sPEP) )
 		}
 		Integer bld=iMs(mst,sBLD)
 		String ttt
@@ -2089,7 +2110,7 @@ private LinkedHashMap getDSCache(String meth,Boolean Upd=true){
 			(sCACHE): [:],
 			(sNWCACHE):[:],
 			(sDEVS): [:],
-			(sPIS): null,
+			(sPISTN): null,
 			(sTRC): [:],
 			(sSCHS):[],
 			(sVARS):[:],
@@ -2235,11 +2256,11 @@ private LinkedHashMap getParentCache(){
 				region: sMs(t0,'region'),
 				(sINSTID): sMs(t0,sINSTID),
 				(sSETTINGS): mMs(t0,'stsettings'),
-				('enabled'): isEnbl(t0),
+				(sENABLED): isEnbl(t0),
 				lifx: mMs(t0,'lifx'),
 				('logPExec'): bIs(t0,'logPExec'),
 				accountId: sMs(t0,'accountId'),
-				newAcctSid: bIs(t0,'newAcctSid'),
+				(sNACCTSID): bIs(t0,sNACCTSID),
 				(sLOCID): sMs(t0,sLOCID),
 				('oldLocations'): (List)t0['oldLocations'],
 				(sALLLOC): (List)t0[sALLLOC],
@@ -2267,7 +2288,7 @@ private LinkedHashMap getTemporaryRunTimeData(Long startTime=wnow()){
 		releaseTheLock(semName)
 	}
 	LinkedHashMap r9=getDSCache(sGETTRTD)
-	r9.temporary=true
+	r9['temporary']=true
 	r9[sTMSTMP]=startTime
 	r9[sLOGS]=[[(sT):startTime]]
 	r9[sDBGLVL]=iZ
@@ -2284,22 +2305,22 @@ private LinkedHashMap getRunTimeData(LinkedHashMap ir9=null,LinkedHashMap retSt=
 	Integer dbgLevel; dbgLevel=iZ
 	if(r9!=null){
 		logs=r9[sLOGS]!=null ? liMs(r9,sLOGS):[]
-		lstarted=r9.lstarted!=null ? lMs(r9,'lstarted'):lZ
-		lended=r9.lended!=null ? lMs(r9,'lended'):lZ
-		piston=r9[sPIS]!=null ? (LinkedHashMap)r9[sPIS]:null
+		lstarted=r9[sLSTART]!=null ? lMs(r9,sLSTART):lZ
+		lended=r9[sLSEND]!=null ? lMs(r9,sLSEND):lZ
+		piston=r9[sPISTN]!=null ? (LinkedHashMap)r9[sPISTN]:null
 		dbgLevel=r9[sDBGLVL]!=null ? iMs(r9,sDBGLVL):iZ
 	}else r9=getTemporaryRunTimeData(started)
 	Long timestamp=lMs(r9,sTMSTMP)
 
-	if(r9.temporary!=null)def a=r9.remove('temporary')
+	if(r9['temporary']!=null)def a=r9.remove('temporary')
 
 	m1=[:]
 	if(retSt!=null) m1=retSt
 	r9=(LinkedHashMap)(r9+m1)
 
 	r9[sTMSTMP]=timestamp
-	r9.lstarted=lstarted
-	r9.lended=lended
+	r9[sLSTART]=lstarted
+	r9[sLSEND]=lended
 	r9[sLOGS]= logs.size()>iZ ? logs:[[(sT):timestamp]]
 	r9[sDBGLVL]=dbgLevel
 
@@ -2315,16 +2336,16 @@ private LinkedHashMap getRunTimeData(LinkedHashMap ir9=null,LinkedHashMap retSt=
 	aS=getCachedMaps('getRTD')
 	aS=aS!=null?aS:[:]
 	Map st=mMs(aS,sST)
-	Map st1=st!=null && st instanceof Map ? [:]+st:[(sOLD):sBLK,(sNEW):sBLK] as LinkedHashMap
+	Map st1=st!=null && st instanceof Map ? [:]+st : [(sOLD):sBLK,(sNEW):sBLK] as LinkedHashMap
 	st1[sOLD]=sMs(st1,sNEW)
 	r9[sST]=st1
 
-	r9.pStart=wnow()
+	r9[sPSTART]=wnow()
 
 	if(piston==null)piston=recreatePiston(shorten,inMem)
 	Boolean doSubScribe=!bIs(piston,'cached')
 
-	r9[sPIS]=piston
+	r9[sPISTN]=piston
 
 	getLocalVariables(r9,aS,doit)
 	piston=null
@@ -2334,8 +2355,8 @@ private LinkedHashMap getRunTimeData(LinkedHashMap ir9=null,LinkedHashMap retSt=
 		String pNm=sMs(r9,snId)
 		Map pData
 		pData=mMs(thePistonCacheFLD,pNm)
-		if(shorten && inMem && pNm!=sBLK && pData!=null && pData.pis==null){
-			pData.pis=[:]+(LinkedHashMap)r9[sPIS]
+		if(shorten && inMem && pNm!=sBLK && pData!=null && pData[sPIS]==null){
+			pData[sPIS]=[:]+(LinkedHashMap)r9[sPISTN]
 			thePistonCacheFLD[pNm]=[:]+pData
 			pData=null
 			mb()
@@ -2346,8 +2367,8 @@ private LinkedHashMap getRunTimeData(LinkedHashMap ir9=null,LinkedHashMap retSt=
 		}
 	}
 	Long t0=wnow()
-	r9.pEnd=t0
-	r9.generatedIn=t0-started
+	r9[sPEND]=t0
+	r9[sGENIN]=t0-started
 	return r9
 }
 
@@ -2508,7 +2529,7 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 	Boolean serializationOn=!myPep // && true // on / off switch
 	Boolean doSerialization=serializationOn && !callMySelf
 
-	tmpRtD.lstarted=wnow()
+	tmpRtD[sLSTART]=wnow()
 	retSt=[('semaphore'):lZ,('semaphoreName'):sNL,('semaphoreDelay'):lZ] as LinkedHashMap
 	if(doSerialization){
 		retSt=lockOrQueueSemaphore(doSerialization,event,queue,tmpRtD)
@@ -2525,7 +2546,7 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 		Long tl= lMs(retSt,'semaphoreDelay')
 		if(lg>i2 && tl>lZ)warn 'Piston waited for semaphore '+tl+sMS,tmpRtD
 	}
-	tmpRtD.lended=wnow()
+	tmpRtD[sLSEND]=wnow()
 
 //measure how Long first state access takes
 	Long stAccess; stAccess=lZ
@@ -2549,13 +2570,13 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 	checkVersion(r9)
 
 	Long theend=wnow()
-	Long le=lMs(r9,'lended')
+	Long le=lMs(r9,sLSEND)
 	Long t0=theend-startTime
-	Long t1=le-lMs(r9,'lstarted')
-	Long t2=lMs(r9,'generatedIn')
-	Long t3=lMs(r9,'pEnd')-lMs(r9,'pStart')
+	Long t1=le-lMs(r9,sLSTART)
+	Long t2=lMs(r9,sGENIN)
+	Long t3=lMs(r9,sPEND)-lMs(r9,sPSTART)
 	Long missing=t0-t1-t2
-	r9.curStat=[(sI):t0.toInteger(),(sL):t1.toInteger(),(sR):t2.toInteger(),(sP):t3.toInteger(),(sS):stAccess.toInteger()] as LinkedHashMap
+	r9['curStat']=[(sI):t0.toInteger(),(sL):t1.toInteger(),(sR):t2.toInteger(),(sP):t3.toInteger(),(sS):stAccess.toInteger()] as LinkedHashMap
 	if(lg>i1){
 		Long t4=le-startTime
 		Long t5=theend-le
@@ -2568,8 +2589,8 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 	for(String foo in cleanData1)aa=r9.remove(foo)
 
 	resetRandomValues(r9)
-	r9.tPause=lZ
-	((Map)r9[sSTATS]).timing=[(sT):startTime,(sD):eventDelay>lZ ? eventDelay:lZ,(sL):elapseT(startTime)] as LinkedHashMap
+	r9[sTPAUSE]=lZ
+	((Map)r9[sSTATS])[sTIMING]=[(sT):startTime,(sD):eventDelay>lZ ? eventDelay:lZ,(sL):elapseT(startTime)] as LinkedHashMap
 
 	if(clrC||clrL||clrA){
 		if(clrL)clear1(true,true,true,false,true)
@@ -2749,11 +2770,11 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 			syncTime=sv_syncTime
 		}
 
-		((Map)((Map)r9[sSTATS]).timing)[sE]=elapseT(eStrt)
+		((Map)((Map)r9[sSTATS])[sTIMING])[sE]=elapseT(eStrt)
 		if(!success)msg[sM]='Event processing failed'
 		if(eric()&& lg>i1){
 			String s; s=sMs(msg,sM)
-			s+=' Total pauses ms: '+lMs(r9,'tPause').toString()
+			s+=' Total pauses ms: '+lMs(r9,sTPAUSE).toString()
 			if(firstTime)s+=' found nothing to do'
 			msg[sM]=s
 		}
@@ -2829,6 +2850,11 @@ private void sendLEvt(Map r9){
 	}
 }
 
+@Field static final String sLSTART='lstarted'
+@Field static final String sLSEND='lended'
+@Field static final String sGENIN='generatedIn'
+@Field static final String sPSTART='pStart'
+@Field static final String sPEND='pEnd'
 @Field static final List<String>cleanData1=['lstarted','lended','generatedIn','pStart','pEnd']
 @Field static List<String>cleanData2
 private static List<String> fill_cleanData2(){
@@ -2906,7 +2932,7 @@ private Boolean executeEvent(Map r9,Map event){
 		String isRSM='isResume'
 		Map mEvt,pEvt
 		mEvt=[:]+event
-		Long d1= (Long)((Map)mMs(r9,sSTATS)?.timing)?.d
+		Long d1= (Long)((Map)mMs(r9,sSTATS)[sTIMING])?.d
 		mEvt[sDELAY]=d1 ?: lZ
 		mEvt[sINDX]=index
 		mEvt[sDV]=cvtDev(getDevice(r9,theFinalDevice)) // documentation
@@ -2961,7 +2987,7 @@ private Boolean executeEvent(Map r9,Map event){
 
 		r9[sSTACK]=[(sC):iZ,(sS):iZ,(sCS):[],(sSS):[]] as LinkedHashMap
 		try{
-			Map pis=mMs(r9,sPIS)
+			Map pis=mMs(r9,sPISTN)
 			List<Map> r=liMs(pis,sR)
 			// piston restriction
 			Boolean allowed=!r || r.size()==iZ || evaluateConditions(r9,pis,sR,true)
@@ -3137,9 +3163,9 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 	String s; s='gvCache'
 	if(r9[s]!=null || r9.gvStoreCache!=null){
 		LinkedHashMap tpiston
-		tpiston=(LinkedHashMap)r9[sPIS]
-		r9[sPIS]=[:]
-		((Map)r9[sPIS]).z=sMs(tpiston,sZ)
+		tpiston=(LinkedHashMap)r9[sPISTN]
+		r9[sPISTN]=[:]
+		((Map)r9[sPISTN])[sZ]=sMs(tpiston,sZ)
 		tpiston=null
 		if(r9[s]!=null){
 			String semName=sTGBL
@@ -3166,9 +3192,9 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 		relaypCall(myRt)
 	}
 //	Long el6=elapseT(startTime)
-	r9[sPIS]=null
+	r9[sPISTN]=null
 
-	((Map)((Map)r9[sSTATS]).timing).u=elapseT(startTime)
+	((Map)((Map)r9[sSTATS])[sTIMING])[sU]=elapseT(startTime)
 //	doLog(sERROR,"el1: $el1  el2: $el2  el3: $el3 el4: $el4 el5: $el5 el6: $el6")
 
 //update graph data
@@ -3177,9 +3203,9 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 	if(myPep)stats=(Map)gtAS(s) else stats=(Map)gtSt(s)
 	stats=stats ?: [:]
 
-	List<Map> tlist=(List<Map>)stats.timing ?: []
+	List<Map> tlist=(List<Map>)stats[sTIMING] ?: []
 	Map lastST=tlist.size() ? [:]+tlist.last():null
-	Map newMap=[:]+(Map)mMs(r9,s).timing
+	Map newMap=[:]+(Map)mMs(r9,s)[sTIMING]
 	if(lastST && newMap){
 		lastST.t=lMt(newMap)-10L
 		a=tlist.push(lastST)
@@ -3190,9 +3216,9 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 	t2=tlist.size()
 	if(t2>t1)tlist=tlist[t2-t1..t2-i1]
 
-	stats.timing=tlist
+	stats[sTIMING]=tlist
 	if(myPep)assignAS(s,stats) else assignSt(s,stats)
-	((Map)r9[s]).timing=null
+	((Map)r9[s])[sTIMING]=null
 
 	t0=getCachedMaps(sFINLZ+s1)
 	if(t0!=null){
@@ -3247,7 +3273,7 @@ private static LinkedHashMap initCncl(){ return [(sSTMTS):[],(sCONDITIONS):[],(s
 @CompileStatic
 private void processSchedules(Map r9,Boolean scheduleJob=false){
 	//if automatic piston states set it based on the autoNew - if any
-	if(!gtPOpt(r9,sMPS)) mMs(r9,sST)[sNEW]= sMs(mMs(r9,sST),'autoNew') ?: sTRUE
+	if(!gtPOpt(r9,sMPS)) mMs(r9,sST)[sNEW]= sMs(mMs(r9,sST),sAUTONEW) ?: sTRUE
 
 	Boolean myPep=isPep(r9)
 	List<Map> schedules,ts
@@ -3540,7 +3566,7 @@ private Boolean executeStatement(Map r9,Map statement,Boolean asynch=false){
 					((Map)r9[sSTACK])[sC]=stmtNm
 					if(isIf && prun(r9) && !gtPOpt(r9,sMPS) && iMs(r9,sSTMTL)==i1){
 						//automatic piston state
-						((Map)r9[sST])['autoNew']= perform ? sTRUE:sFALSE
+						((Map)r9[sST])[sAUTONEW]= perform ? sTRUE:sFALSE
 					}
 					if(perform || ffwd(r9)){
 						if(!executeStatements(r9,liMs(statement,sS),async)){
@@ -7731,8 +7757,6 @@ private Boolean comp_stays_any_of		(Map r9,Map lv,Map rv=null,Map rv2=null,Map t
 private Boolean comp_stays_away_from	(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ return comp_is_not_equal_to(r9,lv,rv,rv2,tv,tv2)}
 private Boolean comp_stays_away_from_any_of		(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ return comp_is_not_any_of(r9,lv,rv,rv2,tv,tv2)}
 
-@Field static final String sRESACT='resAct'
-
 private void traverseStatements(node,Closure closure,parentNode=null,Map<String,Boolean> data=null,Map<String,Integer> lvl=null){
 	if(!node)return
 	//if a statements element, go through each item
@@ -8457,7 +8481,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 			}
 		}
 
-		Map r9p=mMs(r9,sPIS)
+		Map r9p=mMs(r9,sPISTN)
 
 		if(r9p[sR])traverseRestrictions(liMs(r9p,sR),restrictionTraverser,null,stmtData)
 
@@ -8765,8 +8789,7 @@ private static Map fixVector(String s1){
 private static gtThreeAxisVal(ixyz, String attr){
 	Map xyz
 	if(ixyz instanceof String){
-		String s; s=ixyz
-		xyz= fixVector(s)
+		xyz= fixVector((String)ixyz)
 	} else xyz= ixyz instanceof Map ? (Map)ixyz : [:]
 	switch(attr){
 		case sORIENT:
@@ -12605,7 +12628,7 @@ private void getLocalVariables(Map r9,Map aS, Boolean frc=true){
 	r9[sLOCALV]=[:]
 	String t
 	Map values=mMs(aS,sVARS)
-	List<Map>l=(List<Map>)oMv(mMs(r9,sPIS))
+	List<Map>l=(List<Map>)oMv(mMs(r9,sPISTN))
 	if(!l)return
 	Boolean lg=isDbg(r9)
 	for(Map var in l){
@@ -13180,7 +13203,7 @@ static void clearHashMap(String wName){
 @CompileStatic
 private String hashPID(id){
 	LinkedHashMap pC=getParentCache()
-	if(bIs(pC,'newAcctSid'))return hashId3(sMs(pC,sLOCID)+id.toString())
+	if(bIs(pC,sNACCTSID))return hashId3(sMs(pC,sLOCID)+id.toString())
 	return hashId3(id)
 }
 
