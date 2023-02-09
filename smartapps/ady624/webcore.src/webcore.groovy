@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update February 6, 2023 for Hubitat
+ * Last update February 9, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20230130_HE'
-@Field static final String sHVERSTR='v0.3.114.20230130_HE - February 6, 2023'
+@Field static final String sHVERSTR='v0.3.114.20230130_HE - February 9, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -1030,7 +1030,7 @@ void updated(){
 			cleanUp()
 			resetFuelStreamList()
 		}
-	}
+	}else cleanUp()
 	clearBaseResult('updated')
 }
 
@@ -3017,6 +3017,7 @@ private void cleanUp(){
 		List data=['version','versionHE','chunks','hash','virtualDevices','updateDevices', 'hubitatQueryString', 'redirectContactBook',
 				   'semaphore','pong','modules','globalVars','devices','migratedStorage','lastRecovered','lastReg','lastRegTry']
 		for(String foo in data)state.remove(foo)
+		app.removeSetting('hubitatQueryString')
 
 		String n=handlePistn()
 		String pid

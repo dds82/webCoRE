@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update February 6, 2023 for Hubitat
+ * Last update February 9, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -281,6 +281,10 @@ static Boolean eric1(){ return false }
 @Field static final String sCURACTN='curActn'
 @Field static final String sCURTSK='curTsk'
 //@Field static final String sFOLLOWC='followCleanup'
+@Field static final String sGVCACHE='gvCache'
+@Field static final String sGVSTOREC='gvStoreCache'
+@Field static final String sINITGS='initGStore'
+@Field static final String sGSTORE='globalStore'
 
 @Field static final String sLOCID='locationId'
 @Field static final String sUSELFUELS='useLocalFuelStreams'
@@ -1011,6 +1015,7 @@ void cleanState(){
 	String s='sph'
 	for(sph in gtState().findAll{ ((String)it.key).startsWith(s)})wstateRemove(sph.key.toString())
 	for(String foo in clST)wstateRemove(foo)
+	app.removeSetting('hubitatQueryString')
 }
 
 /** PUBLIC METHODS					**/
@@ -3160,8 +3165,9 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 
 //	Long el5=elapseT(startTime)
 	Boolean a
-	String s; s='gvCache'
-	if(r9[s]!=null || r9.gvStoreCache!=null){
+	String s; s=sGVCACHE
+	String gvc=sGVSTOREC
+	if(r9[s]!=null || r9[gvc]!=null){
 		LinkedHashMap tpiston
 		tpiston=(LinkedHashMap)r9[sPISTN]
 		r9[sPISTN]=[:]
@@ -3183,9 +3189,9 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 		}
 		relaypCall(r9)
 		aa=r9.remove(s)
-		aa=r9.remove('gvStoreCache')
-		aa=r9.remove('globalStore')
-		r9.initGStore=false
+		aa=r9.remove(gvc)
+		aa=r9.remove(sGSTORE)
+		r9[sINITGS]=false
 	}else{
 		// update Dashboard
 		Map myRt=shortRtd(r9)
@@ -6453,25 +6459,28 @@ private Long vcmd_saveStateLocally(Map r9,device,List prms,Boolean global=false)
 	List<String> attributes=scast(r9,prms[iZ]).tokenize(sCOMMA)
 	String canister=canisterS(r9,device,prms)
 	Boolean overwrite=!(prms.size()>i2 ? bcast(r9,prms[i2]):false)
+	String iGS=sINITGS
+	String gs=sGSTORE
+	String gvc=sGVSTOREC
+	if(global && !bIs(r9,iGS)){
+		r9[gs]=wgetGStore()
+		r9[iGS]=true
+	}
 	for(String attr in attributes){
 		String n=canister+attr
-		if(global && !bIs(r9,'initGStore')){
-			r9.globalStore=wgetGStore()
-			r9.initGStore=true
-		}
 		def value; value=getDeviceAttributeValue(r9,device,attr,true)
 		if(attr==sHUE && value!=null && value!=sBLK) value=devHue2WcHue(value as Integer)
-		def curVal= global ? r9.globalStore[n] : r9[sSTORE][n]
+		def curVal= global ? mMs(r9,gs)[n] : mMs(r9,sSTORE)[n]
 		if(overwrite || curVal==null){
 			if(global){
-				r9.globalStore[n]=value
-				LinkedHashMap cache= (LinkedHashMap)r9.gvStoreCache ?: [:] as LinkedHashMap
+				r9[gs][n]=value
+				LinkedHashMap cache= (LinkedHashMap)r9[gvc] ?: [:] as LinkedHashMap
 				cache[n]=value
-				r9.gvStoreCache=cache
+				r9[gvc]=cache
 			}else r9[sSTORE][n]=value
 			if(isEric(r9))doLog(sINFO, "stored ${gtLbl(device)} $attr ($value) to ${global ? 'global': 'local'} store $n curVal: $curVal")
 		} else
-			warn "Could not store ${gtLbl(device)} $attr ($value) to ${global ? 'global': 'local'} store $n curVal: $curVal",r9
+			if(isTrc(r9)) warn "Could not store ${gtLbl(device)} $attr ($value) to ${global ? 'global': 'local'} store $n curVal: $curVal",r9
 	}
 	return lZ
 }
@@ -6487,24 +6496,27 @@ private Long vcmd_loadStateLocally(Map r9,device,List prms,Boolean global=false)
 	List<String> newattrs=[]
 	List vals=[]
 
+	String iGS=sINITGS
+	String gs=sGSTORE
+	String gvc=sGVSTOREC
+	if(global && !bIs(r9,iGS)){
+		r9[gs]=wgetGStore()
+		r9[iGS]=true
+	}
 	for(String attr in attributes){
 		String n=canister+attr
-		if(global && !bIs(r9,'initGStore')){
-			r9.globalStore=wgetGStore()
-			r9.initGStore=true
-		}
-		def value; value=global ? r9.globalStore[n]:r9[sSTORE][n]
+		def value; value=global ? mMs(r9,gs)[n]: mMs(r9,sSTORE)[n]
 		def a
 		if(empty){
 			if(global){
-				a=mMs(r9,'globalStore').remove(n)
-				Map cache=mMs(r9,'gvStoreCache') ?: [:]
+				a=mMs(r9,gs).remove(n)
+				Map cache=mMs(r9,gvc) ?: [:]
 				cache[n]=null
-				r9.gvStoreCache=cache
+				r9[gvc]=cache
 			}else a=mMs(r9,sSTORE).remove(n)
 		}
 		if(value==null){
-			warn "Could not load ${gtLbl(device)} $attr ($value) from ${global ? 'global': 'local'} store $n",r9
+			if(isTrc(r9))warn "Could not load ${gtLbl(device)} $attr ($value) from ${global ? 'global': 'local'} store $n",r9
 			continue
 		}
 
@@ -9395,7 +9407,7 @@ private Map setVariable(Map r9,String name,value){
 				Map variable=globalVarsVFLD[wName][tn]
 				variable.v=cast(r9,value,sMt(variable))
 				globalVarsVFLD=globalVarsVFLD
-				String s='gvCache'
+				String s=sGVCACHE
 				Map<String,Map> cache=r9[s]!=null ? (Map<String,Map>)r9[s]:[:]
 				cache[tn]=variable
 				r9[s]=cache
