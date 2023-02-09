@@ -509,6 +509,10 @@ private static Map mMs(Map m,String s){ (Map)m.get(s) }
 
 /** m.string  */
 @CompileStatic
+private static Map<String,Map> msMs(Map m,String s){ (Map<String,Map>)m.get(s) }
+
+/** m.string  */
+@CompileStatic
 private static String sMs(Map m,String v){ (String)m.get(v) }
 
 /** l[integer]  */
@@ -2685,7 +2689,7 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 				if(lg!=iZ) info 'Processing timer '+evntName+' = '+"${lMt(sch)}",r9
 
 				r9[sPCACHE]=[:]
-				Map<String,Map>sysV=(Map<String,Map>)r9[sSYSVARS]
+				Map<String,Map>sysV=msMs(r9,sSYSVARS)
 				sysV[sDLLRINDX][sV]=null
 				sysV[sDLLRDEVICE][sV]=null
 				sysV[sDLLRDEVS][sV]=null
@@ -2905,7 +2909,7 @@ private Boolean executeEvent(Map r9,Map event){
 			targs=es[sARGS]!=null && es[sARGS] instanceof Map ? mMs(es,sARGS):targs
 			Map tMap=mMs(es,sSTACK)
 			if(tMap!=null){
-				Map<String,Map>sysV=(Map<String,Map>)r9[sSYSVARS]
+				Map<String,Map>sysV=msMs(r9,sSYSVARS)
 				sysV[sDLLRINDX][sV]=tMap[sINDX] ?:null
 				sysV[sDLLRDEVICE][sV]=tMap[sDEV] ?:null
 				sysV[sDLLRDEVS][sV]=tMap[sDEVS] ?:[]
@@ -3095,7 +3099,7 @@ private static List<String> fill_cleanData(){
 	return ['allDevices', sPCACHE, sMEM, sBREAK, 'powerSource', 'oldLocations', sINCIDENTS, 'semaphoreDelay', sVARS,
 			sSTACCESS, sATHR, sBLD, sNWCACHE, 'mediaData', 'weather', sLOGS, sTRC, sSYSVARS, sLOCALV, sPREVEVT, sJSON, sRESP,
 			sCACHE, sSTORE, sSETTINGS, sLOCMODEID, 'coreVersion', 'hcoreVersion', sCNCLATNS, sCNDTNSTC, sPSTNSTC, sFFT, sRUN,
-			sRESUMED, sTERM, sINSTID, sWUP, sSTMTL, sARGS, 'nfl', 'temp']
+			sRESUMED, sTERM, sINSTID, sWUP, sSTMTL, sARGS, 'nfl', sTEMP]
 }
 
 @Field static final String sFINLZ='finalize'
@@ -3117,7 +3121,7 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 	((Map)r9[sTRC])[sD]=elapseT(lMt(mMs(r9,sTRC)))
 
 	//save / update changed cache values
-	for(item in (Map<String,Map>)r9[sNWCACHE]) ((Map)r9[sCACHE])[(String)item.key]=item.value
+	for(item in msMs(r9,sNWCACHE)) ((Map)r9[sCACHE])[(String)item.key]=item.value
 
 //	Long el3=elapseT(startTime)
 	//overwrite state might have changed meanwhile
@@ -3165,19 +3169,17 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 
 //	Long el5=elapseT(startTime)
 	Boolean a
-	String s; s=sGVCACHE
-	String gvc=sGVSTOREC
-	if(r9[s]!=null || r9[gvc]!=null){
+	if(r9[sGVCACHE]!=null || r9[sGVSTOREC]!=null){
 		LinkedHashMap tpiston
 		tpiston=(LinkedHashMap)r9[sPISTN]
 		r9[sPISTN]=[:]
 		((Map)r9[sPISTN])[sZ]=sMs(tpiston,sZ)
 		tpiston=null
-		if(r9[s]!=null){
+		if(r9[sGVCACHE]!=null){
 			String semName=sTGBL
 			String wName=sMs(r9,spId)
 			getTheLock(semName,sFINLZ)
-			for(var in (Map<String,Map>)r9[s]){
+			for(var in msMs(r9,sGVCACHE)){
 				Map vars=globalVarsVFLD[wName]
 				String varName=(String)var.key
 				if(varName && varName.startsWith(sAT) && vars[varName] && var.value.v!=vars[varName].v){
@@ -3188,8 +3190,8 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 			releaseTheLock(semName)
 		}
 		relaypCall(r9)
-		aa=r9.remove(s)
-		aa=r9.remove(gvc)
+		aa=r9.remove(sGVCACHE)
+		aa=r9.remove(sGVSTOREC)
 		aa=r9.remove(sGSTORE)
 		r9[sINITGS]=false
 	}else{
@@ -3205,7 +3207,7 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 
 //update graph data
 	Map stats
-	s=sSTATS
+	String s; s=sSTATS
 	if(myPep)stats=(Map)gtAS(s) else stats=(Map)gtSt(s)
 	stats=stats ?: [:]
 
@@ -3381,7 +3383,7 @@ private void updateLogs(Map r9,Long lastExecute=null){
 		assignSt(sLEXEC,lastExecute)
 		if(nc && cacheMap!=null){
 			nc[sLEXEC]=lastExecute
-			nc['temp']=[:]+mMs(r9,'temp')
+			nc[sTEMP]=[:]+mMs(r9,sTEMP)
 			nc[sPCACHE]=[:]+mMs(r9,sPCACHE)
 			theCacheVFLD[id]=nc
 			theCacheVFLD=theCacheVFLD
@@ -3538,7 +3540,7 @@ private Boolean executeStatement(Map r9,Map statement,Boolean asynch=false){
 
 	Boolean svCSC=cchg
 	Boolean value; value=true
-	Map<String,Map>sysV=(Map<String,Map>)r9[sSYSVARS]
+	Map<String,Map>sysV=msMs(r9,sSYSVARS)
 	Double svIndex=(Double)oMv(sysV[sDLLRINDX])
 	List svDevice=liMv(sysV[sDLLRDEVICE])
 
@@ -6459,24 +6461,21 @@ private Long vcmd_saveStateLocally(Map r9,device,List prms,Boolean global=false)
 	List<String> attributes=scast(r9,prms[iZ]).tokenize(sCOMMA)
 	String canister=canisterS(r9,device,prms)
 	Boolean overwrite=!(prms.size()>i2 ? bcast(r9,prms[i2]):false)
-	String iGS=sINITGS
-	String gs=sGSTORE
-	String gvc=sGVSTOREC
-	if(global && !bIs(r9,iGS)){
-		r9[gs]=wgetGStore()
-		r9[iGS]=true
+	if(global && !bIs(r9,sINITGS)){
+		r9[sGSTORE]=wgetGStore()
+		r9[sINITGS]=true
 	}
 	for(String attr in attributes){
 		String n=canister+attr
 		def value; value=getDeviceAttributeValue(r9,device,attr,true)
 		if(attr==sHUE && value!=null && value!=sBLK) value=devHue2WcHue(value as Integer)
-		def curVal= global ? mMs(r9,gs)[n] : mMs(r9,sSTORE)[n]
+		def curVal= global ? mMs(r9,sGSTORE)[n] : mMs(r9,sSTORE)[n]
 		if(overwrite || curVal==null){
 			if(global){
-				r9[gs][n]=value
-				LinkedHashMap cache= (LinkedHashMap)r9[gvc] ?: [:] as LinkedHashMap
+				r9[sGSTORE][n]=value
+				LinkedHashMap cache= (LinkedHashMap)r9[sGVSTOREC] ?: [:] as LinkedHashMap
 				cache[n]=value
-				r9[gvc]=cache
+				r9[sGVSTOREC]=cache
 			}else r9[sSTORE][n]=value
 			if(isEric(r9))doLog(sINFO, "stored ${gtLbl(device)} $attr ($value) to ${global ? 'global': 'local'} store $n curVal: $curVal")
 		} else
@@ -6496,23 +6495,20 @@ private Long vcmd_loadStateLocally(Map r9,device,List prms,Boolean global=false)
 	List<String> newattrs=[]
 	List vals=[]
 
-	String iGS=sINITGS
-	String gs=sGSTORE
-	String gvc=sGVSTOREC
-	if(global && !bIs(r9,iGS)){
-		r9[gs]=wgetGStore()
-		r9[iGS]=true
+	if(global && !bIs(r9,sINITGS)){
+		r9[sGSTORE]=wgetGStore()
+		r9[sINITGS]=true
 	}
 	for(String attr in attributes){
 		String n=canister+attr
-		def value; value=global ? mMs(r9,gs)[n]: mMs(r9,sSTORE)[n]
+		def value; value=global ? mMs(r9,sGSTORE)[n]: mMs(r9,sSTORE)[n]
 		def a
 		if(empty){
 			if(global){
-				a=mMs(r9,gs).remove(n)
-				Map cache=mMs(r9,gvc) ?: [:]
+				a=mMs(r9,sGSTORE).remove(n)
+				Map cache=mMs(r9,sGVSTOREC) ?: [:]
 				cache[n]=null
-				r9[gvc]=cache
+				r9[sGVSTOREC]=cache
 			}else a=mMs(r9,sSTORE).remove(n)
 		}
 		if(value==null){
@@ -7523,7 +7519,7 @@ private List<Map> listPreviousStates(device,String attr,Long threshold,Boolean e
 @CompileStatic
 private static Boolean isEntryInCache(Map r9, Map value){
 	String n=sMs(value,sI)
-	return ((Map<String,Map>)r9[sNWCACHE])[n]!=null
+	return msMs(r9,sNWCACHE)[n]!=null
 }
 
 @CompileStatic
@@ -7537,7 +7533,7 @@ private static void updateCache(Map r9,Map value,Long t){
 		if(valueV[sVT]!=null)a=valueV.remove(sVT)
 		if(valueV[sX]!=null)a=valueV.remove(sX)
 		if(valueV[sP]!=null)a=valueV.remove(sP)
-		((Map<String,Map>)r9[sNWCACHE])[n]=valueV+( [(sS):t] as Map)
+		msMs(r9,sNWCACHE)[n]=valueV+( [(sS):t] as Map)
 	}
 }
 
@@ -8685,7 +8681,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 			a=executeEvent(r9,event)
 			processSchedules r9,true
 			//save cache collected through dummy run
-			for(item in (Map<String,Map>)r9[sNWCACHE])((Map)r9[sCACHE])[(String)item.key]=item.value
+			for(item in msMs(r9,sNWCACHE))((Map)r9[sCACHE])[(String)item.key]=item.value
 			assignSt(sCACHE,mMs(r9,sCACHE))
 			updateCacheFld(r9,sCACHE,[:]+mMs(r9,sCACHE),s,true)
 
@@ -9407,10 +9403,9 @@ private Map setVariable(Map r9,String name,value){
 				Map variable=globalVarsVFLD[wName][tn]
 				variable.v=cast(r9,value,sMt(variable))
 				globalVarsVFLD=globalVarsVFLD
-				String s=sGVCACHE
-				Map<String,Map> cache=r9[s]!=null ? (Map<String,Map>)r9[s]:[:]
+				Map<String,Map> cache=r9[sGVCACHE]!=null ? msMs(r9,sGVCACHE):[:]
 				cache[tn]=variable
-				r9[s]=cache
+				r9[sGVCACHE]=cache
 				releaseTheLock(semName)
 				waddInUseGlobalVar(r9,tn,false)
 				return variable
@@ -12815,7 +12810,7 @@ private static String rtnStr(v,Boolean frcStr=false){
 @CompileStatic
 private gtSysVarVal(Map r9,String name, Boolean frcStr=false){
 	String shsm=sDLR+sHSMSTS
-	Map<String,Map> sv=(Map<String,Map>)r9[sSYSVARS]
+	Map<String,Map> sv=msMs(r9,sSYSVARS)
 	Map ce=mMs(r9,sCUREVT) ?: [:]
 	Map pe=mMs(r9,sPREVEVT) ?: [:]
 	switch(name){
@@ -12965,7 +12960,7 @@ private static List<String> fill_CACH(){ return [sDARGS,sHTTPCNTN,sHTTPCODE,sHTT
 @CompileStatic
 private static void stSysVarVal(Map r9,String nm,value/*,Boolean cachePersist=true*/){
 	Boolean cachePersist=true
-	Map<String,Map>sysV=(Map<String,Map>)r9[sSYSVARS]
+	Map<String,Map>sysV=msMs(r9,sSYSVARS)
 	Map var=sysV[nm]
 	if(var==null)return
 	if(!ListCache) ListCache=fill_CACH()
@@ -12979,9 +12974,12 @@ private static void stSysVarVal(Map r9,String nm,value/*,Boolean cachePersist=tr
 	((Map)((Map)r9[sSYSVARS])[nm])[sV]=value
 }
 
-private static getRandomValue(Map r9,String nm){ return ((Map<String,Map>)r9.temp).randoms[nm] }
-private static void setRandomValue(Map r9,String nm,value){ ((Map<String,Map>)r9.temp).randoms[nm]=value }
-private static void resetRandomValues(Map r9){ r9.temp=[randoms:[:]] }
+@Field static final String sTEMP='temp'
+@Field static final String sRANDS='randoms'
+
+private static getRandomValue(Map r9,String nm){ return msMs(r9,sTEMP)[sRANDS][nm] }
+private static void setRandomValue(Map r9,String nm,value){ msMs(r9,sTEMP)[sRANDS][nm]=value }
+private static void resetRandomValues(Map r9){ r9[sTEMP]=[(sRANDS):[:]] }
 
 private static Map getColorByName(String nm){
 	return getColors().find{ Map it -> sMs(it,sNM)==nm }
