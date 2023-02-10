@@ -10460,14 +10460,14 @@ private Map func_sqrt(Map r9,List<Map> prms){
 /** Usage: pistonPaused(pistonName)			**/
 private Map func_ispistonpaused(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnErr('ispistonpaused(pistonName)')
-	String string=strEvalExpr(r9,prms[iZ])
-	rtnMapB((Boolean)parent.isPisPaused(string))
+	String s=strEvalExpr(r9,prms[iZ])
+	rtnMapB((Boolean)parent.isPisPaused(s))
 }
 
 /** power converts a decimal to power decimal value			**/
 /** Usage: power(integer or decimal or string, power)			**/
 private Map func_power(Map r9,List<Map> prms){
-	if(badParams(r9,prms,i2))return rtnErr('sqrt(integer or decimal or string, power)')
+	if(badParams(r9,prms,i2))return rtnErr('power(integer or decimal or string, power)')
 	rtnMapD(dblEvalExpr(r9,prms[iZ]) ** dblEvalExpr(r9,prms[i1]))
 }
 
