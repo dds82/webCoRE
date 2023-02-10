@@ -10461,7 +10461,10 @@ private Map func_sqrt(Map r9,List<Map> prms){
 private Map func_ispistonpaused(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnErr('ispistonpaused(pistonName)')
 	String s=strEvalExpr(r9,prms[iZ])
-	rtnMapB((Boolean)parent.isPisPaused(s))
+	Boolean r= (Boolean)parent.isPisPaused(s)
+	if(r==(Boolean)null)
+		return rtnErr('ispistonpaused(pistonName) piston not found')
+	rtnMapB(r)
 }
 
 /** power converts a decimal to power decimal value			**/

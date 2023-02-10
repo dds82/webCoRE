@@ -3979,8 +3979,10 @@ Boolean isPisPaused(String pistonId){
 		meta=gtMeta(piston,wName,pid)
 		if(meta && !((Boolean)meta[sA])) return true
 	}
-	if(eric1() && (!piston || !meta))
-		debug "isPisPaused no piston $pistonId or metadata"
+	if(!piston || !meta){
+		if(eric1()) debug "isPisPaused no piston $pistonId or metadata"
+		return (Boolean)null
+	}
 	return false
 }
 
