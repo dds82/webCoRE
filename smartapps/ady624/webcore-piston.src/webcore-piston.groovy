@@ -10550,7 +10550,7 @@ private Map func_length(Map r9,List<Map> prms){ return func_strlen(r9,prms)}
 /** coalesce returns the first non-empty parameter				**/
 /** Usage: coalesce(value1[, value2[, ..., valueN]])				**/
 private Map func_coalesce(Map r9,List<Map> prms){
-	if(badParams(r9,prms,i1))return rtnErr('coalesce(value1[, value2[, ..., valueN]])')
+	if(badParams(r9,prms,i1))return rtnErr('coalesce'+sVALUEN)
 	Integer sz,i
 	sz=prms.size()
 	for(i=iZ; i<sz; i++){
