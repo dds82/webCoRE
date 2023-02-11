@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update February 9, 2023 for Hubitat
+ * Last update February 11, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20230130_HE'
-@Field static final String sHVERSTR='v0.3.114.20230130_HE - February 9, 2023'
+@Field static final String sHVERSTR='v0.3.114.20230130_HE - February 11, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -3160,7 +3160,7 @@ private Boolean isCustomEndpoint(){
 }
 
 String getDashboardUrl(){
-	if(!gtSetStr('endpoint')) return sNL
+	if(!(String)state.endpoint) return sNL
 
 	String aa= gtSetStr('customWebcoreInstanceUrl')
 	if(gtSetB('customEndpoints') && aa){
