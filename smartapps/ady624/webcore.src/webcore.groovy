@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update February 11, 2023 for Hubitat
+ * Last update February 14, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20230130_HE'
-@Field static final String sHVERSTR='v0.3.114.20230130_HE - February 11, 2023'
+@Field static final String sHVERSTR='v0.3.114.20230130_HE - February 14, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -696,7 +696,7 @@ private pageSectionAcctId(Boolean ins=false){
 		msg= "If you have (or may have) multiple webCoRE instances or multiple hubs running webCoRE), for proper IDE operations all of the hubs should be linked together with a common account identifier."
 		msg+= "<br>"
 		Boolean noteshown; noteshown=false
-		msg+= "\n - hub uuid: " + hubUID.toString()
+		msg+= "\n - hub uuid: " + gtHubUID()
 		if(setA && acct){
 			msg += "\n - Using Custom account identifier: $setA"
 			if(acct!=acctHash){
@@ -1049,7 +1049,7 @@ Map getChildPstate(){ gtPdata() }
 Map gtPdata(){
 	LinkedHashMap msettings=(LinkedHashMap)gtAS('settings')
 	if((String)gtSt('accessToken')) updateEndpoint()
-	List a1=[ hashId(((Long)location.id).toString()+sML), hashId(hubUID.toString()+gtLname()+sML)]
+	List a1=[ hashId(((Long)location.id).toString()+sML), hashId(gtHubUID()+gtLname()+sML)]
 	String lsid=locationSid()
 	return [
 		sCv: sVER,
@@ -1149,21 +1149,29 @@ private void clearGlobalPistonCache(String meth=null){
 	t0=null
 }
 
+private Boolean uidChgd(){ return gtHubUID()!=(String)state.svUUID }
+
 private void initialize(){
-	Boolean chg//,initT
-	chg=false
-//	initT=false
-	Boolean reSub=(Boolean)gtAS('forceResub1')
+	Boolean chg; chg=false
+	Boolean reSub; reSub=(Boolean)gtAS('forceResub1')
+
+	if(uidChgd()){
+		reSub=null
+		warn "hub UUID change detected"
+		state.svUUID=gtHubUID()
+	}
+
 	String pS='properSID'
+	Boolean prpSid; prpSid=(Boolean)gtAS(pS)
 	if(reSub==null){
 		assignAS('forceResub1',true)
 		assignAS(pS,null)
+		prpSid=null
 		warn "SID reset requested"
 	}
 
 	String wName=sAppId()
 
-	Boolean prpSid=(Boolean)gtAS(pS)
 	Boolean sprp= gtSetB(pS)
 	if(prpSid==null || prpSid!=sprp){
 		Boolean t0=sprp!=null ?: true
@@ -1171,18 +1179,16 @@ private void initialize(){
 		assignSt(pS,t0)
 		app.updateSetting(pS, [type: sBOOL, (sVAL): t0])
 		initTokens()
-		//initT=true
-		chg=true
 		acctlocFLD[wName]=null
 		locFLD[wName]=sNL
 		clearHashMap(wName)
 		warn "SID reset done"
+		chg=true
 	}
 
 	if(checkSIDs()) chg=true
 
 	if(chg) assignAS('doResub',true)
-	//if(initT)initTokens()
 
 	subscribeAll()
 	Map t0=(Map)gtAS(sVARS)
@@ -2935,16 +2941,16 @@ void resetMemSt(String meth,String wName){
 }
 
 @Field static final String sVC='ver check'
-@CompileStatic
 void verCheck(String wName){
-	if(verFLD[wName]==sVER && HverFLD[wName]==sHVER) return
+	Boolean uuidChg= uidChgd()
+	if(verFLD[wName]==sVER && HverFLD[wName]==sHVER && !uuidChg) return
 	if(verFLD[wName]==sNL || HverFLD[wName]==sNL){
-		if((String)gtSt('cV')==sVER && (String)gtSt('hV')==sHVER){
+		if((String)gtSt('cV')==sVER && (String)gtSt('hV')==sHVER && !uuidChg){
 			resetMemSt(sVC,wName)
 			clearBaseResult(sVC,wName)
 		}
 	}
-	if(verFLD[wName]!=sVER || HverFLD[wName]!=sHVER){
+	if(verFLD[wName]!=sVER || HverFLD[wName]!=sHVER || uuidChg){
 		info "webCoRE software Updated to "+sVER+" HE: "+sHVER
 		resetMemSt(sVC,wName)
 		updated()
@@ -3195,7 +3201,7 @@ private String getDashboardInitUrl(Boolean reg=false){
 			(hubUID.toString() + sAppId()).replace("-", sBLK) + '/?access_token=' + (String)state.accessToken ) */
 //		log.debug "regkey $a"
 		t0=t0+( regkey.replace('http://',sBLK).replace('https://', sBLK).replace('.api.smartthings.com', sBLK).replace(':443', sBLK).replace(sDIV, sBLK) +
-			(hubUID.toString() + sAppId()).replace("-", sBLK) + '/?access_token=' + (String)state.accessToken ).bytes.encodeBase64()
+			(gtHubUID() + sAppId()).replace("-", sBLK) + '/?access_token=' + (String)state.accessToken ).bytes.encodeBase64()
 	}
 	if(eric())debug "getDashboardInitUrl result: $t0"
 	return t0
@@ -3545,7 +3551,7 @@ private String accountSid(){
 	Boolean useNew=stprp!=null ?: true
 	String t='-A'
 	String accountStr
-	accountStr= hubUID.toString() + (useNew ? t : sNL)
+	accountStr= gtHubUID() + (useNew ? t : sNL)
 	if(acctANDloc()) accountStr= gtSetStr('acctID')
 	//if(eric()) debug "instance acct: $accountStr"
 	return hashId(accountStr)
@@ -3575,7 +3581,7 @@ private String locationSid(){
 		else{
 			Boolean stprp= (Boolean)gtSt('properSID')
 			Boolean useNew=stprp!=null ?: true
-			t= (useNew ? hubUID.toString()+gtLname() : location.id.toString()) + sML
+			t= (useNew ? gtHubUID()+gtLname() : location.id.toString()) + sML
 		}
 		//if(eric()) debug "instance location: $t"
 		t= hashId(t)
@@ -3589,7 +3595,7 @@ private String getInstanceSid(){
 	Boolean useNew=stprp!=null ?: true
 	String hsh=sAppId()
 	String t='-I'
-	String instStr=useNew ? hubUID.toString()+hsh+t : hsh
+	String instStr=useNew ? gtHubUID()+hsh+t : hsh
 	//if(eric()) debug "instance ID: $instStr"
 	return hashId(instStr)
 }
@@ -3760,7 +3766,12 @@ void pCallupdateRunTimeData(Map data){
 
 private gtLTS() { wgetChildAppByLabel("webCoRE Long Term Storage") }
 
+
+
 //wrappers
+private String gtHubUID(){ return hubUID.toString() }
+private Boolean isHubitat(){ return hubUID!=null }
+
 private getHub(){
 	return ((List)location.getHubs()).find{ (String)it.getType()=='PHYSICAL' }
 }
@@ -5581,9 +5592,6 @@ List getColors(){
 	return theColorsFLD
 }
 
-private Boolean isHubitat(){
-	return hubUID!=null
-}
 
 private static String sectionTitleStr(String title)	{ return '<h3>'+title+'</h3>' }
 private static String inputTitleStr(String title)	{ return '<u>'+title+'</u>' }

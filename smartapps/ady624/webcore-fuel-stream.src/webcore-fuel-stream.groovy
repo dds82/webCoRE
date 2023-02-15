@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update January 28, 2023 for Hubitat
+ *  Last update February 14, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -11485,13 +11485,16 @@ Boolean fileExists(sensor, String attribute, String fname=sNL){
 		}
 	}catch(e){
 		String sensor_name=gtLbl(sensor)
-		if(e.message.contains("Not Found")){
+		if( isFNF((String)e.message) ){
 			debug "File DOES NOT Exist for ${sensor_name} (${attribute})",null,iN2
 		}else{
 			error"Find file ${sensor_name} (${attribute}) ($filename_} :: Exception: ",null,iN2,e
 		}
 	}
 	return res
+}
+static Boolean isFNF(String file){
+	return file.contains("Not Found") || file.contains('NoSuchFile')
 }
 
 @Field volatile static Map<String,String> readTmpFLD=[:]
@@ -11590,7 +11593,7 @@ Map readFile(sensor, String attribute, String fname=sNL){
 	}catch(e){
 		String sensor_name=gtLbl(sensor)
 		String ts1= " for ${sensor_name} (${attribute}) ($filename_}"
-		if(e.message.contains("Not Found")){
+		if( isFNF((String)e.message) ){
 			debug "File DOES NOT Exist"+ts1,null,iN2
 		}else{
 			error "Read File Data"+ts1+" :: Exception: ",null,iN2,e
@@ -14036,7 +14039,7 @@ Boolean getTheLockW(String qname,String meth=sNL,Boolean longWait=false){
 	Integer semaNum=semaNum(qname)
 	String semaSNum=semaNum.toString()
 	Semaphore sema=sema(semaNum)
-	while(!(sema.tryAcquire())){
+	while(!sema.tryAcquire()){
 		// did not get lock
 		Long t
 		t=lockTimesVFLD[semaSNum]
@@ -14200,8 +14203,8 @@ private Boolean gtSetB(String nm){ return (Boolean)settings[nm] }
 private Integer gtSetI(String nm){ return (Integer)settings[nm] }
 
 private Boolean gtStB(String nm){ return (Boolean)state[nm] }
-private gtSt(String nm){ return state."${nm}" }
-private gtAS(String nm){ return atomicState."${nm}" }
+private gtSt(String nm){ return state.get(nm) }
+private gtAS(String nm){ return atomicState.get(nm) }
 /** assign to state  */
 private void assignSt(String nm,v){ state."${nm}"=v }
 /** assign to atomicState  */

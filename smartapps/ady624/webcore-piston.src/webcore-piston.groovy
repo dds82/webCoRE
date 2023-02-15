@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update February 9, 2023 for Hubitat
+ * Last update February 14, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -2279,6 +2279,7 @@ private LinkedHashMap getParentCache(){
 			res=t1
 			theParentCacheVFLD[wName]=t1
 			theParentCacheVFLD=theParentCacheVFLD
+			clearHashMap(wName)
 			t1=null
 			sendM=true
 		}
@@ -6204,7 +6205,7 @@ private Boolean readFile(Map r9,List prms,Boolean data){
 		if(res) return true
 	}catch(e){
 		String s="Error reading file $name: "
-		if( ((String)e.message).contains("Not Found") ){
+		if( isFNF((String)e.message) ){
 			error s+"Not found",r9
 		}else error s,r9,iN2,e
 		readTmpBFLD[pNm]=null
@@ -6216,6 +6217,11 @@ private Boolean readFile(Map r9,List prms,Boolean data){
 private Long vcmd_readFile(Map r9,device,List prms){
 	Boolean a=readFile(r9,prms,true)
 	return lZ
+}
+
+@CompileStatic
+static Boolean isFNF(String file){
+	return file.contains("Not Found") || file.contains('NoSuchFile')
 }
 
 private Long vcmd_appendFile(Map r9,device,List prms){
@@ -6230,9 +6236,12 @@ private Long vcmd_appendFile(Map r9,device,List prms){
 			if(sz<=iZ) readTmpFLD[pNm]=sSPC
 			readTmpFLD[pNm]+=sLi(prms,i1)
 			ws=writeFile(r9,[name,readTmpFLD[pNm],sNL,sNL])
+		}else{
+			ws=writeFile(r9,[name,sLi(prms,i1),sNL,sNL])
+			if(eric())doLog(sINFO,"Append FNF write Status: $ws")
 		}
 	}catch(e){
-		if( ((String)e.message).contains("Not Found") ){
+		if( isFNF((String)e.message) ){
 			ws=writeFile(r9,[name,sLi(prms,i1),sNL,sNL])
 			if(eric())doLog(sINFO,"Append FNF write Status: $ws")
 		}else{
@@ -6262,7 +6271,7 @@ private Boolean fileExists(Map r9,String name){
 			}
 		}
 	}catch(e){
-		if( !((String)e.message).contains("Not Found") )
+		if( !isFNF((String)e.message) )
 			error "Error file exists $name: ",r9,iN2,e
 		readTmpBFLD[pNm]=null
 	}
@@ -6369,7 +6378,7 @@ private Long vcmd_deleteFile(Map r9,device,List prms){
 
 @Field static Map<String,List<Map>> fuelDataFLD=[:]
 
-private Map canisterMap(Map r9,String c,String n,s=null,d=null){
+private static Map canisterMap(Map r9,String c,String n,s=null,d=null){
 	Map req=[(sC):c,(sN):n,(sS):s,(sD):d,(sI):sMs(r9,sINSTID)]
 	req
 }
@@ -13400,6 +13409,20 @@ private void wremoveAllInUseGlobalVar(){
 
 	Boolean a=removeAllInUseGlobalVar()
 }
+
+// private List<Map> gtRooms(){
+//	Map room
+//	List<Map> rooms=[]
+//	List r=app.getRooms()
+//	for(rr in r){
+//		room=[:]
+//		room[sNM]=(String)r[sNM]
+//		room[sID]=(Long)r[sID]
+//		room['deviceIds']=(List)r['deviceIds']
+//		//room['devices']=(List)r['devices']
+//		rooms.push(room)
+//	}
+// }
 
 private void wappUpdateLabel(String s){ app.updateLabel(s) }
 private void wappUpdateSetting(String s,Map m){ app.updateSetting(s,m) }
