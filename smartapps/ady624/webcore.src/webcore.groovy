@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update February 14, 2023 for Hubitat
+ * Last update February 15, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20230130_HE'
-@Field static final String sHVERSTR='v0.3.114.20230130_HE - February 14, 2023'
+@Field static final String sHVERSTR='v0.3.114.20230130_HE - February 15, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -1478,9 +1478,11 @@ static void releaseTheLock(String meth=sNL){
 }
 
 @Field volatile static Map<String,List<Map>> childAppsFLD= [:]
+@Field static final String sGTCACHED='getCached'
 
-List<Map> gtCachedchildApps(String wName){
+List<Map> gtCachedchildApps(String wName,Boolean haveLock=false){
 	List<Map> res
+	if(!haveLock) Boolean didw=getTheLock(sGTCACHED)
 	res= childAppsFLD[wName]
 	if(!res){
 		String n=handlePistn()
@@ -1491,6 +1493,7 @@ List<Map> gtCachedchildApps(String wName){
 		childAppsFLD[wName]= res
 		childAppsFLD= childAppsFLD
 	}
+	if(!haveLock) releaseTheLock(sGTCACHED)
 	return res
 }
 
@@ -1504,11 +1507,11 @@ static void clearCachedchildApps(String wName){
 
 /**
  * get Piston details
- * @returns [ (sID): pid, (sNM): normalizeLabel(it), meta: [:]+meta ]
+ * @returns [ [(sID): pid, (sNM): normalizeLabel(it), meta: [:]+meta],... ]
  */
-private List<Map> presult(String wName){
+private List<Map> presult(String wName,Boolean haveLock=false){
 	String n=handlePistn()
-	return gtCachedchildApps(wName).sort{ (String)it.label }.collect{
+	return gtCachedchildApps(wName,haveLock).sort{ (String)it.label }.collect{
 		String pid= (String)it.pid //hashPID(it.id)
 		/*Map meta=[
 			(sA):isAct(t0),
@@ -1559,7 +1562,7 @@ private Map<String,Object> api_get_base_result(){
 			base_resultFLD[wName]=(Map)null
 		}else{
 			Map<String,Object> result=[:]+base_resultFLD[wName]
-			((Map)result.instance).pistons= presult(wName)
+			((Map)result.instance).pistons= presult(wName,true)
 			base_resultFLD[wName]=[:]+result
 			base_resultFLD=base_resultFLD
 			releaseTheLock(t)
@@ -1586,7 +1589,7 @@ private Map<String,Object> api_get_base_result(){
 		(sNM): gtLname()+ ' \\ ' +myN,
 		instance: [
 			account: [(sID): accountSid(), t: gtSt('lSIDchanged')  ],
-			pistons:  presult(wName),
+			pistons:  presult(wName,true),
 			(sID): instanceId,
 			locationId: locationId,
 			(sNM): myN,
