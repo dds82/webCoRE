@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update February 14, 2023 for Hubitat
+ * Last update February 18, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 //file:noinspection GroovyAssignabilityCheck
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230130_HE'
+@Field static final String sHVER='v0.3.114.20230218_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -7288,6 +7288,8 @@ void doStaysProcess(Map r9,List<Map>schedules,String co,Map cndtn,Integer cndNm,
 }
 
 @Field static final List<String> lGENERIC=['event_occurs','gets_any']
+@Field static final List<String> lSPECIFIC=['receives','gets']
+@Field static final String sDNM= ' (event device/attr did not match)'
 
 @CompileStatic
 private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,Map ro2=null,Map to=null,Map to2=null,Map options=[:]){
@@ -7322,29 +7324,32 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 				Map vvalMap= mMv(value)
 				String m1; m1=sNL
 				if(lg) m1= "Comparison (${vvalMap[sT]}) ${vvalMap[sV]} $comparison "
+				String compS; compS= sMv(mMs(lo,sOPERAND))
+				if(compS==sALRMSSTATUS) compS=sHSMSTS
+				else if(compS==sALRMSYSALRT) compS=sHSMALRT
+				else if(compS==sALRMSYSEVT) compS=sHSMSARM
+				Map ce= mMs(r9,sCUREVT) ?: [:]
+				String rEN= sMs(ce,sNM)
+				//sTHREAX fixAttr
 				if(!ro){
 					if(lg)msg= timer sBLK,r9
-					if(comparison in lGENERIC){ // generic trigger gets_any
-						Map ce= mMs(r9,sCUREVT) ?: [:]
-						String rEN= sMs(ce,sNM)
-						String compS
-						compS= sMv(mMs(lo,sOPERAND))
-						if(compS==sALRMSSTATUS) compS=sHSMSTS
-						else if(compS==sALRMSYSALRT) compS=sHSMALRT
-						else if(compS==sALRMSYSEVT) compS=sHSMSARM
+					if(comparison in lGENERIC){ // generic trigger event_occurs,gets_any
 						if(sMt(mMs(lo,sOPERAND))==sV && rEN==compS){
 							res= true
 						}else if(sMs(vvalMap,sD)==sMs(ce,sDEV) && sMa(vvalMap)==rEN){
 							res= true
 							compS= sMa(vvalMap)
 						}
-						if(lg)msg[sM]= "Comparison (string) ${compS} $comparison = $res"
+						if(lg)msg[sM]= "Comparison (string) ${compS} $comparison = $res" + (!res ? sDNM:sBLK)
 					}else{
 						res= callComp(r9,fn,value,null,null,tvalue,tvalue2)
 						if(lg)msg[sM]= m1+"= $res"
 					}
 					if(lg)debug msg,r9
 				}else{
+					Boolean isSpecific= comparison in lSPECIFIC // specific receives, gets
+					Boolean ok= isSpecific ? ( (sMt(mMs(lo,sOPERAND))==sV && rEN==compS) ||
+								((sMs(vvalMap,sD)==sMs(ce,sDEV) && sMa(vvalMap)==rEN)) ) : true
 					Boolean rres
 					String roG= sMs(mMs(ro,sOPERAND),sG) ?: sANY
 					res= roG!=sANY
@@ -7355,9 +7360,9 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 						if(lg) m2= m1+"(${rvalue?.v?.t}) ${rvalue?.v?.v} "
 						if(!ro2){
 							if(lg)msg= timer sBLK,r9
-							rres= callComp(r9,fn,value,rvalue,null,tvalue,tvalue2)
+							rres= ok ? callComp(r9,fn,value,rvalue,null,tvalue,tvalue2) : ok
 							if(lg){
-								msg[sM]= m2+"= $rres"
+								msg[sM]= m2+"= $rres" + (!rres && !ok ? sDNM:sBLK)
 								debug msg,r9
 							}
 						}else{
@@ -7367,7 +7372,7 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 							for(Map<String,Map> r2value in liMs(ro2,sVALUES)){
 								if(r2value && sMt(mMv(r2value))==sDEV) r2value[sV]= evaluateExpression(r9,mMv(r2value),sDYN)
 								if(lg)msg= timer sBLK,r9
-								Boolean r2res= callComp(r9,fn,value,rvalue,r2value,tvalue,tvalue2)
+								Boolean r2res= ok ? callComp(r9,fn,value,rvalue,r2value,tvalue,tvalue2) : false
 								if(lg){
 									msg[sM]= m2+".. (${r2value?.v?.t}) ${r2value?.v?.v} = $r2res"
 									debug msg,r9
@@ -7391,7 +7396,7 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 				if(!pass) res= false
 			}
 		}else{
-			if(lge)myDetail r9,"eXcluded or not forceall",iN2
+			if(lg)debug "Comparison $comparison = $res (event device/attr eXcluded)",r9
 		}
 		result= loG==sANY ? result||res : result&&res
 		if(oM){
@@ -8120,7 +8125,6 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 				incrementDevices(deviceId,cmpTyp,attr)
 			}
 		}
-		List<String>rg=['receives','gets']
 		String sALLOWA='allowA'
 		operandTraverser={ Map node,Map operand,Map value,String cmpTyp, Boolean isTrk ->
 			if(!operand)return
@@ -8148,7 +8152,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 							String attrVal; attrVal=sNL
 							allowAval= allowAval==(Boolean)null ? true : allowAval
 
-							if(allowAval && (sMs(node,sCO) in rg) && value && sMt(value)==sC && value[sC]){
+							if(allowAval && (sMs(node,sCO) in lSPECIFIC) && value && sMt(value)==sC && value[sC]){
 								attrVal=sMs(value,sC)
 							}else allowAval=false
 							if(allowAval && attrVal!=sNL){
@@ -8863,31 +8867,37 @@ private getDeviceAttributeValue(Map r9,device,String attr,Boolean skipCurEvt=fal
 		String msg="Error reading current value for ${device}.".toString()
 
 		String nattr=fixAttr(attr)
-		if(nattr==sSTS){
-			result= device.getStatus()
-		}else if(nattr==sTHREAX){
-			def xyz
-			xyz= !skipCurEvt && r9EvN==sTHREAX && r9EdID && ce && ce[sVAL] ? ce[sVAL] :null
-			if(isEric(r9) && xyz)myDetail r9,s+" event $xyz (${myObj(xyz)})",iN2
-			Boolean errmsg; errmsg=false
-			if(!xyz){
-				try{
-					xyz=device.currentValue(sTHREAX,true)
-					if(xyz && isEric(r9))myDetail r9,s+" read $xyz (${myObj(xyz)})",iN2
-				}catch(al){
-					error msg+sTHREAX+sCLN,r9,iN2,al
-					errmsg=true
+		switch(nattr){
+			case 'lastActivityWC':
+				result= ((Date)device.getLastActivity())?.getTime()
+				break
+			case sSTS:
+				result= device.getStatus()
+				break
+			case sTHREAX:
+				def xyz
+				xyz= !skipCurEvt && r9EvN==sTHREAX && r9EdID && ce && ce[sVAL] ? ce[sVAL] :null
+				if(isEric(r9) && xyz)myDetail r9,s+" event $xyz (${myObj(xyz)})",iN2
+				Boolean errmsg; errmsg=false
+				if(!xyz){
+					try{
+						xyz=device.currentValue(sTHREAX,true)
+						if(xyz && isEric(r9))myDetail r9,s+" read $xyz (${myObj(xyz)})",iN2
+					}catch(al){
+						error msg+sTHREAX+sCLN,r9,iN2,al
+						errmsg=true
+					}
 				}
-			}
-			if(xyz){
-				result= gtThreeAxisVal(xyz,attr)
-			}else if(!errmsg) error msg+sTHREAX+sCLN,r9,iN2
-		}else{
-			try{
-				result=device.currentValue(attr,true)
-			}catch(all){
-				error msg+attr+sCLN,r9,iN2,all
-			}
+				if(xyz){
+					result= gtThreeAxisVal(xyz,attr)
+				}else if(!errmsg) error msg+sTHREAX+sCLN,r9,iN2
+				break
+			default:
+				try{
+					result=device.currentValue(attr,true)
+				}catch(all){
+					error msg+attr+sCLN,r9,iN2,all
+				}
 		}
 	}
 

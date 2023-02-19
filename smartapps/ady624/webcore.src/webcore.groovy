@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update February 15, 2023 for Hubitat
+ * Last update February 18, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -31,8 +31,8 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230130_HE'
-@Field static final String sHVERSTR='v0.3.114.20230130_HE - February 15, 2023'
+@Field static final String sHVER='v0.3.114.20230218_HE'
+@Field static final String sHVERSTR='v0.3.114.20230218_HE - February 18, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -1609,7 +1609,7 @@ private Map<String,Object> api_get_base_result(){
 			//hubs: ((List)location.getHubs()).collect{ [(sID): it.id /*hashId(it.id)*/, (sNM): gtLname(), firmware: isHubitat() ? (String)getHubitatVersion()[(String)it.id.toString()] : (String)it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]},
 			hubs: gtHubs().collect { [id: it.id, name: gtLname(), firmware: it.fw, physical: it.physical, powerSource: it.powerSource ] },
 			//incidents: alerts.collect{it}.findAll{ (Long)it.date >= incidentThreshold },
-			incidents: getIncidents(),
+			incidents: getIncidents(true),
 			//incidents: isHubitat() ? [] : location.activeIncidents.collect{[date: it.date.time, (sTIT): it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
 			(sID): locationId,
 			mode: hashId(gtCurrentMode()[sID]),
@@ -3278,8 +3278,8 @@ Map getDevDetails(dev, Boolean addtransform=false){
 	String dnm=dev.getDisplayName()
 	List<Map> newCL; newCL=[]
 	List cmdL; cmdL=dev.getSupportedCommands()
-	if(eric()) error("DEVICE $dnm")
-	if(eric()) warn("COMMANDS $cmdL")
+	//if(eric()) error("DEVICE $dnm")
+	//if(eric()) warn("COMMANDS $cmdL")
 	cmdL=cmdL.unique{ (String)it.getName() }
 	Boolean b
 	for(cmd in cmdL){
@@ -3288,8 +3288,8 @@ Map getDevDetails(dev, Boolean addtransform=false){
 		mycmd[sN]=cnm
 		List myargs=(List)cmd.getArguments()
 		List<Map> prms = cmd.getParameters()
-		if(eric()) warn("$cnm arguments: $myargs")
-		if(eric()) warn("$cnm Parameters: $prms")
+		//if(eric()) warn("$cnm arguments: $myargs")
+		//if(eric()) warn("$cnm Parameters: $prms")
 		if(myargs){
 			Boolean ok; ok=false
 			List<Map> myL; myL=[]
@@ -3325,7 +3325,7 @@ Map getDevDetails(dev, Boolean addtransform=false){
 			}
 		}
 	}
-	if(eric()) warn("PROCESSED COMMANDS $newCL")
+	//if(eric()) warn("PROCESSED COMMANDS $newCL")
 
 	newCL= newCL.unique{ (String)it[sN] }
 
@@ -3334,11 +3334,11 @@ Map getDevDetails(dev, Boolean addtransform=false){
 	for (Map cmd in newCL){
 		String cmdName=cmd[sN]
 		if(allCmds.containsKey(cmdName)){
-			if (eric()){
+			/* if (eric()){
 				info("allCmds has device command $cmdName")
 				trace("found in allCmds ${allCmds[cmdName]}")
 				trace("found in device $cmd")
-			}
+			} */
 		}else{
 			cmd.cm=true // custom
 			if((List)cmd[sP]){
@@ -3362,7 +3362,7 @@ Map getDevDetails(dev, Boolean addtransform=false){
 				}
 				cmd[sP]=typs
 			}
-			if(eric()) warn("adding custom marker to $cmdName $cmd")
+			//if(eric()) warn("adding custom marker to $cmdName $cmd")
 		}
 	}
 
@@ -4142,6 +4142,7 @@ def newIncidentHandler(evt){
 }
 
 @Field static final String sHSMALRTS='hsmAlerts'
+@Field static final String sADDHSMEVT='addHsmEvent'
 
 void addHsmEvent(evt){
 	String evNm = (String)evt.name
@@ -4149,6 +4150,8 @@ void addHsmEvent(evt){
 	String evDesc=(String)evt.descriptionText
 	String nevDesc= normalizeString(evDesc)
 	if(eric())log.debug "received event: name: $evNm, value: $evV, Desc:$evDesc desc1: $nevDesc  json >> ${evt.jsonData}"
+
+	Boolean didw=getTheLock(sADDHSMEVT)
 
 	def a; a=gtAS(sHSMALRTS)
 	Map alert; alert=null
@@ -4173,9 +4176,14 @@ void addHsmEvent(evt){
 		]
 		Boolean aa=alerts.push(alert)
 		assignAS(sHSMALRTS,alerts)
+
+		releaseTheLock(sADDHSMEVT)
+
 		clearParentPistonCache("hsmAlerts changed")
 		clearBaseResult('hsmAlertHandler')
-	}
+	}else
+		releaseTheLock(sADDHSMEVT)
+
 	if(alerts) a=getIncidents() // cause trimming
 }
 
@@ -4206,18 +4214,25 @@ def hsmAlertHandler(evt) { // hsmAlert event
 //incidents: isHubitat() ? [] : location.activeIncidents.collect{[date: it.date.time, (sTIT): it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
 // this should search the db from hsmAlert events? - they are not there
 
-private List<Map> getIncidents(){
+@Field static final String sGTINCIDENTS='getIncidents'
+
+private List<Map> getIncidents(Boolean haveLock=false){
+
+	if(!haveLock) Boolean didw=getTheLock(sGTINCIDENTS)
 
 	List<Map> alerts,newAlerts,new2Alerts,new3Alerts,new4Alerts
 	def a; a=gtAS(sHSMALRTS)
 	alerts= a? (List<Map>)a : []
 	Integer osz; osz=alerts.size()
-	if(osz==0) return []
+	if(osz==0){
+		if(!haveLock) releaseTheLock(sGTINCIDENTS)
+		return []
+	}
 
 	String locStat=(String)location.hsmStatus
 	if(locStat==sALLDISARM){ alerts=[]; state.remove(sHSMALRTS) }
 
-	/*
+/*
 	(sNM): evNm,
 	(sV):evt.value,
 	des:evDesc,
@@ -4235,6 +4250,7 @@ private List<Map> getIncidents(){
 	Map<String,List<Map>> rules
 	rules=[:]
 	String intrusion='intrusion'
+	Boolean chgd; chgd=false
 
 	Boolean b
 	for(Map myE in newAlerts){
@@ -4244,26 +4260,32 @@ private List<Map> getIncidents(){
 		if(evNm=='hsmAlert'){
 			if(v.contains(intrusion)){
 				if(locStat!=sDISARMD) b= new2Alerts.push(myE)
+				else chgd=true
 			}else if(v in ['water','smoke','arming']){
 				b=new2Alerts.push(myE)
 			}else if(v == sCANCEL){
 				new2Alerts=[]
 				rules= [:]
+				chgd=true
 			}else if(v=='rule'){
 				String ruleKey= desc
 				if(ruleKey){
 					List<Map> trule= rules[ruleKey] ?: []
 					b= trule.push(myE)
 					rules[ruleKey]= trule
-				}
-			}else log.warn "unknown $evNm $v"
+				} else chgd=true
+			}else { log.warn "unknown $evNm $v"; chgd=true }
 		}else if(evNm=='hsmRule' && v==sCANRULEA){
 			String ruleKey=desc
 			if(ruleKey) rules[ruleKey]=[]
+			chgd=true
 		}else if(evNm=='hsmRules' && v=='disarmedRule'){
 			String ruleKey=desc
 			if(ruleKey) rules[ruleKey]=[]
-		}else log.warn "unknown $evNm $v"
+			chgd=true
+		}else if(evNm=='hsmRules' && v=='armedRule'){ // ignored
+			chgd=true
+		}else { log.warn "unknown $evNm $v"; chgd=true }
 	}
 	new3Alerts= []+new2Alerts
 	for(l in rules.keySet()){
@@ -4272,12 +4294,16 @@ private List<Map> getIncidents(){
 	new4Alerts = new3Alerts.collect { it }.sort { (Long)it.date }
 
 	Integer nsz=new4Alerts.size()
-	if(osz!=nsz) {
+	if(osz!=nsz || chgd){
 		assignAS(sHSMALRTS,[]+new4Alerts)
+
+		if(!haveLock) releaseTheLock(sGTINCIDENTS)
+
 		clearParentPistonCache("hsmAlerts changed")
 		clearBaseResult('hsmAlertHandler')
-	}
-	return new4Alerts
+	} else
+		if(!haveLock) releaseTheLock(sGTINCIDENTS)
+		return new4Alerts
 }
 
 void modeHandler(evt){
@@ -4668,6 +4694,7 @@ Map getChildAttributes(){
 	image				: [ (sN): "image",				(sT): "image",											],
 	indicatorStatus		: [ (sN): "indicator status",	(sT): sENUM,		(sO): ["never", "when off", "when on"],					],
 //	infraredLevel		: [ (sN): "infrared level",		(sT): sINT,	(sR): [0, 100],		u: "%",							],
+	lastActivityWC		: [ (sN): "last activity",		(sT): sDTIME,											],
 //	lastCodeName		: [ (sN): "last lock code",		(sT): sSTR,											],
 	level				: [ (sN): sLVL,					(sT): sINT,	(sR): [0, 100],		u: "%",							],
 	levelPreset			: [ (sN): "preset level",		(sT): sINT,	(sR): [1, 100],		u: "%",							],
