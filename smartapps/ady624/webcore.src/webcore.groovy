@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update February 18, 2023 for Hubitat
+ * Last update February 20, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -31,8 +31,8 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230218_HE'
-@Field static final String sHVERSTR='v0.3.114.20230218_HE - February 18, 2023'
+@Field static final String sHVER='v0.3.114.20230220_HE'
+@Field static final String sHVERSTR='v0.3.114.20230220_HE - February 20, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -4268,7 +4268,7 @@ private List<Map> getIncidents(Boolean haveLock=false){
 				rules= [:]
 				chgd=true
 			}else if(v=='rule'){
-				String ruleKey= desc
+				String ruleKey= stripH(desc)
 				if(ruleKey){
 					List<Map> trule= rules[ruleKey] ?: []
 					b= trule.push(myE)
@@ -4276,11 +4276,11 @@ private List<Map> getIncidents(Boolean haveLock=false){
 				} else chgd=true
 			}else { log.warn "unknown $evNm $v"; chgd=true }
 		}else if(evNm=='hsmRule' && v==sCANRULEA){
-			String ruleKey=desc
+			String ruleKey= stripH(desc)
 			if(ruleKey) rules[ruleKey]=[]
 			chgd=true
 		}else if(evNm=='hsmRules' && v=='disarmedRule'){
-			String ruleKey=desc
+			String ruleKey= stripH(desc)
 			if(ruleKey) rules[ruleKey]=[]
 			chgd=true
 		}else if(evNm=='hsmRules' && v=='armedRule'){ // ignored
@@ -4304,6 +4304,16 @@ private List<Map> getIncidents(Boolean haveLock=false){
 	} else
 		if(!haveLock) releaseTheLock(sGTINCIDENTS)
 		return new4Alerts
+}
+
+static String stripH(String str){
+	if(!str) return sBLK
+	Integer first; first = str.indexOf('<span')
+	String res; res = str[iZ..(first>iZ ? first-i1 : str.length()-i1)]
+	first = str.indexOf('CancelAlert')
+	String res1; res1 = res[iZ..(first>iZ ? first-i1 : res.length()-i1)]
+	res = res1.trim()
+	return res
 }
 
 void modeHandler(evt){
@@ -5515,7 +5525,8 @@ Map getChildVirtDevices(){
 	}
 	return cleanResult
 }
-
+// m - momentary - seems to restrict to 'executes'?
+// x - exclude nothing (for virtual devices)?
 private Map<String,Map> virtualDevices(){
 	return [
 		date:			[ (sN): 'Date',				(sT): sDATE,		],
@@ -5531,7 +5542,7 @@ private Map<String,Map> virtualDevices(){
 		rule:			[ (sN): 'Rule',				(sT): sENUM,	(sO): getRuleOptions(),		(sM): true ],
 		systemStart:	[ (sN): 'System Start',		(sT): sSTR,		x: true],
 		severeLoad:		[ (sN): 'Severe Load',		(sT): sSTR,		x: true],
-		zigbeeOff:		[ (sN): 'Zibee Off',		(sT): sSTR,		x: true],
+		zigbeeOff:		[ (sN): 'Zigbee Off',		(sT): sSTR,		x: true],
 		zigbeeOn:		[ (sN): 'Zigbee On',		(sT): sSTR,		x: true],
 		zwaveCrashed:	[ (sN): 'Z-Wave crashed',	(sT): sSTR,		x: true],
 		sunriseTime:	[ (sN): 'Sunrise Time',		(sT): sSTR,		x: true],

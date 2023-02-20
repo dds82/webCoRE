@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update February 18, 2023 for Hubitat
+ * Last update February 20, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -30,9 +30,10 @@
 //file:noinspection GroovyFallthrough
 //file:noinspection GrMethodMayBeStatic
 //file:noinspection GroovyAssignabilityCheck
+//file:noinspection UnnecessaryQualifiedReference
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230218_HE'
+@Field static final String sHVER='v0.3.114.20230220_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -133,6 +134,7 @@ static Boolean eric1(){ return false }
 @Field static final String sALRMSYSEVT='alarmSystemEvent'
 @Field static final String sHSMALRT='hsmAlert'
 @Field static final String sHSMSARM='hsmSetArm'
+@Field static final String sPWRSRC='powerSource'
 @Field static final String sASYNCREP='wc_async_reply'
 @Field static final String sCLRC='clearc'
 @Field static final String sCLRL='clearl'
@@ -2261,8 +2263,8 @@ private LinkedHashMap getParentCache(){
 			t1=[
 				coreVersion: sMs(t0,'sCv'),
 				hcoreVersion: sMs(t0,'sHv'),
-				('powerSource'): sMs(t0,'powerSource'),
-				region: sMs(t0,'region'),
+				(sPWRSRC): sMs(t0,sPWRSRC),
+				('region'): sMs(t0,'region'),
 				(sINSTID): sMs(t0,sINSTID),
 				(sSETTINGS): mMs(t0,'stsettings'),
 				(sENABLED): isEnbl(t0),
@@ -3097,7 +3099,7 @@ private Boolean executeEvent(Map r9,Map event){
 
 @Field static List<String> cleanData
 private static List<String> fill_cleanData(){
-	return ['allDevices', sPCACHE, sMEM, sBREAK, 'powerSource', 'oldLocations', sINCIDENTS, 'semaphoreDelay', sVARS,
+	return ['allDevices', sPCACHE, sMEM, sBREAK, sPWRSRC, 'oldLocations', sINCIDENTS, 'semaphoreDelay', sVARS,
 			sSTACCESS, sATHR, sBLD, sNWCACHE, 'mediaData', 'weather', sLOGS, sTRC, sSYSVARS, sLOCALV, sPREVEVT, sJSON, sRESP,
 			sCACHE, sSTORE, sSETTINGS, sLOCMODEID, 'coreVersion', 'hcoreVersion', sCNCLATNS, sCNDTNSTC, sPSTNSTC, sFFT, sRUN,
 			sRESUMED, sTERM, sINSTID, sWUP, sSTMTL, sARGS, 'nfl', sTEMP]
@@ -6205,7 +6207,7 @@ private Boolean readFile(Map r9,List prms,Boolean data){
 		if(res) return true
 	}catch(e){
 		String s="Error reading file $name: "
-		if( isFNF((String)e.message) ){
+		if( isFNF(r9,e) ){
 			error s+"Not found",r9
 		}else error s,r9,iN2,e
 		readTmpBFLD[pNm]=null
@@ -6219,9 +6221,11 @@ private Long vcmd_readFile(Map r9,device,List prms){
 	return lZ
 }
 
-@CompileStatic
-static Boolean isFNF(String file){
-	return file.contains("Not Found") || file.contains('NoSuchFile')
+Boolean isFNF(Map r9,Exception ex){
+	if(ex instanceof java.nio.file.NoSuchFileException) return true
+	String file=(String)ex.message
+	if(isEric(r9))doLog(sINFO,"isFNF ($file)")
+	return file.contains("Not Found")
 }
 
 private Long vcmd_appendFile(Map r9,device,List prms){
@@ -6241,7 +6245,7 @@ private Long vcmd_appendFile(Map r9,device,List prms){
 			if(eric())doLog(sINFO,"Append FNF write Status: $ws")
 		}
 	}catch(e){
-		if( isFNF((String)e.message) ){
+		if( isFNF(r9,e) ){
 			ws=writeFile(r9,[name,sLi(prms,i1),sNL,sNL])
 			if(eric())doLog(sINFO,"Append FNF write Status: $ws")
 		}else{
@@ -6271,7 +6275,7 @@ private Boolean fileExists(Map r9,String name){
 			}
 		}
 	}catch(e){
-		if( !isFNF((String)e.message) )
+		if( !isFNF(r9,e) )
 			error "Error file exists $name: ",r9,iN2,e
 		readTmpBFLD[pNm]=null
 	}
@@ -6426,7 +6430,7 @@ private Long vcmd_writeToFuelStream(Map r9,device,List prms){
 	if(bIs(r9,sUSELFUELS) && name!=sNL) parent.writeToFuelStream(req)
 	else{
 		Map requestParams=[
-			uri: "https://api-"+(String)r9.region+'-'+sMs(r9,sINSTID)[32]+".webcore.co:9247",
+			uri: "https://api-"+sMs(r9,'region')+'-'+sMs(r9,sINSTID)[32]+".webcore.co:9247",
 			path: "/fuelStream/write",
 			headers: ['ST': sMs(r9,sINSTID)],
 			body: req,
@@ -6450,7 +6454,7 @@ private Long vcmd_storeMedia(Map r9,device,List prms){
 	}
 	String data=new String(r9.mediaData as byte[],'ISO_8859_1')
 	Map requestParams=[
-		uri: "https://api-"+(String)r9.region+'-'+sMs(r9,sINSTID)[32]+".webcore.co:9247",
+		uri: "https://api-"+sMs(r9,'region')+'-'+sMs(r9,sINSTID)[32]+".webcore.co:9247",
 		path: "/media/store",
 		headers: [
 			'ST':sMs(r9,sINSTID),
@@ -6895,38 +6899,33 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 			String rEN=sMs(ce,sNM)
 			String evntVal="${ce[sVAL]}".toString()
 			nodeI=nD+sV
-			String oV
-			oV=sMv(operand)
+			String oV; oV=fixAttr(sMv(operand))
 			switch(oV){
 				case sTIME:
 				case sDATE:
 				case sDTIME:
-					mv=rtnMap(oV,(Long)cast(r9,t,oV,sLONG))
+					mv= rtnMap(oV,(Long)cast(r9,t,oV,sLONG))
 					break
-				case sALRMSSTATUS:
-					oV=sHSMSTS
 				case sMODE:
+				case sPWRSRC:
 				case sHSMSTS:
 					nodeI=LID+sCLN+oV
 					mv=getDeviceAttribute(r9,LID,oV,null,trigger)
 					break
+			// for the rest of these, add in the eXcluded, a: markers
 				case sHSMALRT:
-				case sALRMSYSALRT:
-					String valStr=evntVal+(rEN==sHSMALRT && evntVal==sRULE ? sCOMMA+sMs(ce,sDESCTXT) :sBLK)
-					mv=rtnMapS((rEN==sHSMALRT ? valStr:sNL))
+					String valStr= evntVal+(evntVal==sRULE ? sCOMMA+sMs(ce,sDESCTXT) : sBLK)
+					mv= gtVdevRes(r9,rEN,oV,valStr,!trigger)
 					break
 				case sHSMSARM:
-				case sALRMSYSEVT:
-					mv=rtnMapS((rEN==sHSMSARM ? evntVal:sNL))
+					mv= gtVdevRes(r9,rEN,oV,evntVal,!trigger)
 					break
-				case 'alarmSystemRule':
-					mv=rtnMapS((rEN=='hsmRules' ? evntVal:sNL))
-					break
-				case 'powerSource':
-					mv=rtnMap(sENUM,r9['powerSource'])
+				case 'hsmRules':
+					mv= gtVdevRes(r9,rEN,oV,evntVal,!trigger)
 					break
 				case 'routine':
-					mv=rtnMapS((rEN=='routineExecuted' ? hashId(r9,evntVal):sNL))
+					oV='routineExecuted'
+					mv= gtVdevRes(r9,rEN,oV,hashId(r9,evntVal),!trigger)
 					break
 				case sPSTNRSM:
 				case 'systemStart':
@@ -6937,10 +6936,10 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 				case 'sunriseTime':
 				case 'sunsetTime':
 				case sTILE:
-					mv=rtnMapS((rEN==oV ? evntVal:sNL))
+					mv= gtVdevRes(r9,rEN,oV,evntVal,!trigger)
 					break
 				case 'ifttt':
-					mv=rtnMapS((rEN==('ifttt'+sDOT+evntVal)? evntVal:sNL))
+					mv= gtVdevRes(r9,rEN,'ifttt'+sDOT+evntVal,evntVal,!trigger)
 					break
 				case 'email':
 					mv=rtnMap('email',(rEN==('email'+sDOT+evntVal)? evntVal:sNL))
@@ -7037,6 +7036,14 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 	}
 	if(lg)myDetail r9,myS+"result:$vals"
 	return vals
+}
+
+private static Map gtVdevRes(Map r9,String rEN, String attr,String v,Boolean eXcluded){
+	return rEN==attr ? rtnMapS(v)+addVDevFlds(r9,attr,eXcluded) : rtnMapS(sNL)+addVDevFlds(r9,attr,true)
+}
+
+private static Map addVDevFlds(Map r9,String attr,Boolean eXcluded){
+	return [(sA):attr, (sD): sMs(r9,sLOCID), /*(sI):subDeviceIndex,*/ (sX):eXcluded]
 }
 
 private Map callFunc(Map r9,String func,List p){
@@ -7150,8 +7157,10 @@ private Boolean evaluateCondition(Map r9,Map cndtn,String collection,Boolean asy
 					Boolean isd= tm[sD] && sMa(tm) //if has d and a its a device
 					Boolean ok; ok=true
 					if(isd){
-						Boolean eXcluded=!!tm[sX]
-						//x=eXclude- if a momentary attribute is looked for and the device/attr does not match the current event device/attr, then we must ignore during comparisons
+						Boolean eXcluded=bIs(tm,sX)
+			//x=eXclude- if a trigger comparison or a momentary device/attribute is looked for,
+			//   and the device/attr does not match the current event device/attr,
+			// then we must ignore the result during comparisons
 						ok= bIs(cndtn,sS) && (!isStays || (isStays && co==sSTAYUNCH)) &&
 							(ffwd(r9) || !eXcluded || needUpdateFLD[myId]!=false)
 					}
@@ -7302,7 +7311,8 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 	}
 	Boolean lg=isDbg(r9)
 	String fn="comp_"+comparison
-	String loG= sMs(mMs(lo,sOPERAND),sG) ?: sANY
+	Map loOperMap=mMs(lo,sOPERAND)
+	String loG= sMs(loOperMap,sG) ?: sANY
 	Boolean result,res
 	result= loG!=sANY
 	Boolean oM=bIs(options,sMATCHES)
@@ -7314,27 +7324,27 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 	Boolean fa=bIs(options,'forceAll')
 	for(Map<String,Map> value in liMs(lo,sVALUES)){
 		res=false
-		//x=eXclude- if a momentary attribute is looked for and the device/attr does not match the current event device/attr, then we must ignore during comparisons
-		if(value && mMv(value) && (!(mMv(value)[sX]) || fa)){
+		//x=eXclude- if a trigger comparison or a momentary device/attribute is looked for,
+		//   and the device/attr does not match the current event device/attr,
+		// then we must ignore the result during comparisons, unless forceAll
+		Map vvalMap; vvalMap= value ? (mMv(value) ?: null) : null
+		Boolean eXcluded= (vvalMap && bIs(vvalMap,sX))
+		if(vvalMap && (!eXcluded || fa)){
 			Map msg; msg=[:]
 			try{
 				//physical support
 				//value.p=lo.operand.p
-				if(value && sMt(mMv(value))==sDEV) value[sV]=evaluateExpression(r9,mMv(value),sDYN)
-				Map vvalMap= mMv(value)
+				if(vvalMap && sMt(vvalMap)==sDEV) value[sV]=evaluateExpression(r9,vvalMap,sDYN)
+				vvalMap= mMv(value)
 				String m1; m1=sNL
 				if(lg) m1= "Comparison (${vvalMap[sT]}) ${vvalMap[sV]} $comparison "
-				String compS; compS= sMv(mMs(lo,sOPERAND))
-				if(compS==sALRMSSTATUS) compS=sHSMSTS
-				else if(compS==sALRMSYSALRT) compS=sHSMALRT
-				else if(compS==sALRMSYSEVT) compS=sHSMSARM
+				String compS; compS= fixAttr(sMv(loOperMap))
 				Map ce= mMs(r9,sCUREVT) ?: [:]
 				String rEN= sMs(ce,sNM)
-				//sTHREAX fixAttr
 				if(!ro){
 					if(lg)msg= timer sBLK,r9
-					if(comparison in lGENERIC){ // generic trigger event_occurs,gets_any
-						if(sMt(mMs(lo,sOPERAND))==sV && rEN==compS){
+					if(comparison in lGENERIC){ // generic trigger event_occurs, gets_any
+						if(sMt(loOperMap)==sV && rEN==compS){
 							res= true
 						}else if(sMs(vvalMap,sD)==sMs(ce,sDEV) && sMa(vvalMap)==rEN){
 							res= true
@@ -7348,7 +7358,7 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 					if(lg)debug msg,r9
 				}else{
 					Boolean isSpecific= comparison in lSPECIFIC // specific receives, gets
-					Boolean ok= isSpecific ? ( (sMt(mMs(lo,sOPERAND))==sV && rEN==compS) ||
+					Boolean ok= isSpecific ? ( (sMt(loOperMap)==sV && rEN==compS) ||
 								((sMs(vvalMap,sD)==sMs(ce,sDEV) && sMa(vvalMap)==rEN)) ) : true
 					Boolean rres
 					String roG= sMs(mMs(ro,sOPERAND),sG) ?: sANY
@@ -7378,11 +7388,11 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 									debug msg,r9
 								}
 								rres= ro2G==sANY ? rres || r2res : rres && r2res
-								if((ro2G==sANY && rres) || (ro2G!=sANY && !rres)) break
+								if(!fa && ((ro2G==sANY && rres) || (ro2G!=sANY && !rres))) break
 							}
 						}
 						res= (roG==sANY ? res || rres : res && rres)
-						if((roG==sANY && res) || (roG!=sANY && !res)) break
+						if(!fa && ((roG==sANY && res) || (roG!=sANY && !res))) break
 					}
 				}
 			}catch (all){
@@ -7390,12 +7400,12 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 				res= false
 			}
 
-			if(res && sMt(mMs(lo,sOPERAND))==sV && sMv(mMs(lo,sOPERAND)) in LT1){
-				Boolean pass= (checkTimeRestrictions(r9,mMs(lo,sOPERAND),wnow(),i5,i1)==lZ)
+			if(res && sMt(loOperMap)==sV && sMv(loOperMap) in LT1){
+				Boolean pass= (checkTimeRestrictions(r9,loOperMap,wnow(),i5,i1)==lZ)
 				if(lg)debug "Time restriction check ${pass ? 'passed' : 'failed'}",r9
 				if(!pass) res= false
 			}
-		}else{
+		}else if(eXcluded){
 			if(lg)debug "Comparison $comparison = $res (event device/attr eXcluded)",r9
 		}
 		result= loG==sANY ? result||res : result&&res
@@ -7405,8 +7415,7 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 				Map ods=mMs(options,sDEVS)
 				Boolean a= ((List)oMs(ods, res ? sMATCHED:sUNMATCHED)).push(vVD)
 			}
-		}else{
-			// if not matching, evaluation optimization
+		}else if(!fa){ // if not matching, evaluation optimization
 			//logical OR if using the ANY keyword
 			if(loG==sANY && res) break
 			//logical AND if using the ALL keyword
@@ -7491,6 +7500,9 @@ private static Boolean matchDeviceSubIndex(list,deviceSubIndex){
 	return true
 } */
 
+/**
+ * physical support
+ */
 @CompileStatic
 private static Boolean matchDeviceInteraction(Map lv,Map r9){
 	String option= sMs(mMv(lv),sP) // lv.v.p
@@ -8188,7 +8200,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 					String subsId,attr,ct
 					subsId=sNL
 					attr=sNL
-					String operV=sMv(operand)
+					String operV=fixAttr(sMv(operand))
 					String tsubId=deviceId+operV
 					switch(operV){
 						case sPSTNRSM:
@@ -8199,7 +8211,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 						case sDTIME:
 						case sMODE:
 						case sTILE:
-						case 'powerSource':
+						case sPWRSRC:
 						case 'systemStart':
 						case 'severeLoad':
 						case 'zigbeeOff':
@@ -8207,27 +8219,12 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 						case 'zwaveCrashed':
 						case 'sunriseTime':
 						case 'sunsetTime':
+						case sHSMSTS:
+						case sHSMALRT:
+						case sHSMSARM:
+						case 'hsmRules':
 							subsId=tsubId
 							attr=operV
-							break
-						case sHSMSTS:
-						case sALRMSSTATUS:
-							subsId=tsubId
-							attr=sHSMSTS
-							break
-						case sHSMALRT:
-						case sALRMSYSALRT:
-							subsId=tsubId
-							attr=sHSMALRT
-							break
-						case sHSMSARM:
-						case sALRMSYSEVT:
-							subsId=tsubId
-							attr=sHSMSARM
-							break
-						case 'alarmSystemRule':
-							subsId=tsubId
-							attr="hsmRules"
 							break
 						case 'email':
 							subsId="$deviceId${operV}".toString()+sMs(r9,sID)
@@ -8784,6 +8781,10 @@ private static List<String> fill_THR(){ return [sORIENT,sAXISX,sAXISY,sAXISZ] }
 private static String fixAttr(String attr){
 	if(!LTHR) LTHR=fill_THR()
 	if(attr in LTHR) return sTHREAX
+	if(attr==sALRMSSTATUS) return sHSMSTS
+	if(attr==sALRMSYSALRT) return sHSMALRT
+	if(attr==sALRMSYSEVT) return sHSMSARM
+	if(attr=='alarmSystemRule') return 'hsmRules'
 	return attr
 }
 
@@ -8928,16 +8929,23 @@ private static Map devAttrT(Map r9,String attr,device){
  * If no attribute return device name if device exists
  */
 @CompileStatic
-private Map getDeviceAttribute(Map r9,String deviceId,String attr,subDeviceIndex=null,Boolean trigger=false){
+private Map getDeviceAttribute(Map r9,String ideviceId,String attr,subDeviceIndex=null,Boolean trigger=false){
+	String deviceId; deviceId=ideviceId
 	Map ce=mMs(r9,sCUREVT)
 	String cdev
 	cdev= ce? (sMs(ce,sDEV) ?: sNL) : sNL
 
 	if(isEric(r9))myDetail r9,"getDeviceAttribute deviceId: $deviceId attr: $attr  trigger: $trigger ce: ${ce}",iN2
 
-	Boolean useEvt; useEvt=false
-	String v; v=sNL
+	Map mv; mv=[:]
+	Map attribute; attribute=[:]
+	def device
+
 	if(deviceId in (List<String>)r9[sALLLOC]){ //backward compatibility; we have the location device
+		device=gtLocation()
+		deviceId=sMs(r9,sLOCID)
+		Boolean useEvt; useEvt=false
+		String v; v=sNL
 		if(cdev==sMs(r9,sLOCID)){
 			String r9EvN=sMs(ce,sNM)
 			v=sMs(ce,sVAL)
@@ -8948,52 +8956,59 @@ private Map getDeviceAttribute(Map r9,String deviceId,String attr,subDeviceIndex
 			case sMODE:
 				Map mode; mode= useEvt ? fndMode(r9,v):null
 				mode= mode ?: gtCurrentMode()
-				if(mode) return rtnMap(sENUM,hashId(r9,lMs(mode,sID))) + ([(sN):sMs(mode,sNM),(sD):sMs(r9,sLOCID)] as Map<String,Object>)
+				if(mode) mv= rtnMap(sENUM,hashId(r9,lMs(mode,sID))) + ([(sN):sMs(mode,sNM)] as Map<String,Object>)
+				break
 			case sHSMSTS:
 			case sALRMSSTATUS:
 				String inm= useEvt ? v : gtLhsmStatus()
 				String n=VirtualDevices()[sALRMSSTATUS]?.o[inm]
-				return rtnMap(sENUM,inm) + ([(sN):n,(sD):sMs(r9,sLOCID)] as Map<String,Object>)
+				mv= rtnMap(sENUM,inm) + ([(sN):n] as Map<String,Object>)
+				break
+			case sPWRSRC:
+				mv=rtnMap(sENUM,r9[sPWRSRC])
+				break
 		}
-		return rtnMapS(gtLname())
-	}
+		if(!mv) mv=rtnMapS(gtLname())
 
-	def device=getDevice(r9,deviceId)
-	if(device!=null){
-		def value; value=gtLbl(device)
-		Map attribute=devAttrT(r9,attr,device)
-		String atT=sMt(attribute)
-		if(attr!=sNL){
-			def t0
-			t0=getDeviceAttributeValue(r9,device,attr)//,!trigger)
-			if(attr==sHUE && t0!=null && t0!=sBLK) t0=devHue2WcHue(t0 as Integer)
-			if(t0 instanceof BigDecimal){
-				if(atT==sINT) t0=t0 as Integer
-				else if(atT==sDEC) t0=t0 as Double
+	}else{
+
+		device=getDevice(r9,deviceId)
+		if(device!=null){
+			def value; value=gtLbl(device)
+			attribute=devAttrT(r9,attr,device)
+			String atT=sMt(attribute)
+			if(attr!=sNL){
+				def t0
+				t0=getDeviceAttributeValue(r9,device,attr)//,!trigger)
+				if(attr==sHUE && t0!=null && t0!=sBLK) t0=devHue2WcHue(t0 as Integer)
+				if(t0 instanceof BigDecimal){
+					if(atT==sINT) t0=t0 as Integer
+					else if(atT==sDEC) t0=t0 as Double
+				}
+				value= matchCast(r9,t0,atT) ? t0:cast(r9,t0,atT)
 			}
-			value= matchCast(r9,t0,atT) ? t0:cast(r9,t0,atT)
-		}
-
-//x=eXclude- if a momentary device/attribute as trigger is looked for and the device/attr does not match the current event device/attr,
-// then we must ignore the result during comparisons
-		Boolean eXclude; eXclude=false
-		if(attr!=sNL && trigger && attribute[sM]!=null){
-			//have to compare ids and type for hubitat since the locationid can be the same as the deviceid
-			Boolean isLoc= isDeviceLocation(device)
-			cdev=cdev ?: sMs(r9,sLOCID)
-			Boolean deviceMatch= (!isLoc && hashD(r9,device)==cdev) || (isLoc && cdev in (List<String>)r9[sALLLOC])
-			eXclude=  (!deviceMatch || (ce && fixAttr(attr)!=sMs(ce,sNM)))
-		}
-		return [
-			(sT):atT,
-			(sV):value,
-			(sD):deviceId,
-			(sA):attr,
-//			(sI):subDeviceIndex,
-			(sX):eXclude
-		]
+			mv= rtnMap(atT,value)
+		}else
+			return rtnMapE("Device '${deviceId}':${attr} not found".toString())
 	}
-	return rtnMapE("Device '${deviceId}':${attr} not found".toString())
+
+//x=eXclude- if a trigger comparison or a momentary device/attribute is looked for,
+//   and the device/attr does not match the current event device/attr,
+// then we must ignore the result during comparisons
+	Boolean eXclude; eXclude=false
+	if( attr!=sNL && (trigger || (attribute[sM]!=null && bIs(attribute,sM)) ) ){
+		//have to compare ids and type for hubitat since the locationid can be the same as the deviceid
+		Boolean isLoc= isDeviceLocation(device)
+		cdev=cdev ?: sMs(r9,sLOCID)
+		Boolean deviceMatch= (!isLoc && hashD(r9,device)==cdev) || (isLoc && cdev in (List<String>)r9[sALLLOC])
+		eXclude=  (!deviceMatch || (ce && fixAttr(attr)!=sMs(ce,sNM)))
+	}
+	return mv + ([
+		(sD):deviceId,
+		(sA):attr,
+//		(sI):subDeviceIndex,
+		(sX):eXclude
+	] as Map<String,Object>)
 }
 
 @CompileStatic
