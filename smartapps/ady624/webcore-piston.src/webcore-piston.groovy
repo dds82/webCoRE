@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update February 20, 2023 for Hubitat
+ * Last update February 21, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -33,7 +33,7 @@
 //file:noinspection UnnecessaryQualifiedReference
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230220_HE'
+@Field static final String sHVER='v0.3.114.20230221_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -130,10 +130,12 @@ static Boolean eric1(){ return false }
 @Field static final String sRULE='rule'
 @Field static final String sHSMSTS='hsmStatus'
 @Field static final String sALRMSSTATUS='alarmSystemStatus'
-@Field static final String sALRMSYSALRT='alarmSystemAlert'
-@Field static final String sALRMSYSEVT='alarmSystemEvent'
 @Field static final String sHSMALRT='hsmAlert'
+@Field static final String sALRMSYSALRT='alarmSystemAlert'
 @Field static final String sHSMSARM='hsmSetArm'
+@Field static final String sALRMSYSEVT='alarmSystemEvent'
+@Field static final String sHSMRULE='hsmRule'
+@Field static final String sHSMRULES='hsmRules'
 @Field static final String sPWRSRC='powerSource'
 @Field static final String sASYNCREP='wc_async_reply'
 @Field static final String sCLRC='clearc'
@@ -2489,6 +2491,16 @@ static Map fillPL(){
 	]
 }
 
+static String stripH(String str){
+	if(!str) return sBLK
+	Integer first; first = str.indexOf('<span')
+	String res; res = str[iZ..(first>iZ ? first-i1 : str.length()-i1)]
+	first = str.indexOf('CancelAlert')
+	String res1; res1 = res[iZ..(first>iZ ? first-i1 : res.length()-i1)]
+	res = res1.trim()
+	return res
+}
+
 @Field static final String sEXS='Execution stage started'
 @Field static final String sEXC='Execution stage complete.'
 
@@ -2508,7 +2520,9 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 		String recStr
 		recStr=evntName==sTIME && bIs(event,sRECOVERY) ? '/recovery':sBLK
 		recStr+=bIs(event,sPHYS) ? '/physical':sBLK
-		String valStr=evntVal+(evntName==sHSMALRT && evntVal==sRULE ? sCOMMA+sMs(event,sDESCTXT):sBLK)
+		String valStr; valStr= evntVal
+		if(evntName in [sHSMALRT,sHSMRULE,sHSMRULES])
+			valStr+= ((evntName==sHSMALRT && evntVal==sRULE) || evntName in [sHSMRULE,sHSMRULES] ? sCOMMA+stripH(sMs(event,sDESCTXT)):sBLK)
 		String mymsg
 		mymsg='Received event ['+devStr+'].'+evntName+recStr+' = '+valStr+" with a delay of ${eventDelay}ms"
 		if(lg>i1)mymsg+=", canQueue: ${queue}, calledMyself: ${callMySelf}"
@@ -5082,12 +5096,15 @@ private Long vcmd_setAlarmSystemStatus(Map r9,device,List prms){
 
 	if(status && status.size()!=iZ){
 		String v= status[iZ][sID]
+		String s; s= "Sending hsmSetArm $v"
 		if(v in ['armAway','armHome','armNight']){ // optional - the number of seconds of delay
 			Integer psz= prms.size()
 			Integer del= psz>i1 ? iLi(prms,i1) : iZ
 			Map data= del>iZ ? [seconds: del] : [:]
+			if(data.seconds) s+= " with delay $del"
 			sendLocationEvent((sNM):sHSMSARM,(sVAL):v,(sDATA):data)
 		}else sendLocationEvent((sNM):sHSMSARM,(sVAL):v)
+		if(isDbg(r9)) debug s,r9
 	} else error "Error setting HSM status. Status '$sIdOrNm' does not exist.",r9
 	return lZ
 }
@@ -6918,9 +6935,8 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 					mv= gtVdevRes(r9,rEN,oV,valStr,!trigger)
 					break
 				case sHSMSARM:
-					mv= gtVdevRes(r9,rEN,oV,evntVal,!trigger)
-					break
-				case 'hsmRules':
+				case sHSMRULE:
+				case sHSMRULES:
 					mv= gtVdevRes(r9,rEN,oV,evntVal,!trigger)
 					break
 				case 'routine':
@@ -8222,7 +8238,8 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 						case sHSMSTS:
 						case sHSMALRT:
 						case sHSMSARM:
-						case 'hsmRules':
+						case sHSMRULE:
+						case sHSMRULES:
 							subsId=tsubId
 							attr=operV
 							break
@@ -8784,7 +8801,8 @@ private static String fixAttr(String attr){
 	if(attr==sALRMSSTATUS) return sHSMSTS
 	if(attr==sALRMSYSALRT) return sHSMALRT
 	if(attr==sALRMSYSEVT) return sHSMSARM
-	if(attr=='alarmSystemRule') return 'hsmRules'
+	if(attr=='alarmSystemRule') return sHSMRULE
+	if(attr=='alarmSystemRules') return sHSMRULES
 	return attr
 }
 

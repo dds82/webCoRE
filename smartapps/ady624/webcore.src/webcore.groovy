@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update February 20, 2023 for Hubitat
+ * Last update February 21, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -31,8 +31,8 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230220_HE'
-@Field static final String sHVERSTR='v0.3.114.20230220_HE - February 20, 2023'
+@Field static final String sHVER='v0.3.114.20230221_HE'
+@Field static final String sHVERSTR='v0.3.114.20230221_HE - February 21, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -591,9 +591,9 @@ private pageGraphs(){
 		section(){
 			List graphApps = getGraphApps()
 			app([(sTIT): 'List of streams and graphs / create a new graph', multiple: true, install: true, uninstall: false], 'fuelStreams', 'ady624', handleFuelS())
-			if(graphApps?.size()) {
+			if(graphApps?.size()){
 				input "graphDuplicateSelect", sENUM, title: "Duplicate Existing Graph", description: 'Tap to select...', options: graphApps.collectEntries { [(it?.id):it?.getLabel()] }, required: false, multiple: false, submitOnChange: true
-				if(settings.graphDuplicateSelect) {
+				if(settings.graphDuplicateSelect){
 					href "graphDuplicationPage", title: "Create Duplicate Graph?", description: 'Tap to proceed...'
 				}
 			}
@@ -601,17 +601,17 @@ private pageGraphs(){
 	}
 }
 
-def graphDuplicationPage() {
-	return dynamicPage(name: "graphDuplicationPage", nextPage: "pageGraphs", uninstall: false, install: false) {
-		section() {
-			if((Boolean)state.graphDuplicated) {
+def graphDuplicationPage(){
+	return dynamicPage(name: "graphDuplicationPage", nextPage: "pageGraphs", uninstall: false, install: false){
+		section(){
+			if((Boolean)state.graphDuplicated){
 				paragraph "Graph already duplicated..." + "Return to graph page and select it"
-			} else {
+			}else{
 				def grf = getGraphApps()?.find { it?.id?.toString() == settings.graphDuplicateSelect?.toString() }
-				if(grf) {
+				if(grf){
 					Map grfData = grf.getSettingsAndStateMap() ?: [:]
 					String grfId = (String)grf.getId().toString()
-					if(grfData.settings && grfData.state) {
+					if(grfData.settings && grfData.state){
 						String myId=app.getId()
 						if(!childDupMapFLD[myId]) childDupMapFLD[myId] = [:]
 						if(!childDupMapFLD[myId].graphs) childDupMapFLD[myId].graphs = [:]
@@ -628,7 +628,7 @@ def graphDuplicationPage() {
 					def a=addChildApp("ady624", handleFuelS(), nm, [settings: grfData.settings])
 					paragraph "Graph Duplicated..." + "<br>Return to Graph Page and look for the App with '(Dup)' in the name..."
 					state.graphDuplicated = true
-				} else { paragraph "Graph not Found" }
+				}else{ paragraph "Graph not Found" }
 			}
 		}
 	}
@@ -636,29 +636,29 @@ def graphDuplicationPage() {
 
 @Field volatile static Map<String, Map> childDupMapFLD        = [:]
 
-public Map getChildDupeData(String type, String childId) {
+public Map getChildDupeData(String type, String childId){
 	String myId=sAppId()
 	return (childDupMapFLD[myId] && childDupMapFLD[myId][type] && childDupMapFLD[myId][type][childId]) ? (Map)childDupMapFLD[myId][type][childId] : [:]
 }
 
-public void clearDuplicationItems() {
+public void clearDuplicationItems(){
 	state.graphDuplicated = false
 	if(settings.graphDuplicateSelect) app.removeSetting("graphDuplicateSelect")
 	state.remove('graphDuplicated')
 }
 
-public void childAppDuplicationFinished(String type, String childId) {
+public void childAppDuplicationFinished(String type, String childId){
 	doLog(sTRC,"childAppDuplicationFinished($type, $childId)")
 //    Map data = [:]
 	String myId=sAppId()
-	if(childDupMapFLD[myId] && childDupMapFLD[myId][type] && childDupMapFLD[myId][type][childId]) {
+	if(childDupMapFLD[myId] && childDupMapFLD[myId][type] && childDupMapFLD[myId][type][childId]){
 		childDupMapFLD[myId][type].remove(childId)
 	}
 	clearDuplicationItems()
 }
 
 
-List getGraphApps() {
+List getGraphApps(){
 	return ((List)getAllChildApps())?.findAll {
 		String t= it?.gtSetting('graphType')
 		t && it?.name == handleFuelS() && !(t in ['longtermstorage'])
@@ -1272,7 +1272,7 @@ private void checkWeather(){
 			storageApp.settingsToState("weatherType", wTyp)
 			storageApp.settingsToState("apixuKey", apiK)
 			storageApp.settingsToState("zipCode", gtSetStr('zipCode'))
-			if(weatherTyp=='OpenWeatherMap') {
+			if(weatherTyp=='OpenWeatherMap'){
 				storageApp.settingsToState("zipCode1", gtSetStr('zipCode1'))
 				storageApp.settingsToState("apiVer", gtSetB('apiVer')?:false)
 			}
@@ -1883,7 +1883,7 @@ private findPiston(String id, String nm=sNL){
 		List t0; t0=wgetChildApps().findAll{ (String)it.name==n }
 		if(id!=sNL){
 			piston=t0.find{ hashPID(it.id)==id }
-			if (!piston)piston=t0.find{ hashId(it.id)==id }
+			if(!piston)piston=t0.find{ hashId(it.id)==id }
 		}
 		if(nm!=sNL && !piston) piston=t0.find{ (String)it.label==nm || normalizeLabel(it)==nm }
 		t0=null
@@ -1898,7 +1898,7 @@ private Map gtAllCommands(){
 }
 
 
-private api_intf_dashboard_piston_getDb() {
+private api_intf_dashboard_piston_getDb(){
 	Map result; result=[:]
 	if(verifySecurityToken((Map)params)){
 		String serverDbVersion=sHVER
@@ -2549,18 +2549,18 @@ def findCreateFuel(Map req){
 		String[] s= ((String)req[sN]).split('_')
 		String sensorId= s[0]
 		String attribute= s[1]
-		if (lts!=null && (Boolean)lts.isStorage(sensorId, attribute)){
+		if(lts!=null && (Boolean)lts.isStorage(sensorId, attribute)){
 			result= lts
 		}
 
-	} else {
+	}else{
 		String streamName="${(req[sC] ?: sBLK)}||${req[sN]}"
 		List l
 		l=wgetChildApps().findAll{ (String)it.name== n && ((String)it.label)?.contains(streamName)}
 		for (sa in l){
 			String sl=(String)sa.label
 			Integer ndx=sl.indexOf(' - ' )
-			if (ndx >= 0){
+			if(ndx >= 0){
 				String lbl=sl.substring(ndx + 3)
 				if(lbl==streamName){
 					result=sa
@@ -2653,7 +2653,7 @@ private api_intf_fuelstreams_get(){
 	if(id.isNumber()){
 		stream=wgetChildApps().find { (String)it.name==n && ((String)it.label).startsWith("$id -")}
 		result=stream.listFuelStreamData(id)
-	} else {
+	}else{
 		stream = gtLTS()
 	}
 	if(stream)
@@ -2667,9 +2667,9 @@ private api_intf_fuelstreams_get(){
 Map quantParams(sensorId, String attribute){
 	def lts = gtLTS()
 
-	if (lts!=null) {
+	if(lts!=null){
 		return (Map)lts.quantParams(sensorId, attribute)
-	} else return null
+	}else return null
 }
 
 Boolean ltsExists(){
@@ -2681,7 +2681,7 @@ Boolean ltsExists(){
 Boolean ltsAvailable(sensorId, String attribute){
 	def lts = gtLTS()
 
-	if (lts!=null){
+	if(lts!=null){
 		return (Boolean)lts.isStorage(sensorId, attribute)
 	}
 	return false
@@ -2690,7 +2690,7 @@ Boolean ltsAvailable(sensorId, String attribute){
 Boolean ltsQuant(sensorId, String attribute){
 	def lts = gtLTS()
 
-	if (lts!=null){
+	if(lts!=null){
 		return (Boolean)lts.isQuant(sensorId, attribute)
 	}
 	return false
@@ -2698,7 +2698,7 @@ Boolean ltsQuant(sensorId, String attribute){
 
 Map openWeatherConfig(){ // used by graphs/fuel stream
 	String weatherTyp= gtSetStr('weatherType') ?: sNL
-	if( state.storAppOn && weatherTyp=='OpenWeatherMap') {
+	if( state.storAppOn && weatherTyp=='OpenWeatherMap'){
 		return [latitude: gtSetStr('zipCode'), longitude: gtSetStr('zipCode1'), apiVer: gtSetB('apiVer'), apiKey: gtSetStr('apixuKey'), pollInterval: '30 Minutes']
 	}
 	return null
@@ -2716,7 +2716,7 @@ Map getWData(){
 
 String getOpenWeatherData(){
 	def childDevice = getChildDevice("OPEN_WEATHER${app.id}")
-	if (!childDevice){
+	if(!childDevice){
 		doLog(sDBG,"Error: No Child Found")
 		return sNL
 	}
@@ -2791,7 +2791,7 @@ private api_intf_dashboard_piston_activity(){
 				lastPActivityFLD= lastPActivityFLD
 				msg+=' updating cache'
 				result=[(sSTS):sSUCC, activity: (t0 ?: [:]) + [globalVars: listAvailableVariables1()/*, mode: hashId(location.getCurrentMode().id), shm: location.currentState("alarmSystemStatus")?.value, hubs: location.getHubs().collect{ [id: hashId(it.id), (sNM): it.name, firmware: it.getFirmwareVersionString(), physical: it.getType().toString().contains('PHYSICAL'), powerSource: it.isBatteryInUse() ? 'battery' : 'mains' ]}*/]]
-			} else {
+			}else{
 				result=[(sSTS):sSUCC, activity: [:]]
 				msg+=' using cache'
 			}
@@ -3311,7 +3311,7 @@ Map getDevDetails(dev, Boolean addtransform=false){
 						if(prms[i].description) myD[sH]=prms[i].description
 						if(prms[i].constraints) myD[sC]=prms[i].constraints
 						b=myL.push([:]+myD)
-					} else ok=false
+					}else ok=false
 				}
 			}
 			mycmd[sP]= ok && myL ? myL : myargs
@@ -3349,13 +3349,13 @@ Map getDevDetails(dev, Boolean addtransform=false){
 					if(item instanceof String){
 						if(item) b=typs.push(item.toUpperCase())
 						else bad=true
-					} else {
+					}else{
 						Map mitem=(Map)item
 						String t= mitem ? ((String)mitem[sT] ?: sNL) : sNL
 						if(t){
 							mitem[sT]= t.toUpperCase()
 							typs[i]=mitem
-						} else bad=true
+						}else bad=true
 					}
 					if(bad && (getLogging()[sDBG] || eric())) debug("Device $dnm has strange command $cmdName with commands $cmd has nulls")
 					i++
@@ -3767,7 +3767,7 @@ void pCallupdateRunTimeData(Map data){
 	updateRunTimeData(data,wName,id)
 }
 
-private gtLTS() { wgetChildAppByLabel("webCoRE Long Term Storage") }
+private gtLTS(){ wgetChildAppByLabel("webCoRE Long Term Storage") }
 
 
 
@@ -3796,7 +3796,7 @@ private Map getHubitatVersion(){
 	return ((List)location.getHubs()).collectEntries{ [(it.id.toString()): it.getFirmwareVersionString()] }
 } */
 
-private TimeZone mTZ() { return (TimeZone)location.timeZone }
+private TimeZone mTZ(){ return (TimeZone)location.timeZone }
 private gtLocation(){ return location }
 private String gtLtScale(){ return (String)location.getTemperatureScale() }
 private String gtLname(){ return (String)location.getName() }
@@ -3826,7 +3826,7 @@ private void assignAS(String nm,v){ atomicState.put(nm,v) }
 private Date wtoDateTime(String s){ return (Date)toDateTime(s) }
 private Date wtimeToday(String str,TimeZone tz){ return (Date)timeToday(str,tz) }
 Long wnow(){ return (Long)now() }
-List wgetChildApps() { return (List)getChildApps() }
+List wgetChildApps(){ return (List)getChildApps() }
 private wgetChildAppByLabel(String n){ getChildAppByLabel(n) }
 private Map wrender(Map options=[:]){ render options }
 
@@ -4205,7 +4205,7 @@ def hsmHandler(evt){ // hsmStatus event
 	// gets disarmed value (leave rule alone?)
 }
 
-def hsmAlertHandler(evt) { // hsmAlert event
+def hsmAlertHandler(evt){ // hsmAlert event
 	// get value of rule to say rule fired?
 	// get value of water, temperature
 	addHsmEvent(evt)
@@ -4273,7 +4273,7 @@ private List<Map> getIncidents(Boolean haveLock=false){
 					List<Map> trule= rules[ruleKey] ?: []
 					b= trule.push(myE)
 					rules[ruleKey]= trule
-				} else chgd=true
+				}else chgd=true
 			}else { log.warn "unknown $evNm $v"; chgd=true }
 		}else if(evNm=='hsmRule' && v==sCANRULEA){
 			String ruleKey= stripH(desc)
@@ -4301,9 +4301,9 @@ private List<Map> getIncidents(Boolean haveLock=false){
 
 		clearParentPistonCache("hsmAlerts changed")
 		clearBaseResult('hsmAlertHandler')
-	} else
+	}else
 		if(!haveLock) releaseTheLock(sGTINCIDENTS)
-		return new4Alerts
+	return new4Alerts
 }
 
 static String stripH(String str){
@@ -5461,10 +5461,16 @@ private static Map getAlarmSystemAlertOptions(){
 	]
 }
 
+private static Map getAlarmSystemRulesOptions(){
+	return [
+			armedRule:	"Armed Rule",
+			disarmedRule:	"Disarmed Rule"
+	]
+}
+
 private static Map getAlarmSystemRuleOptions(){
 	return [
-		armedRule:	"Armed Rule",
-		disarmedRule:	"Disarmed Rule"
+		cancelRuleAlerts:	"Cancel Rule Alerts"
 	]
 }
 
@@ -5549,9 +5555,10 @@ private Map<String,Map> virtualDevices(){
 		sunsetTime:		[ (sN): 'Sunset Time',		(sT): sSTR,		x: true],
 //ac - actions. hubitat doesn't reuse the status for actions
 		alarmSystemStatus:	[ (sN): 'Hubitat Safety Monitor status',	(sT): sENUM,		(sO): getHubitatAlarmSystemStatusOptions(), ac: getAlarmSystemStatusActions(),		x: true],
-		alarmSystemEvent:	[ (sN): 'Hubitat Safety Monitor event',		(sT): sENUM,		(sO): getAlarmSystemStatusActions(),	(sM): true],
-		alarmSystemAlert:	[ (sN): 'Hubitat Safety Monitor alert',		(sT): sENUM,		(sO): getAlarmSystemAlertOptions(),	(sM): true,			x: true],
-		alarmSystemRule:	[ (sN): 'Hubitat Safety Monitor rule',		(sT): sENUM,		(sO): getAlarmSystemRuleOptions(),		(sM): true]
+		alarmSystemEvent:	[ (sN): 'Hubitat Safety Monitor command event',		(sT): sENUM,		(sO): getAlarmSystemStatusActions(),	(sM): true],
+		alarmSystemAlert:	[ (sN): 'Hubitat Safety Monitor alert event',		(sT): sENUM,		(sO): getAlarmSystemAlertOptions(),	(sM): true,			x: true],
+		alarmSystemRule:	[ (sN): 'Hubitat Safety Monitor rule event',		(sT): sENUM,		(sO): getAlarmSystemRuleOptions(),		(sM): true],
+		alarmSystemRules:	[ (sN): 'Hubitat Safety Monitor rules event',		(sT): sENUM,		(sO): getAlarmSystemRulesOptions(),		(sM): true]
 	]
 }
 
