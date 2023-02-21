@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update February 14, 2023 for Hubitat
+ *  Last update February 21, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -30,9 +30,10 @@
 //file:noinspection SpellCheckingInspection
 //file:noinspection GroovyFallthrough
 //file:noinspection GrMethodMayBeStatic
+//file:noinspection UnnecessaryQualifiedReference
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230113_HE'
+@Field static final String sHVER='v0.3.114.20230221_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -11485,7 +11486,7 @@ Boolean fileExists(sensor, String attribute, String fname=sNL){
 		}
 	}catch(e){
 		String sensor_name=gtLbl(sensor)
-		if( isFNF((String)e.message) ){
+		if( isFNF(e) ){
 			debug "File DOES NOT Exist for ${sensor_name} (${attribute})",null,iN2
 		}else{
 			error"Find file ${sensor_name} (${attribute}) ($filename_} :: Exception: ",null,iN2,e
@@ -11493,8 +11494,11 @@ Boolean fileExists(sensor, String attribute, String fname=sNL){
 	}
 	return res
 }
-static Boolean isFNF(String file){
-	return file.contains("Not Found") || file.contains('NoSuchFile')
+
+Boolean isFNF(Exception ex){
+	if(ex instanceof java.nio.file.NoSuchFileException) return true
+	String file=(String)ex.message
+	return file.contains("Not Found")
 }
 
 @Field volatile static Map<String,String> readTmpFLD=[:]
@@ -11593,7 +11597,7 @@ Map readFile(sensor, String attribute, String fname=sNL){
 	}catch(e){
 		String sensor_name=gtLbl(sensor)
 		String ts1= " for ${sensor_name} (${attribute}) ($filename_}"
-		if( isFNF((String)e.message) ){
+		if( isFNF(e) ){
 			debug "File DOES NOT Exist"+ts1,null,iN2
 		}else{
 			error "Read File Data"+ts1+" :: Exception: ",null,iN2,e
