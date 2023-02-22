@@ -16,17 +16,20 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update Noveber 16, 2022 for Hubitat
+ * Last update February 22, 2023 for Hubitat
  */
 
-//file:noinspection unused
-//file:noinspection GroovyUnusedAssignment
+//file:noinspection GroovySillyAssignment
 //file:noinspection GrDeprecatedAPIUsage
+//file:noinspection GroovyDoubleNegation
+//file:noinspection GroovyUnusedAssignment
+//file:noinspection unused
 //file:noinspection SpellCheckingInspection
+//file:noinspection GroovyFallthrough
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20220928_HE'
+@Field static final String sHVER='v0.3.114.20230221_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -225,7 +228,8 @@ public void updateWeatherD(){
 		case 'OpenWeatherMap':
 			//myUri = 'https://api.openweathermap.org/data/2.5/onecall?lat=' + myZip + '&lon=' + myZip1 + '&exclude=minutely,hourly&mode=json&units=imperial&appid=' + myKey
 			Boolean apiVer = (Boolean)state.apiVer ?: false
-			myUri = 'https://api.openweathermap.org/data/'+(apiVer ? '3.0':'2.5')+'/onecall?lat=' + myZip + '&lon=' + myZip1 + '&exclude=minutely&mode=json&units=imperial&appid=' + myKey
+			String wunits= (String)state.wunits ?:'imperial'
+			myUri = 'https://api.openweathermap.org/data/'+(apiVer ? '3.0':'2.5')+'/onecall?lat=' + myZip + '&lon=' + myZip1 + '&exclude=minutely&mode=json&units='+ wunits + '&appid=' + myKey
 		}
 		if(myUri){
 			Map header; header=[:]
@@ -249,6 +253,7 @@ public void ahttpRequestHandler(resp, callbackData){
 	obs = [:]
 //	def err
 	String weatherType = (String)state.weatherType ?: sNL
+	String wunits= (String)state.wunits ?:'imperial'
 	if((resp.status == 200) && resp.data){
 		try {
 			json = resp.getJson()
@@ -258,7 +263,9 @@ public void ahttpRequestHandler(resp, callbackData){
 		}
 
 		if(!json) return
+
 		json.weatherType=weatherType
+		json.wunits=wunits
 
 		if(weatherType == 'apiXU'){
 			if(json.forecast && json.forecast.forecastday){
@@ -644,15 +651,17 @@ Long GetTimeDiffSeconds(String strtDate, String stpDate=sNL, String methName=sNL
 	}else{ return null }
 }
 
-public void settingsToState(myKey, setval){
-	if(setval){
+public void settingsToState(String myKey, setval){
+	if(!myKey) return
+	if(setval!=null){
 		atomicState."${myKey}" = setval
 		state."${myKey}" = setval
 	} else state.remove("${myKey}" as String)
 }
 
-void stateRemove(key){
-	state.remove(key?.toString())
+void stateRemove(String key){
+	if(!key) return
+	state.remove(key)
 }
 
 /******************************************************************************/

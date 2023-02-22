@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update February 21, 2023 for Hubitat
+ *  Last update February 22, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -10311,6 +10311,8 @@ def tileForecast(){
 				app.updateSetting("latitude", map.latitude)
 				app.updateSetting("longitude", map.longitude)
 				app.updateSetting("tile_key", map.apiKey)
+				//apiVer: gtSetB('apiVer'),
+				//wunits: gtSetStr('wunits')?:'imperial'
 				String val
 				switch(sMs(map,'pollInterval')){
 					case '1 Minute':
@@ -12423,7 +12425,6 @@ List<Map> cleanFuelStream(List<Map> istream){
 	//String s="${sid}_${attribute}".toString()   s+'_storage'
 	Integer storage=(gtSetting("storage_days") ?: 1461) as Integer
 
-	if(isEric())debug "cleanFuelStream, size: $osz, days: $storage",null
 	msg += "original sz: $osz "
 	List<Map> parse_data=pruneData(stream, storage)
 	stream=parse_data
@@ -12431,14 +12432,12 @@ List<Map> cleanFuelStream(List<Map> istream){
 	Integer nsz
 	nsz=stream.size()
 	msg += "after maxdays $storage sz1: $nsz "
-	if(isEric())debug "cleanFuelStream first trim, size: $nsz, days: $storage",null
 
 	List<Map> tstream
 	tstream= rtnFileData(stream) // need to work with as stored size
 	Double storageSize= tstream.toString().size() / 1024.0D
 	Integer max=(gtSetting('maxSize') ?: 95) as Integer
 
-	if(isEric())debug "cleanFuelStream prep, storageSize: $storageSize, max: $max",null
 	Boolean a
 	if(storageSize.toInteger() > max){
 		Integer points=stream.size()
@@ -12448,14 +12447,14 @@ List<Map> cleanFuelStream(List<Map> istream){
 		pointsToRemove=averageSize > 0 ? ((storageSize - max) / averageSize).toInteger() : 0
 		pointsToRemove=pointsToRemove > 0 ? pointsToRemove : 0
 
-		msg +="max trim Size ${storageSize}KB Points ${points} Avg $averageSize Remove $pointsToRemove".toString()
+		msg +="size trim to $max: Size ${storageSize}KB Points ${points} Avg $averageSize Remove $pointsToRemove".toString()
 		List<Map> toBeRemoved=stream.sort{ Map it -> it.t }.take(pointsToRemove)
 		a=stream.removeAll(toBeRemoved)
 	}
 
 	nsz=stream.size()
 	if(osz!=nsz){
-		if(isEric())debug "Trimmed fuel stream, $osz, $nsz",null
+		msg += "Trimmed fuel stream, $osz, $nsz"
 		if(msg && isDbg()) debug msg,null
 	}
 	return stream
@@ -12465,7 +12464,7 @@ List<Map> cleanFuelStream(List<Map> istream){
 
 /** fuel stream only - receives internal format, stores as file format based on fuel stream storage settings */
 void storeFuelUpdate(List<Map>istream,Map req,Boolean frc=false){
-	if(isEric())myDetail null,"storeFuelUpdate $istream $req $frc",iN2
+	if(isEric())myDetail null,"storeFuelUpdate ${istream.size()} $req $frc",iN2
 	Boolean res
 	List<Map>stream
 	stream=cleanFuelStream(istream)
@@ -12480,7 +12479,7 @@ void storeFuelUpdate(List<Map>istream,Map req,Boolean frc=false){
 
 /** fuel stream only - receives file format, stores in HE DB */
 Boolean storeFuelDBData(List<Map>stream){
-	if(isEric())myDetail null,"storeFuelDBData $stream",iN2
+	if(isEric())myDetail null,"storeFuelDBData ${stream.size()}",iN2
 	if(!gtStB('useFiles')){
 		state.fuelStreamData=stream
 		return true
@@ -12490,7 +12489,7 @@ Boolean storeFuelDBData(List<Map>stream){
 
 /** fuel stream only - receives file format, stores in file */
 Boolean storeFuelFileData(List<Map>istream,Boolean frc){
-	if(isEric())myDetail null,"storeFuelFileData $istream $frc",iN2
+	if(isEric())myDetail null,"storeFuelFileData ${istream.size()} $frc",iN2
 	if(gtStB('useFiles')){
 		String attribute=fuelNattr()
 		def sensor=app

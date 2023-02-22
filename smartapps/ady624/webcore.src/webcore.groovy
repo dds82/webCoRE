@@ -503,6 +503,7 @@ def pageSettings(){
 				input "zipCode", sTXT, (sTIT): zipDesc, defaultValue: defaultLoc, (sREQ): false
 				if(mreq==OpnW){
 					input "zipCode1", sTXT, (sTIT): zipDesc1, defaultValue: defaultLoc1, (sREQ): false
+					input "wunits", sENUM, (sTIT): "Weather units", defaultValue: 'imperial', (sREQ): false, options:['standard','metric','imperial']
 					paragraph "OpenWeatherMap Integration uses onecall api.  Ensure your key is compatible"
 					input "apiVer", sBOOL, (sTIT): "Api key version (2.5 - Off, 3.0 - On)?", defaultValue: false, submitOnChange: true
 				}
@@ -1272,9 +1273,10 @@ private void checkWeather(){
 			storageApp.settingsToState("weatherType", wTyp)
 			storageApp.settingsToState("apixuKey", apiK)
 			storageApp.settingsToState("zipCode", gtSetStr('zipCode'))
-			if(weatherTyp=='OpenWeatherMap'){
+			if(wTyp=='OpenWeatherMap'){
 				storageApp.settingsToState("zipCode1", gtSetStr('zipCode1'))
 				storageApp.settingsToState("apiVer", gtSetB('apiVer')?:false)
+				storageApp.settingsToState("wunits", gtSetStr('wunits')?:'imperial')
 			}
 			if(t0){
 				storageApp.startWeather()
@@ -2701,7 +2703,14 @@ Boolean ltsQuant(sensorId, String attribute){
 Map openWeatherConfig(){ // used by graphs/fuel stream
 	String weatherTyp= gtSetStr('weatherType') ?: sNL
 	if( state.storAppOn && weatherTyp=='OpenWeatherMap'){
-		return [latitude: gtSetStr('zipCode'), longitude: gtSetStr('zipCode1'), apiVer: gtSetB('apiVer'), apiKey: gtSetStr('apixuKey'), pollInterval: '30 Minutes']
+		return [
+				latitude: gtSetStr('zipCode'),
+				longitude: gtSetStr('zipCode1'),
+				apiVer: gtSetB('apiVer'),
+				apiKey: gtSetStr('apixuKey'),
+				pollInterval: '30 Minutes',
+				wunits: gtSetStr('wunits')?:'imperial'
+		]
 	}
 	return null
 }
