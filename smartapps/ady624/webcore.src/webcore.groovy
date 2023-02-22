@@ -3366,10 +3366,15 @@ Map getDevDetails(dev, Boolean addtransform=false){
 		}
 	}
 
+	List attrs= ((List)dev.getSupportedAttributes()).unique{ (String)it.name }.collect{
+		[ (sN): (String)it.name, (sT): it.getDataType(), (sO): it.getValues() ]
+	}
+	attrs.push([(sN):'lastActivityWC',(sT):sDTIME,(sO):null])
 	Map res=[
 		(sN): dnm,
 		cn: dev.getCapabilities()*.name,
-		(sA): ((List)dev.getSupportedAttributes()).unique{ (String)it.name }.collect{
+		(sA): attrs,
+		/*((List)dev.getSupportedAttributes()).unique{ (String)it.name }.collect{
 			//Map x=[
 			[
 				(sN): (String)it.name,
@@ -3380,7 +3385,7 @@ Map getDevDetails(dev, Boolean addtransform=false){
 //				x.v= dev.currentValue(x.n)
 //			} catch(ignored){}
 //			x
-		},
+		}, */
 		/*(sC): dev.getSupportedCommands().unique{ transform ? transformCommand(it, overrides) : it.getName() }.collect{[
 				(sN): transform ? transformCommand(it, overrides) : it.getName(),
 				(sP): it.getArguments()

@@ -141,6 +141,8 @@ static Boolean eric1(){ return false }
 @Field static final String sCLRC='clearc'
 @Field static final String sCLRL='clearl'
 @Field static final String sCLRA='cleara'
+@Field static final String sSTS='$status'
+@Field static final String sLSTACTIVITY='lastActivityWC'
 
 @Field static final String sBLK=''
 @Field static final String sCOMMA=','
@@ -8576,7 +8578,8 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 			allowA=bIs(sub,sALLOWA)
 			String a; a=sMa(sub)
 			// check for disabled event subscriptions
-			if(!des && sst && !!subconds && altSub!=never && (sst==sTRIG || altSub==always || !hasTriggers)){
+			Boolean isSkipA= a in [sLSTACTIVITY] // lastActivity does not generate events
+			if(!des && !isSkipA && sst && !!subconds && altSub!=never && (sst==sTRIG || altSub==always || !hasTriggers)){
 				def device= devStr.startsWith(sCLN)? getDevice(r9,devStr):null
 				allowA=!!allowA
 				String nattr=fixAttr(a)
@@ -8791,8 +8794,7 @@ private getDevice(Map r9,String idOrName){
 	return device
 }
 
-@Field static final String sSTS='$status'
-@Field static List<String> LTHR
+@Field static List<String>  LTHR
 private static List<String> fill_THR(){ return [sORIENT,sAXISX,sAXISY,sAXISZ] }
 
 private static String fixAttr(String attr){
@@ -8883,45 +8885,49 @@ private getDeviceAttributeValue(Map r9,device,String attr,Boolean skipCurEvt=fal
 		result= ce[sVAL]
 		if(isEric(r9))myDetail r9,s+" event $result (${myObj(result)})",iN2
 	}else{
-		String msg="Error reading current value for ${device}.".toString()
-
 		String nattr=fixAttr(attr)
-		switch(nattr){
-			case 'lastActivityWC':
-				result= ((Date)device.getLastActivity())?.getTime()
-				break
-			case sSTS:
-				result= device.getStatus()
-				break
-			case sTHREAX:
-				def xyz
-				xyz= !skipCurEvt && r9EvN==sTHREAX && r9EdID && ce && ce[sVAL] ? ce[sVAL] :null
-				if(isEric(r9) && xyz)myDetail r9,s+" event $xyz (${myObj(xyz)})",iN2
-				Boolean errmsg; errmsg=false
-				if(!xyz){
-					try{
-						xyz=device.currentValue(sTHREAX,true)
-						if(xyz && isEric(r9))myDetail r9,s+" read $xyz (${myObj(xyz)})",iN2
-					}catch(al){
-						error msg+sTHREAX+sCLN,r9,iN2,al
-						errmsg=true
+		if(nattr in [sLSTACTIVITY,sSTS,sTHREAX]){
+			switch(nattr){
+				case sLSTACTIVITY:
+					result= ((Date)device.getLastActivity())?.getTime()
+					break
+				case sSTS:
+					result= device.getStatus()
+					break
+				case sTHREAX:
+					def xyz
+					xyz= !skipCurEvt && r9EvN==sTHREAX && r9EdID && ce && ce[sVAL] ? ce[sVAL] :null
+					if(isEric(r9) && xyz)myDetail r9,s+" event $xyz (${myObj(xyz)})",iN2
+					Boolean errmsg; errmsg=false
+					if(!xyz){
+						try{
+							xyz=device.currentValue(sTHREAX,true)
+							if(xyz && isEric(r9))myDetail r9,s+" read $xyz (${myObj(xyz)})",iN2
+						}catch(al){
+							error gtAttrErr(device)+sTHREAX+sCLN,r9,iN2,al
+							errmsg=true
+						}
 					}
-				}
-				if(xyz){
-					result= gtThreeAxisVal(xyz,attr)
-				}else if(!errmsg) error msg+sTHREAX+sCLN,r9,iN2
-				break
-			default:
-				try{
-					result=device.currentValue(attr,true)
-				}catch(all){
-					error msg+attr+sCLN,r9,iN2,all
-				}
+					if(xyz){
+						result= gtThreeAxisVal(xyz,attr)
+					}else if(!errmsg) error gtAttrErr(device)+sTHREAX+sCLN,r9,iN2
+					break
+			}
+		}else{
+			try{
+				result=device.currentValue(attr,true)
+			}catch(all){
+				error gtAttrErr(device)+attr+sCLN,r9,iN2,all
+			}
 		}
 	}
 
 	if(isEric(r9))myDetail r9,s+" result $result (${myObj(result)})"
 	return result!=null ? result:sBLK
+}
+
+String gtAttrErr(device){
+	return "Error reading current value for ${device}.".toString()
 }
 
 /**
@@ -10201,7 +10207,7 @@ private Map evaluateExpression(Map r9,Map express,String rtndataType=sNL){
 					String s; s=sBLK
 					try{
 						v= doExprMath(r9,o,t,v1,v2)
-					}catch(ex){
+					}catch(ignored){
 						s= "Error Calculating ($t1)$v1 $o ($t2)$v2 >> ($t)$v"
 						result=rtnMapE(s)
 						err=true
