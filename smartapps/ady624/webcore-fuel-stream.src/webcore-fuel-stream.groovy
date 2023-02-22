@@ -12148,10 +12148,14 @@ def mainFuelstream(){
 			storageLimitInput(sNL, sNL,"1461",'storage_days')
 		}
 
+		section('Logging'){
+			input sLOGNG,sENUM,(sTIT):'Logging Level',options:[(s0):"None",(s1):"Minimal",(s2):"Medium","3":"Full"],description:'Logging level',defaultValue:state[sLOGNG] ? state[sLOGNG].toString():s0
+		}
+
 		List<Map> a
 		a=getFuelStreamDBData(false)
 		state[uf]= gtSetB(uf) && !(a)
-		section('Storage'){
+		section('Storage Configuration'){
 
 			if(gtSetB(uf)){
 				String attribute=fuelNattr()
@@ -12420,12 +12424,13 @@ List<Map> cleanFuelStream(List<Map> istream){
 	Integer storage=(gtSetting("storage_days") ?: 1461) as Integer
 
 	if(isEric())debug "cleanFuelStream, size: $osz, days: $storage",null
-
+	msg += "original sz: $osz "
 	List<Map> parse_data=pruneData(stream, storage)
 	stream=parse_data
 
 	Integer nsz
 	nsz=stream.size()
+	msg += "after maxdays $storage sz1: $nsz "
 	if(isEric())debug "cleanFuelStream first trim, size: $nsz, days: $storage",null
 
 	List<Map> tstream
@@ -12443,7 +12448,7 @@ List<Map> cleanFuelStream(List<Map> istream){
 		pointsToRemove=averageSize > 0 ? ((storageSize - max) / averageSize).toInteger() : 0
 		pointsToRemove=pointsToRemove > 0 ? pointsToRemove : 0
 
-		msg +="Size ${storageSize}KB Points ${points} Avg $averageSize Remove $pointsToRemove".toString()
+		msg +="max trim Size ${storageSize}KB Points ${points} Avg $averageSize Remove $pointsToRemove".toString()
 		List<Map> toBeRemoved=stream.sort{ Map it -> it.t }.take(pointsToRemove)
 		a=stream.removeAll(toBeRemoved)
 	}

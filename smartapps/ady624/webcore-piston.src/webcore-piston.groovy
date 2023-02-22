@@ -10197,7 +10197,19 @@ private Map evaluateExpression(Map r9,Map express,String rtndataType=sNL){
 					if(!(v2!=null && tt1!=sNL && (t2==sNL || tt1==t2) && matchCast(r9,v2,tt1))) v2=oMv(evaluateExpression(r9,items[idxPlus],t2))
 					v2=v2==sSNULL ? null:v2
 
-					v= doExprMath(r9,o,t,v1,v2)
+					Boolean err;err=false
+					String s; s=sBLK
+					try{
+						v= doExprMath(r9,o,t,v1,v2)
+					}catch(ex){
+						s= "Error Calculating ($t1)$v1 $o ($t2)$v2 >> ($t)$v"
+						result=rtnMapE(s)
+						err=true
+					}
+					if(err){
+						error s,r9
+						break
+					}
 					if(isDbg(r9))debug "Calculating ($t1)$v1 $o ($t2)$v2 >> ($t)$v",r9
 
 					//set the results
@@ -10210,7 +10222,9 @@ private Map evaluateExpression(Map r9,Map express,String rtndataType=sNL){
 
 				itmSz=items.size()
 			}
-			result=items[iZ] ? (sMt(items[iZ])==sDEV ? items[iZ]:evaluateExpression(r9,items[iZ])):rtnMap(sDYN,null)
+			if(!isErr(result)){
+				result=items[iZ] ? (sMt(items[iZ])==sDEV ? items[iZ]:evaluateExpression(r9,items[iZ])):rtnMap(sDYN,null)
+			}
 			break
 	}
 
@@ -10249,6 +10263,8 @@ private Map evaluateExpression(Map r9,Map express,String rtndataType=sNL){
 private doExprMath(Map r9,String o,String t,v1,v2){
 	def v
 	v=null
+	//String myS; myS=sBLK
+	//if(isEric(r9)) myDetail r9,"doExprMath: o: $o type: $t, v1: $v1 (${myObj(v1)}) v2: $v2 (${myObj(v2)})",iN2
 	switch(o){
 		case sQM:
 		case sCLN:
@@ -12687,18 +12703,26 @@ Long getSkew(Long t4,String ttyp){
  */
 @CompileStatic
 private void getLocalVariables(Map r9,Map aS, Boolean frc=true){
+	/*String myS; myS=sBLK
+	Boolean lg1=isEric(r9)
+	if(lg1){
+		myS="getLocalVariables: "+sffwdng(r9)
+		myDetail r9,myS,i1
+	}*/
 	r9[sLOCALV]=[:]
 	String t
 	Map values=mMs(aS,sVARS)
 	List<Map>l=(List<Map>)oMv(mMs(r9,sPISTN))
 	if(!l)return
 	Boolean lg=isDbg(r9)
+	//if(lg1) myDetail r9,"values: $values",iN2
 	for(Map var in l){
 		t=sMt(var)
 		String tn=sanitizeVariableName(sMs(var,sN))
 		Map ival= mMv(var) // initialize value for variable
 		def v
 		v= values ? values[tn]:null // stored value for variable
+		//if(lg1) myDetail r9,"found variable $tn value: $v",iN2
 		Boolean hasival= ival!=null
 		Boolean isconst= hasival && sMa(var)==sS && !t.endsWith(sRB)
 		Boolean useival= hasival && (v==null || frc || isconst)
@@ -12718,7 +12742,9 @@ private void getLocalVariables(Map r9,Map aS, Boolean frc=true){
 			variable[sA]=sS
 		}
 		((Map)r9[sLOCALV])[tn]=variable
+		//if(lg1) myDetail r9,"stored variable $tn value: $variable",iN2
 	}
+	//if(lg1)myDetail r9,myS+"result:"
 }
 
 /** UI will not display anything that starts with $current or $previous; variables without d:true and non-null value will not display */
