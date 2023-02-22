@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update February 21, 2023 for Hubitat
+ * Last update February 22, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -2571,9 +2571,11 @@ def findCreateFuel(Map req){
 		l=null
 
 		if(!result){
-			def t0= wgetChildApps().findAll{ (String)it.name==n && ((String)it.label)?.contains(' - ') }.collect{ ((String)it.label).split(' - ')[0].toInteger() }.max()
+			Integer t0= wgetChildApps().findAll{
+				(String)it.name==n && ((String)it.label)?.contains(' - ') && ((String)it.label)?.contains('||') }.collect{
+					((String)it.label).split(' - ')[0].toInteger() }.max()
 			//def t0=wgetChildApps().findAll{ (String)it.name==n }.collect{ ((String)it.label).split(' - ')[0].toInteger()}.max()
-			def id=(t0 ?: 0) + 1
+			Integer id=(t0 ?: 0) + 1
 			try{
 				result=addChildApp('ady624', n, "$id - $streamName")
 				result.createStream([(sID): id, (sNM): req[sN], canister: req[sC] ?: sBLK])
