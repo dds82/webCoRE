@@ -378,7 +378,7 @@ private pageEngineBlock(){
 				href sPDPC,(sTIT):'Dump base result Cache',description:sBLK, (sDESC): c, state: b
 				href sPDPDEV,(sTIT):'Dump devices result',description:sBLK, (sDESC): c, state: b
 				href "pageDumpDashC",(sTIT):'Dump dashload Cache',description:sBLK, (sDESC): c, state: b
-				href "pageRebuildCache", (sTIT): "Clean up and rebuild IDE data cache", (sDESC): "Tap to change your clean up and rebuild your data cache", state: b
+				href "pageRebuildCache", (sTIT): "Clean up and rebuild IDE data cache", (sDESC): "Tap to clean up and rebuild your data cache", state: b
 			}
 		}
 	}
@@ -2655,7 +2655,9 @@ private api_intf_fuelstreams_get(){
 	// TODO if LTS stream form, need to find proper LTS and pass stream id
 	def stream
 	if(id.isNumber()){
-		stream=wgetChildApps().find { (String)it.name==n && ((String)it.label).startsWith("$id -")}
+		stream=wgetChildApps().find {
+			(String)it.name==n && ((String)it.label).contains('||') && ((String)it.label).startsWith("$id - ")
+		}
 		result=stream.listFuelStreamData(id)
 	}else{
 		stream = gtLTS()

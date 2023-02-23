@@ -11527,7 +11527,7 @@ Map readFile(sensor, String attribute, String fname=sNL){
 		//myDetail null,"pNm: ${pNm} cache sz: $sz",iN2
 		if(sz> 4){
 			JsonSlurper jsonSlurper=new JsonSlurper()
-			List<Map> parse=convertToList((List<Map>)jsonSlurper.parseText(readTmpFLD[pNm]))
+			List<Map> parse=convertToInternal((List<Map>)jsonSlurper.parseText(readTmpFLD[pNm]))
 			if(isEric())trace "readFile cache hit",null
 			if(isEric())myDetail null,s
 			return [size: sz, data: parse ]
@@ -11592,7 +11592,7 @@ Map readFile(sensor, String attribute, String fname=sNL){
 		parse=[]
 		if(sz>1){
 			JsonSlurper jsonSlurper=new JsonSlurper()
-			parse=convertToList((List<Map>)jsonSlurper.parseText(readTmpFLD[pNm]))
+			parse=convertToInternal((List<Map>)jsonSlurper.parseText(readTmpFLD[pNm]))
 		}else sz=0
 		if(isEric())myDetail null,s+" $sz"
 		return [size: sz, data: parse ]
@@ -11793,7 +11793,7 @@ List<Map>getAllData(sensor,String attribute, Integer mindays=1461, Boolean add=t
 	if(add){
 		List<Map> respEvents=getEvents(sensor: sensor, (sATTR): attribute, start_time: then)
 		if(respEvents){
-			all_data=addData(parse_data, convertToList(respEvents))
+			all_data=addData(parse_data, convertToInternal(respEvents))
 		}
 	}
 
@@ -11801,7 +11801,7 @@ List<Map>getAllData(sensor,String attribute, Integer mindays=1461, Boolean add=t
 
 	if(!all_data && add){
 		def state_=sensor.currentState(attribute,true)
-		all_data= convertToList([[v:state_,t:wnow()]])
+		all_data= convertToInternal([[v:state_,t:wnow()]])
 	}
 
 	if(isEric())myDetail null,"getAllData ${all_data.size()}"
@@ -11857,7 +11857,7 @@ void appendFile_LTS(sensor, String attribute, String fname=sNL){
  * @return Internal data format as List<Map>  [[date: (Date)date, (sVAL): v, t: (Long)t], ....]
  */
 @CompileStatic
-static List<Map> convertToList(List<Map>json){
+static List<Map> convertToInternal(List<Map>json){
 
 	List<Map> return_data=[]
 
@@ -11886,7 +11886,11 @@ static List<Map> convertToList(List<Map>json){
 	return return_data
 }
 
-/** shared (LTS & fuel) only method - convert different formats to file format */
+/**
+ * shared (LTS & fuel) only method - convert different formats to file format
+ *  @input internal format [[date: (Date)date, (sVAL): v, t: (Long)t]...]
+ *  @returns [[ v: v, t: long]...]
+ */
 @CompileStatic
 static List<Map> rtnFileData(List<Map> events){
 	List<Map> file_data=[]
@@ -12388,7 +12392,7 @@ List<Map> getFuelStreamDBData(Boolean init=true){
 		if(init) state.fuelStreamData=[]
 	}
 
-	return convertToList((List)state.fuelStreamData)
+	return convertToInternal((List)state.fuelStreamData)
 }
 
 /** fuel stream only - returns internal format */
