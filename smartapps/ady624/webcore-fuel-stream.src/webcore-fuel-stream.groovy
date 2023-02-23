@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update February 22, 2023 for Hubitat
+ *  Last update February 23, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -12290,7 +12290,8 @@ public List<Map> listFuelStreamData(String streamid){
 		for(Map data in res){
 			def v=data.containsKey(sV) ? data[sV] : data[sVAL]
 			Long t=data.containsKey(sT) ? (Long)data[sT] : ((Date)data[sDT]).getTime()
-			ideData << [ (sD): v, (sI): t, (sT): getFormattedDate(new Date(t))]
+			//ideData << [ (sD): v, (sI): t, (sT): getFormattedDate(new Date(t))]
+			ideData << [ (sD): v, (sT): t ]
 		}
 	}
 	return ideData

@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update February 22, 2023 for Hubitat
+ * Last update February 23, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -31,8 +31,8 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230221_HE'
-@Field static final String sHVERSTR='v0.3.114.20230221_HE - February 21, 2023'
+@Field static final String sHVER='v0.3.114.20230222_HE'
+@Field static final String sHVERSTR='v0.3.114.20230222_HE - February 23, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -174,6 +174,7 @@ private static Boolean graphsOn(){ return true }
 @Field static final String sR='r'
 @Field static final String sT='t'
 @Field static final String sV='v'
+@Field static final String sX='x'
 @Field static final String sZ='z'
 
 @Field static final String sLCLFS='localFuelStreams'
@@ -1779,7 +1780,7 @@ private api_intf_dashboard_load(){
 
 	//for accuracy, use the time as close as possible to the render
 	result.put(sNOW,wnow())
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, ("Content-Encoding"): 'gzip', data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_devices(){
@@ -1794,7 +1795,7 @@ private api_intf_dashboard_devices(){
 	}else{ result=api_get_error_result(sERRTOK,s) }
 	//for accuracy, use the time as close as possible to the render
 	result.put(sNOW,wnow())
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, ("Content-Encoding"): 'gzip', data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_refresh(){
@@ -1925,7 +1926,7 @@ private api_intf_dashboard_piston_getDb(){
 	String wName=sAppId()
 	clearBaseResult('get Db',wName)
 	result.put(sNOW,wnow())
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, ("Content-Encoding"): 'gzip', data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_get(){
@@ -1980,7 +1981,7 @@ private api_intf_dashboard_piston_get(){
 	//def jsonData=JsonOutput.toJson(result)
 	//log.debug "Trimmed resonse length: ${jsonData.getBytes(sUTF8).length}"
 	//render contentType: sAPPJAVA, data: "${params.callback}(${jsonData})"
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, ("Content-Encoding"): 'gzip', data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private void checkResultSize(Map result, Boolean requireDb=false, String caller=sNL){
@@ -2060,7 +2061,7 @@ private api_intf_dashboard_piston_backup(){
 	}else{ result=api_get_error_result(sERRTOK,'piston_backup') }
 	//for accuracy, use the time as close as possible to the render
 	result.put(sNOW,wnow())
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, ("Content-Encoding"): 'gzip', data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private String decodeEmoji(String value){
@@ -2665,7 +2666,7 @@ private api_intf_fuelstreams_get(){
 	if(stream)
 		result=stream.listFuelStreamData(id)
 
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(["points" : result])})"
+	wrender contentType: sAPPJAVA, ("Content-Encoding"): 'gzip', data: "${params.callback}(${JsonOutput.toJson(["points" : result])})"
 }
 
 
@@ -5243,9 +5244,9 @@ Map getChildComparisons(){
 		remains_below_or_equal_to	: [ (sD): "remains below or equal to",	(sDD): "remains below or equal to",		(sG):sDI,		(sP): i1,					],
 		rises				: [ (sD): "rises",				(sDD): "rise",					(sG):sDI,							],
 		does_not_rise		: [ (sD): "does not rise",			(sDD): "do not rise",				(sG):sDI,							],
-		gets				: [ (sD): "gets",										(sG):sM,		(sP): i1					],
-		gets_any			: [ (sD): "gets any",									(sG):sM,							],
-		event_occurs		: [ (sD): "event occurs",									(sG):sS,						],
+		gets				: [ (sD): "gets",										(sG):sM+sV,		(sP): i1					],
+		gets_any			: [ (sD): "gets any",									(sG):sM+sV,							],
+		event_occurs		: [ (sD): "event occurs",									(sG):sS+sV,						],
 		receives			: [ (sD): "receives",			(sDD): "receive",					(sG):"bdis",	(sP): i1,					],
 		rises_above			: [ (sD): "rises above",			(sDD): "rise above",				(sG):sDI,		(sP): i1,					],
 		rises_to_or_above	: [ (sD): "rises to or above",		(sDD): "rise to or above",				(sG):sDI,		(sP): i1,					],
@@ -5549,32 +5550,33 @@ Map getChildVirtDevices(){
 	}
 	return cleanResult
 }
-// m - momentary - seems to restrict to 'executes'?
-// x - exclude nothing (for virtual devices)?
+
+// m - momentary - restrict to comparisons that accept virtual devices - g: includes 'v', or datatype match (e) executes
+// x - use all comparisons, and exclude by datatype && no g:v  (x mean attribute has history?)
 private Map<String,Map> virtualDevices(){
 	return [
 		date:			[ (sN): 'Date',				(sT): sDATE,		],
 		datetime:		[ (sN): 'Date & Time',		(sT): sDTIME,	],
 		time:			[ (sN): 'Time',				(sT): sTIME,		],
 		email:			[ (sN): 'Email',			(sT): 'email',						(sM): true	],
-		powerSource:	[ (sN): 'Hub power source',	(sT): sENUM,	(sO): [battery: 'battery', mains: 'mains'],					x: true	],
+		powerSource:	[ (sN): 'Hub power source',	(sT): sENUM,	(sO): [battery: 'battery', mains: 'mains'],					(sX): true	],
 		ifttt:			[ (sN): 'IFTTT',			(sT): sSTR,						(sM): true	],
-		mode:			[ (sN): 'Location mode',	(sT): sENUM,	(sO): getLocationModeOptions(),	x: true],
+		mode:			[ (sN): 'Location mode',	(sT): sENUM,	(sO): getLocationModeOptions(),	(sX): true],
 		tile:			[ (sN): 'Piston tile',		(sT): sENUM,	(sO): ['1':'1','2':'2','3':'3','4':'4','5':'5','6':'6','7':'7','8':'8','9':'9','10':'10','11':'11','12':'12','13':'13','14':'14','15':'15','16':'16'],		(sM): true	],
-		pistonResume: 	[ (sN): 'Piston Resumed',	(sT): sSTR,		x: true],
+		pistonResume: 	[ (sN): 'Piston Resumed',	(sT): sSTR,		(sM): true],
 // HE specific events
 		rule:			[ (sN): 'Rule',				(sT): sENUM,	(sO): getRuleOptions(),		(sM): true ],
-		systemStart:	[ (sN): 'System Start',		(sT): sSTR,		x: true],
-		severeLoad:		[ (sN): 'Severe Load',		(sT): sSTR,		x: true],
-		zigbeeOff:		[ (sN): 'Zigbee Off',		(sT): sSTR,		x: true],
-		zigbeeOn:		[ (sN): 'Zigbee On',		(sT): sSTR,		x: true],
-		zwaveCrashed:	[ (sN): 'Z-Wave crashed',	(sT): sSTR,		x: true],
-		sunriseTime:	[ (sN): 'Sunrise Time',		(sT): sSTR,		x: true],
-		sunsetTime:		[ (sN): 'Sunset Time',		(sT): sSTR,		x: true],
+		systemStart:	[ (sN): 'System Start',		(sT): sSTR,		(sM): true],
+		severeLoad:		[ (sN): 'Severe Load',		(sT): sSTR,		(sM): true],
+		zigbeeOff:		[ (sN): 'Zigbee Off',		(sT): sSTR,		(sM): true],
+		zigbeeOn:		[ (sN): 'Zigbee On',		(sT): sSTR,		(sM): true],
+		zwaveCrashed:	[ (sN): 'Z-Wave crashed',	(sT): sSTR,		(sM): true],
+		sunriseTime:	[ (sN): 'Sunrise Time',		(sT): sSTR,		(sM): true],
+		sunsetTime:		[ (sN): 'Sunset Time',		(sT): sSTR,		(sM): true],
 //ac - actions. hubitat doesn't reuse the status for actions
-		alarmSystemStatus:	[ (sN): 'Hubitat Safety Monitor status',	(sT): sENUM,		(sO): getHubitatAlarmSystemStatusOptions(), ac: getAlarmSystemStatusActions(),		x: true],
+		alarmSystemStatus:	[ (sN): 'Hubitat Safety Monitor status',	(sT): sENUM,		(sO): getHubitatAlarmSystemStatusOptions(), ac: getAlarmSystemStatusActions(),		(sX): true],
 		alarmSystemEvent:	[ (sN): 'Hubitat Safety Monitor command event',		(sT): sENUM,		(sO): getAlarmSystemStatusActions(),	(sM): true],
-		alarmSystemAlert:	[ (sN): 'Hubitat Safety Monitor alert event',		(sT): sENUM,		(sO): getAlarmSystemAlertOptions(),	(sM): true,			x: true],
+		alarmSystemAlert:	[ (sN): 'Hubitat Safety Monitor alert event',		(sT): sENUM,		(sO): getAlarmSystemAlertOptions(),		(sM): true],
 		alarmSystemRule:	[ (sN): 'Hubitat Safety Monitor rule event',		(sT): sENUM,		(sO): getAlarmSystemRuleOptions(),		(sM): true],
 		alarmSystemRules:	[ (sN): 'Hubitat Safety Monitor rules event',		(sT): sENUM,		(sO): getAlarmSystemRulesOptions(),		(sM): true]
 	]
