@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update February 23, 2023 for Hubitat
+ * Last update February 26, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -79,6 +79,7 @@ import groovy.transform.CompileStatic
 import groovy.transform.Field
 import java.security.MessageDigest
 import java.util.concurrent.Semaphore
+import java.util.zip.GZIPOutputStream
 
 preferences{
 	//UI pages
@@ -1780,7 +1781,7 @@ private api_intf_dashboard_load(){
 
 	//for accuracy, use the time as close as possible to the render
 	result.put(sNOW,wnow())
-	wrender contentType: sAPPJAVA, ("Content-Encoding"): 'gzip', data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_devices(){
@@ -1795,7 +1796,7 @@ private api_intf_dashboard_devices(){
 	}else{ result=api_get_error_result(sERRTOK,s) }
 	//for accuracy, use the time as close as possible to the render
 	result.put(sNOW,wnow())
-	wrender contentType: sAPPJAVA, ("Content-Encoding"): 'gzip', data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_refresh(){
@@ -1926,7 +1927,7 @@ private api_intf_dashboard_piston_getDb(){
 	String wName=sAppId()
 	clearBaseResult('get Db',wName)
 	result.put(sNOW,wnow())
-	wrender contentType: sAPPJAVA, ("Content-Encoding"): 'gzip', data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private api_intf_dashboard_piston_get(){
@@ -1981,7 +1982,7 @@ private api_intf_dashboard_piston_get(){
 	//def jsonData=JsonOutput.toJson(result)
 	//log.debug "Trimmed resonse length: ${jsonData.getBytes(sUTF8).length}"
 	//render contentType: sAPPJAVA, data: "${params.callback}(${jsonData})"
-	wrender contentType: sAPPJAVA, ("Content-Encoding"): 'gzip', data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private void checkResultSize(Map result, Boolean requireDb=false, String caller=sNL){
@@ -2061,7 +2062,7 @@ private api_intf_dashboard_piston_backup(){
 	}else{ result=api_get_error_result(sERRTOK,'piston_backup') }
 	//for accuracy, use the time as close as possible to the render
 	result.put(sNOW,wnow())
-	wrender contentType: sAPPJAVA, ("Content-Encoding"): 'gzip', data: "${params.callback}(${JsonOutput.toJson(result)})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
 }
 
 private String decodeEmoji(String value){
@@ -2666,7 +2667,7 @@ private api_intf_fuelstreams_get(){
 	if(stream)
 		result=stream.listFuelStreamData(id)
 
-	wrender contentType: sAPPJAVA, ("Content-Encoding"): 'gzip', data: "${params.callback}(${JsonOutput.toJson(["points" : result])})"
+	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(["points" : result])})"
 }
 
 
@@ -3847,7 +3848,33 @@ private Date wtimeToday(String str,TimeZone tz){ return (Date)timeToday(str,tz) 
 Long wnow(){ return (Long)now() }
 List wgetChildApps(){ return (List)getChildApps() }
 private wgetChildAppByLabel(String n){ getChildAppByLabel(n) }
-private Map wrender(Map options=[:]){ render options }
+
+private Map wrender(Map options=[:]){
+	//debug "wrender: params: ${params} "
+	//debug "wrender: options:: ${options} "
+	if( ((String)request?.headers?."Accept-encoding")?.contains('gzip')){
+//		debug "request: ${request} "
+//		debug "will accept gzip"
+		if( ((String)options.data).length() > 256){
+//			debug "options.data is > 256"
+//			def a= string2gzip((String)options.data)
+//			options.data=a
+//			options."Content-Encoding"='gzip'
+			return render(options)
+		}
+	}
+	render options
+}
+
+def string2gzip(String s){
+	ByteArrayOutputStream baos = new ByteArrayOutputStream()
+	GZIPOutputStream zipStream = new GZIPOutputStream(baos)
+	zipStream.write(s.getBytes('UTF-8'))
+	zipStream.close()
+	byte[] result = baos.toByteArray()
+	baos.close()
+	return result.encodeBase64()
+}
 
 @Field static final String sURT='updateRunTimeData'
 @Field static final String sGVCACHE='gvCache'
