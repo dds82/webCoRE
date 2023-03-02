@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update February 23, 2023 for Hubitat
+ * Last update March 2, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -4889,12 +4889,12 @@ private Long do_setLevel(Map r9,device,List prms,String cmd,Integer val=null){
 	List<Object> larg
 	larg= [arg] as List<Object>
 	if(cmd==sSTLVL){ // setLevel takes seconds duration argument (optional)
-		delay=psz>i2 ? dcast(r9,prms[i2]):-d1
+		delay=psz>i2 ? (prms[i2]!=null ? dcast(r9,prms[i2]):-d1) :-d1
 	}else if(cmd==sSTCLRTEMP){ // setColorTemp takes level and seconds duration arguments (optional)
 		if(psz>i2){
 			Integer lvl=prms[i2]!=null ? icast(r9,prms[i2]):null
 			a=larg.push(lvl)
-			delay=psz>i3 ? dcast(r9,prms[i3]):-d1
+			delay=psz>i3 ? (prms[i3]!=null ? dcast(r9,prms[i3]):-d1) :-d1
 		}
 	}
 	if(delay>=dZ)a=larg.push(delay.toBigDecimal())
