@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update March 2, 2023 for Hubitat
+ * Last update March 16, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20230222_HE'
-@Field static final String sHVERSTR='v0.3.114.20230222_HE - March 2, 2023'
+@Field static final String sHVERSTR='v0.3.114.20230222_HE - March 16, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -128,6 +128,7 @@ private static Boolean graphsOn(){ return true }
 @Field static final String sDIV='/'
 @Field static final String sBOOL='bool'
 @Field static final String sAPPJAVA="application/javascript;charset=utf-8"
+@Field static final String sCONTENTT='contentType'
 @Field static final String sDATA='data'
 @Field static final String sSTS='status'
 @Field static final String sERR='error'
@@ -1515,8 +1516,8 @@ static void clearCachedchildApps(String wName){
  */
 private List<Map> presult(String wName,Boolean haveLock=false){
 	String n=handlePistn()
-	return gtCachedchildApps(wName,haveLock).sort{ (String)it.label }.collect{
-		String pid= (String)it.pid //hashPID(it.id)
+	return gtCachedchildApps(wName,haveLock).sort{ Map it -> sMs(it,'label') }.collect{ Map it ->
+		String pid= sMs(it,'pid') //hashPID(it.id)
 		/*Map meta=[
 			(sA):isAct(t0),
 			(sC):t0[sCTGRY],
@@ -1533,6 +1534,8 @@ private List<Map> presult(String wName,Boolean haveLock=false){
 		[ (sID): pid, (sNM): it.nlabel, (sMETA): (meta ? [:]+meta : [:])]
 	}
 }
+
+@Field static final String sCB='clearB'
 
 @CompileStatic
 private void clearBaseResult(String meth=sNL,String wNi=sNL){
@@ -1617,7 +1620,7 @@ private Map<String,Object> api_get_base_result(){
 			//incidents: isHubitat() ? [] : location.activeIncidents.collect{[date: it.date.time, (sTIT): it.getTitle(), message: it.getMessage(), args: it.getMessageArgs(), sourceType: it.getSourceType()]}.findAll{ it.date >= incidentThreshold },
 			(sID): locationId,
 			mode: hashId(gtCurrentMode()[sID]),
-			modes: gtModes().collect{ [id: hashId(it.id), name: (String)it.name ]},
+			modes: gtModes().collect{ Map it -> [id: hashId(it.id), name: sMs(it,'name') ]},
 			shm: transformHsmStatus(gtLhsmStatus()),
 			(sNM): gtLname(),
 			temperatureScale: gtLtScale(),
@@ -1663,11 +1666,12 @@ Boolean useLocalFuelStreams(){
 	return b!=null ? b : true
 }
 
-
+// dashboard activity cache
 @Field volatile static Map<String,Map<String,String>> lastDActivityFLD = [:]
 @Field volatile static Map<String,Map<String,String>> lastDActivityTOKFLD = [:]
 @Field volatile static Map<String,Map<String,Long>> tlastDActivityFLD=[:]
 
+// piston activity cache
 @Field volatile static Map<String,Map<String,String>> lastPActivityFLD = [:]
 @Field volatile static Map<String,Map<String,String>> lastPActivityTOKFLD = [:]
 @Field volatile static Map<String,Map<String,String>> lastPActivityPIDFLD = [:]
@@ -1706,21 +1710,18 @@ static private clearLastPActivity(String wName,String sess){
 	lastPActivityFLD= lastPActivityFLD
 }
 
-@Field static final String sCB='clearB'
-/**
- * clear cache for IDE
- */
 private api_intf_dashboard_load(){
 	Map result; result=[:]
 	recoveryHandler()
 	String s='dashLoad'
 	String msg; msg=s
 	Boolean err; err=false
-	if(verifySecurityToken((Map)params)){
+	Map p=(Map)params
+	if(verifySecurityToken(p)){
 		msg+=' security ok'
 		result=api_get_base_result()
 
-		if((String)params.dashboard=="1"){
+		if(sMs(p,'dashboard')=="1"){
 			startDashboard()
 		}else{
 			if((String)state.dashboard!=sINACT) stopDashboard()
@@ -1728,9 +1729,9 @@ private api_intf_dashboard_load(){
 	}else{
 		err=true
 		msg+=' security NOT ok'
-		if((String)params.pin!=sNL){
-			String p=gtSetStr('PIN')
-			if(p && md5('pin:'+p)==(String)params.pin){
+		if(sMs(p,'pin')!=sNL){
+			String pi=gtSetStr('PIN')
+			if(pi && md5('pin:'+pi)==sMs(p,'pin')){
 				result=api_get_base_result()
 				result.instance.token=createSecurityToken()
 			}else{
@@ -1744,10 +1745,10 @@ private api_intf_dashboard_load(){
 	}
 
 	String wName=sAppId()
-	String sess=(String)params.session ?: 'default'
+	String sess=sMs(p,'session') ?: 'default'
 	if(!err && result){
 		msg+=' no error & result'
-		String tok=(String)params.token
+		String tok=sMs(p,'token')
 		if(result)result.remove('now')
 		String jsonData= JsonOutput.toJson(result)
 		String rl=generateMD5_A(jsonData)
@@ -1781,14 +1782,15 @@ private api_intf_dashboard_load(){
 
 	//for accuracy, use the time as close as possible to the render
 	result.put(sNOW,wnow())
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private api_intf_dashboard_devices(){
 	Map result; result=[:]
 	String s='dashbaord_devices '
-	if(verifySecurityToken((Map)params)){
-		String soffset= "${params.offset}".toString()
+	Map p=(Map)params
+	if(verifySecurityToken(p)){
+		String soffset= "${p.offset}".toString()
 		Integer offset= soffset.isInteger() ? soffset.toInteger() : 0
 		if(eric())debug s+soffset
 		result=listAvailableDevices(false, true, offset) +
@@ -1796,7 +1798,7 @@ private api_intf_dashboard_devices(){
 	}else{ result=api_get_error_result(sERRTOK,s) }
 	//for accuracy, use the time as close as possible to the render
 	result.put(sNOW,wnow())
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private api_intf_dashboard_refresh(){
@@ -1810,7 +1812,7 @@ private api_intf_dashboard_refresh(){
 	}
 	//for accuracy, use the time as close as possible to the render
 	result.put(sNOW,wnow())
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private Map getDashboardData(){
@@ -1821,7 +1823,7 @@ private Map getDashboardData(){
 		result=storageApp.getDashboardData()
 	}else{
 		result=((Map<String,Object>)settings).findAll{ ((String)it.key).startsWith("dev:") }.collect{ it.value }.flatten().collectEntries{ dev -> [(hashId(dev.id)): dev]}.collectEntries{ id, dev ->
-			[ (id): dev.getSupportedAttributes().collect{ (String)it.name }.unique().collectEntries{
+			[ (id): ((List<String>)((List)dev.getSupportedAttributes()).collect{ (String)it.name }).unique().collectEntries{
 				def value
 				try { value=dev.currentValue(it) }catch(ignored){ value=null }
 				return [ (it) : value]
@@ -1838,14 +1840,15 @@ private api_intf_dashboard_piston_new(){
 	if(verifySecurityToken((Map)params)){
 		result=[(sSTS): sSUCC, (sNM): generatePistonName()]
 	}else{ result=api_get_error_result(sERRTOK,s) }
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private api_intf_dashboard_piston_create(){
 	Map result
 	debug "Dashboard: Request received to create a new piston"
-	if(verifySecurityToken((Map)params)){
-		String pname=(String)params.name!=sNL ? (String)params.name : generatePistonName()
+	Map p=(Map)params
+	if(verifySecurityToken(p)){
+		String pname=sMs(p,'name')!=sNL ? sMs(p,'name') : generatePistonName()
 		String n=handlePistn()
 		List apps; apps=wgetChildApps().findAll{ (String)it.name==n }
 		Boolean found; found=false
@@ -1860,9 +1863,9 @@ private api_intf_dashboard_piston_create(){
 		if(!found){
 			try{
 				def piston=addChildApp("ady624", handlePistn(), pname)
-				debug "created piston $piston.id  params $params"
-				if((String)params.author!=sNL || (String)params.bin!=sNL){
-					piston.config([bin: (String)params.bin, author: (String)params.author, initialVersion: sVER])
+				debug "created piston $piston.id  params $p"
+				if(sMs(p,'author')!=sNL || sMs(p,'bin')!=sNL){
+					piston.config([bin: sMs(p,'bin'), author: sMs(p,'author'), initialVersion: sVER])
 				}
 				debug "Created Piston "+pname
 				result=[(sSTS): sSUCC, (sID): hashPID(piston.id)]
@@ -1877,7 +1880,7 @@ private api_intf_dashboard_piston_create(){
 			result=[(sSTS): sERROR, (sERR): sERRUNK]
 		}
 	}else{ result=api_get_error_result(sERRTOK,'piston_create') }
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private findPiston(String id, String nm=sNL){
@@ -1927,7 +1930,7 @@ private api_intf_dashboard_piston_getDb(){
 	String wName=sAppId()
 	clearBaseResult('get Db',wName)
 	result.put(sNOW,wnow())
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private api_intf_dashboard_piston_get(){
@@ -1936,19 +1939,20 @@ private api_intf_dashboard_piston_get(){
 	String wName=sAppId()
 	clearBaseResult('get Piston',wName)
 	String s='piston_get'
-	if(verifySecurityToken((Map)params)){
-		String pistonId=(String)params.id
+	Map p=(Map)params
+	if(verifySecurityToken(p)){
+		String pistonId=sMs(p,'id')
 		def piston=findPiston(pistonId)
 		if(piston){
 			debug "Dashboard: Request received to get piston ${pistonId} ${(String)piston.label}"
 
 			String serverDbVersion=sHVER
-			String clientDbVersion=(String)params.db
+			String clientDbVersion=sMs(p,'db')
 			requireDb=serverDbVersion!=clientDbVersion
 			Map t0=(Map)piston.get()
 			result[sDATA]=t0!=null ? t0 : [:]
 			if(requireDb){
-				debug "Dashboard: get piston ${params?.id} needs new db current: ${serverDbVersion} in server ${clientDbVersion}"
+				debug "Dashboard: get piston ${p?.id} needs new db current: ${serverDbVersion} in server ${clientDbVersion}"
 				/*Map theDb=[
 					capabilities: capabilities().sort{ (String)it.value.d },
 					commands: [
@@ -1969,20 +1973,16 @@ private api_intf_dashboard_piston_get(){
 			if(getLogging()[sDBG]) checkResultSize(result, requireDb, "get piston")
 		}else{
 			result=api_get_error_result(sERRID,s)
-			warn "Dashboard: get piston bad ID : ${params?.id}"
+			warn "Dashboard: get piston bad ID : ${p?.id}"
 		}
 	}else{
 		result=api_get_error_result(sERRTOK,s)
-		warn "Dashboard: get piston bad token: ${params}"
+		warn "Dashboard: get piston bad token: ${p}"
 	}
 
 	//for accuracy, use the time as close as possible to the render
 	result.put(sNOW,wnow())
-
-	//def jsonData=JsonOutput.toJson(result)
-	//log.debug "Trimmed resonse length: ${jsonData.getBytes(sUTF8).length}"
-	//render contentType: sAPPJAVA, data: "${params.callback}(${jsonData})"
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private void checkResultSize(Map result, Boolean requireDb=false, String caller=sNL){
@@ -2038,9 +2038,10 @@ private api_intf_dashboard_piston_backup(){
 		pistons: [],
 		(sNOW):0L
 	]
-	debug "Dashboard: Request received to backup pistons ${params?.ids}"
-	if(verifySecurityToken((Map)params)){
-		List pistonIds=((String)params.ids ?: sBLK).tokenize(',')
+	Map p=(Map)params
+	debug "Dashboard: Request received to backup pistons ${p?.ids}"
+	if(verifySecurityToken(p)){
+		List pistonIds=(sMs(p,'ids') ?: sBLK).tokenize(',')
 		String myN= appName()
 		for(String pistonId in pistonIds){
 			def piston=findPiston(pistonId)
@@ -2062,7 +2063,7 @@ private api_intf_dashboard_piston_backup(){
 	}else{ result=api_get_error_result(sERRTOK,'piston_backup') }
 	//for accuracy, use the time as close as possible to the render
 	result.put(sNOW,wnow())
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private String decodeEmoji(String value){
@@ -2101,10 +2102,11 @@ private Map api_intf_dashboard_piston_set_save(String id, String data, Map<Strin
 private api_intf_dashboard_piston_set(){
 	Map result
 	debug "Dashboard: Request received to set a piston"
-	if(verifySecurityToken((Map)params)){
-		String data=(String)params?.data
+	Map p=(Map)params
+	if(verifySecurityToken(p)){
+		String data=sMs(p,'data')
 		//save the piston
-		Map saved=api_intf_dashboard_piston_set_save((String)params?.id, data, ['chunk:0' : data])
+		Map saved=api_intf_dashboard_piston_set_save(sMs(p,'id'), data, ['chunk:0' : data])
 		if(saved){
 			if(saved.rtData){
 				updateRunTimeData((Map)saved.rtData)
@@ -2115,7 +2117,7 @@ private api_intf_dashboard_piston_set(){
 			result=[(sSTS): sSUCC] + saved
 		}else{ result=[(sSTS): sERROR, (sERR): sERRUNK] }
 	}else{ result=api_get_error_result(sERRTOK) }
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 @Field volatile static LinkedHashMap<String, LinkedHashMap> pPistonChunksFLD= [:]
@@ -2123,31 +2125,33 @@ private api_intf_dashboard_piston_set(){
 private api_intf_dashboard_piston_set_start(){
 	Map result
 	debug "Dashboard: Request received to set a piston (chunked start)"
-	if(verifySecurityToken((Map)params)){
-		String chunkstr="${params?.chunks}".toString()
+	Map p=(Map)params
+	if(verifySecurityToken(p)){
+		String chunkstr="${p?.chunks}".toString()
 		Integer chunks=chunkstr.isInteger() ? chunkstr.toInteger() : 0
 		String wName=sAppId()
 		if((chunks > 0) && (chunks < 100)){
 			clearHashMap(wName)
 			//atomicState.chunks=[id: params?.id, count: chunks]
-			pPistonChunksFLD[wName]=[(sID): params?.id, count: chunks]
+			pPistonChunksFLD[wName]=[(sID): p?.id, count: chunks]
 			pPistonChunksFLD=pPistonChunksFLD
 			mb()
 			result=[(sSTS): "ST_READY"]
 		}else{ result=[(sSTS): sERROR, (sERR): "ERR_INVALID_CHUNK_COUNT"] }
 	}else{ result=api_get_error_result(sERRTOK) }
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private api_intf_dashboard_piston_set_chunk(){
 	Map result
 	String wName=sAppId()
-	String mchunk="${params?.chunk}".toString()
+	Map p=(Map)params
+	String mchunk="${p?.chunk}".toString()
 	Integer chunk=mchunk.isInteger() ? mchunk.toInteger() : -i1
 	//debug "Dashboard: Request received to set a piston chunk (#${1 + chunk}/${atomicState.chunks?.count})"
 	debug "Dashboard: Request received to set a piston chunk (#${1 + chunk}/${pPistonChunksFLD[wName]?.count})"
-	if(verifySecurityToken((Map)params)){
-		String data=(String)params?.data
+	if(verifySecurityToken(p)){
+		String data=(String)p?.data
 		//def chunks=atomicState.chunks
 		mb()
 		LinkedHashMap<String,Object>chunks=pPistonChunksFLD[wName]
@@ -2159,7 +2163,7 @@ private api_intf_dashboard_piston_set_chunk(){
 			result=[(sSTS): "ST_READY"]
 		}else{ result=[(sSTS): sERROR, (sERR): sERRCHUNK] }
 	}else{ result=api_get_error_result(sERRTOK) }
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private api_intf_dashboard_piston_set_end(){
@@ -2208,14 +2212,14 @@ private api_intf_dashboard_piston_set_end(){
 			}else{ result=[(sSTS): sERROR, (sERR): sERRCHUNK] }
 		}else{ result=[(sSTS): sERROR, (sERR): sERRCHUNK] }
 	}else{ result=api_get_error_result(sERRTOK) }
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private common_pause_resume(Map params, String oper, String msg){
 	Map result
 	String wName=sAppId()
 	if(verifySecurityToken(params)){
-		def piston=findPiston((String)params[sID])
+		def piston=findPiston(sMs(params,sID))
 		if(piston){
 			Map rtData
 			if(oper!='resume')
@@ -2232,7 +2236,7 @@ private common_pause_resume(Map params, String oper, String msg){
 	}else result=api_get_error_result(sERRTOK)
 	debug "Dashboard: "+msg
 	clearBaseResult(oper,wName)
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private api_intf_dashboard_piston_pause(){
@@ -2245,11 +2249,12 @@ private api_intf_dashboard_piston_resume(){
 
 private api_intf_dashboard_presence_create(){
 	Map result
-	if(verifySecurityToken((Map)params)){
-		String dni=(String)params.dni
-		def sensor=(dni ? getChildDevices().find{ (String)it.getDeviceNetworkId()==dni } : null) ?: addChildDevice("ady624", handlePres(), dni ?: hashId("${wnow()}"), null, [label: params.name])
+	Map p=(Map)params
+	if(verifySecurityToken(p)){
+		String dni=sMs(p,'dni')
+		def sensor=(dni ? getChildDevices().find{ (String)it.getDeviceNetworkId()==dni } : null) ?: addChildDevice("ady624", handlePres(), dni ?: hashId("${wnow()}"), null, [label: sMs(p,'name')])
 		if(sensor){
-			sensor.label=(String)params.name
+			sensor.label=sMs(p,'name')
 			result=[
 				(sSTS): sSUCC,
 				deviceId: hashId(sensor.id)
@@ -2257,7 +2262,7 @@ private api_intf_dashboard_presence_create(){
 			refreshDevices()
 		}else result=api_get_error_result("ERR_COULD_NOT_CREATE_DEVICE")
 	}else result=api_get_error_result(sERRTOK)
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private common_Simple(Map params, String msg, String oper, arg=null, Boolean clrC=false){
@@ -2265,7 +2270,7 @@ private common_Simple(Map params, String msg, String oper, arg=null, Boolean clr
 	debug "Dashboard: "+msg
 	String wName=sAppId()
 	if(verifySecurityToken(params)){
-		String pid=(String)params[sID]
+		String pid=sMs(params,sID)
 		def piston=findPiston(pid)
 		if(piston){
 			if(arg!=null)
@@ -2279,23 +2284,27 @@ private common_Simple(Map params, String msg, String oper, arg=null, Boolean clr
 		}else result=api_get_error_result(sERRID)
 	}else result=api_get_error_result(sERRTOK)
 	if(clrC)clearBaseResult(oper,wName)
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private api_intf_dashboard_piston_test(){
-	common_Simple((Map)params, "Received test a piston", 'test', null, true)
+	Map p=(Map)params
+	common_Simple(p, "Received test a piston", 'test', null, true)
 }
 
 private api_intf_dashboard_piston_tile(){
-	common_Simple((Map)params, "Clicked a piston tile", 'clickTile', params.tile, false)
+	Map p=(Map)params
+	common_Simple(p, "Clicked a piston tile", 'clickTile', p.tile, false)
 }
 
 private api_intf_dashboard_piston_set_bin(){
-	common_Simple((Map)params, "Received set piston bin", 'setBin', (String)params.bin, true)
+	Map p=(Map)params
+	common_Simple(p, "Received set piston bin", 'setBin', sMs(p,'bin'), true)
 }
 
 private api_intf_dashboard_piston_set_category(){
-	common_Simple((Map)params, "Received set piston category", 'setCategory', params.category, true)
+	Map p=(Map)params
+	common_Simple(p, "Received set piston category", 'setCategory', p.category, true)
 }
 
 private api_intf_dashboard_piston_set_modified(){
@@ -2303,7 +2312,8 @@ private api_intf_dashboard_piston_set_modified(){
 }
 
 private api_intf_dashboard_piston_logging(){
-	common_Simple((Map)params, "Received set piston logging level", 'setLoggingLevel', (String)params.level, true)
+	Map p=(Map)params
+	common_Simple(p, "Received set piston logging level", 'setLoggingLevel', sMs(p,'level'), true)
 }
 
 private api_intf_dashboard_piston_clear_logs(){
@@ -2314,8 +2324,9 @@ private api_intf_dashboard_piston_delete(){
 	Map result
 	String wName=sAppId()
 	debug "Dashboard: Request received to delete a piston"
-	if(verifySecurityToken((Map)params)){
-		String id=(String)params.id
+	Map p=(Map)params
+	if(verifySecurityToken(p)){
+		String id=sMs(p,'id')
 		def piston=findPiston(id)
 		if(piston){
 			ptMeta(wName,id,null)
@@ -2337,28 +2348,31 @@ private api_intf_dashboard_piston_delete(){
 			runIn(21, broadcastPistonList)
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private api_intf_location_entered(){
-	String deviceId=(String)params.device
-	String dni=(String)params.dni
+	Map p=(Map)params
+	String deviceId=sMs(p,'device')
+	String dni=sMs(p,'dni')
 	def device=getChildDevices().find{ ((String)it.getDeviceNetworkId()==dni) || (hashId(it.id)==deviceId) }
-	if(device && params.place) device.processEvent([(sNM): 'entered', place: params.place, places: state.settings.places])
+	if(device && p.place) device.processEvent([(sNM): 'entered', place: p.place, places: state.settings.places])
 }
 
 private api_intf_location_exited(){
-	String deviceId=(String)params.device
-	String dni=(String)params.dni
+	Map p=(Map)params
+	String deviceId=sMs(p,'device')
+	String dni=sMs(p,'dni')
 	def device=getChildDevices().find{ ((String)it.getDeviceNetworkId()==dni) || (hashId(it.id)==deviceId) }
-	if(device && params.place) device.processEvent([(sNM): 'exited', place: params.place, places: state.settings.places])
+	if(device && p.place) device.processEvent([(sNM): 'exited', place: p.place, places: state.settings.places])
 }
 
 private api_intf_location_updated(){
-	String deviceId=(String)params.device
-	String dni=(String)params.dni
+	Map p=(Map)params
+	String deviceId=sMs(p,'device')
+	String dni=sMs(p,'dni')
 	def device=getChildDevices().find{ ((String)it.getDeviceNetworkId()==dni) || (hashId(it.id)==deviceId) }
-	Map location=params.location ? (LinkedHashMap) new JsonSlurper().parseText((String)params.location) : [(sERR): "Invalid data"]
+	Map location=p.location ? (LinkedHashMap) new JsonSlurper().parseText(sMs(p,'location')) : [(sERR): "Invalid data"]
 	if(device) device.processEvent([(sNM): 'updated', location: location, places: state.settings.places])
 }
 
@@ -2367,10 +2381,11 @@ private api_intf_variable_set(){
 	String meth="dashboard variable_set "
 	debug meth+"Request received to set a variable"
 	String meth1; meth1=sNL
-	if(verifySecurityToken((Map)params)){
-		String pid=(String)params.id
-		String name; name=(String)params.name
-		LinkedHashMap value=params.value ? (LinkedHashMap) new JsonSlurper().parseText(new String(((String)params.value).decodeBase64(), sUTF8)) : null
+	Map p=(Map)params
+	if(verifySecurityToken(p)){
+		String pid=sMs(p,'id')
+		String name; name=sMs(p,'name')
+		LinkedHashMap value=p.value ? (LinkedHashMap) new JsonSlurper().parseText(new String((sMs(p,'value')).decodeBase64(), sUTF8)) : null
 		trace meth+"pid: $pid name: $name value: $value"
 		Map<String,Map> globalVars
 		Map<String,Object> localVars
@@ -2509,7 +2524,7 @@ private api_intf_variable_set(){
 		}
 	}else{ result=api_get_error_result(sERRTOK) }
 	clearBaseResult('set var')
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 
@@ -2643,7 +2658,8 @@ private api_intf_fuelstreams_list(){
 	}
 	*/
 
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(["fuelStreams" : result])})"
+	Map res=["fuelStreams" : result]
+	renderRes(res)
 }
 
 private api_intf_fuelstreams_get(){
@@ -2667,7 +2683,8 @@ private api_intf_fuelstreams_get(){
 	if(stream)
 		result=stream.listFuelStreamData(id)
 
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(["points" : result])})"
+	Map res=["points" : result]
+	renderRes(res)
 }
 
 
@@ -2746,8 +2763,9 @@ String getOpenWeatherData(){
 private api_intf_settings_set(){
 	Map result
 	debug "Dashboard: Request received to set settings"
-	if(verifySecurityToken((Map)params)){
-		String pset=(String)params.settings
+	Map p=(Map)params
+	if(verifySecurityToken(p)){
+		String pset=sMs(p,'settings')
 		LinkedHashMap msettings=pset ? (LinkedHashMap) new JsonSlurper().parseText(new String(pset.decodeBase64(), sUTF8)) : null
 		assignAS('settings',msettings)
 
@@ -2757,36 +2775,38 @@ private api_intf_settings_set(){
 		testLifx()
 		result=[(sSTS): sSUCC]
 	}else{ result=api_get_error_result(sERRTOK) }
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private api_intf_dashboard_piston_evaluate(){
 	Map result
 	debug "Dashboard: Request received to evaluate an expression"
-	if(verifySecurityToken((Map)params)){
-		def piston=findPiston((String)params.id)
+	Map p=(Map)params
+	if(verifySecurityToken(p)){
+		def piston=findPiston(sMs(p,'id'))
 		if(piston){
-			LinkedHashMap expression=(LinkedHashMap) new JsonSlurper().parseText(new String(((String)params.expression).decodeBase64(), sUTF8))
+			LinkedHashMap expression=(LinkedHashMap) new JsonSlurper().parseText(new String((sMs(p,'expression')).decodeBase64(), sUTF8))
 			Map msg=timer "Evaluating expression"
-			result=[(sSTS): sSUCC, (sVAL): piston.proxyEvaluateExpression(null /* getRunTimeData()*/, expression, (String)params.dataType)]
+			result=[(sSTS): sSUCC, (sVAL): piston.proxyEvaluateExpression(null /* getRunTimeData()*/, expression, sMs(p,'dataType'))]
 			trace msg
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 private api_intf_dashboard_piston_activity(){
 	String s; s='piston activity'
 	String msg; msg=s
 	Map result
-	if(verifySecurityToken((Map)params)){
+	Map p=(Map)params
+	if(verifySecurityToken(p)){
 		msg+=' security ok'
-		String pistonId=(String)params.id
+		String pistonId=sMs(p,'id')
 		def piston=findPiston(pistonId)
 		if(piston!=null){
 			String wName=sAppId()
-			String sess=(String)params.session ?: 'default'
-			Map t0=(Map)piston.activity(params.log)
+			String sess=sMs(p,'session') ?: 'default'
+			Map t0=(Map)piston.activity(p.log)
 			String jsonData= JsonOutput.toJson(t0)
 			String rl=generateMD5_A(jsonData)
 			String tok=(String)params.token
@@ -2822,7 +2842,7 @@ private api_intf_dashboard_piston_activity(){
 	}
 	if(getLogging()[sDBG]) checkResultSize(result, false, s)
 	//debug "Dashboard: Activity request received $params " +msg
-	wrender contentType: sAPPJAVA, data: "${params.callback}(${JsonOutput.toJson(result)})"
+	renderRes(result)
 }
 
 def api_ifttt(){
@@ -2832,9 +2852,10 @@ def api_ifttt(){
 	if(remoteAddr==null)remoteAddr=request.'X-forwarded-for' ?: request.Host
 	debug "Request received ifttt call IP $remoteAddr Referer: ${request.headers.Referer}"
 //log.debug "params ${params}"
-	if(params){
+	Map p=(Map)params
+	if(p){
 		data.params=[:]
-		for(param in params){
+		for(param in p){
 			if(!((String)param.key in ['access_token', 'theAccessToken', 'appId', 'action', 'controller'])){
 				data[(String)param.key]=param.value
 			}
@@ -2842,11 +2863,11 @@ def api_ifttt(){
 	}
 	data=data + (request?.JSON ?: [:])
 	data.remoteAddr=remoteAddr
-	String eventName=(String)params?.eventName
+	String eventName=sMs(p,'eventName')
 	if(eventName){
 		sendLocationEvent([(sNM): "ifttt.${eventName}", (sVAL): eventName, isStateChange: true, linkText: "IFTTT event", descriptionText: "${handle()} has received an IFTTT event: $eventName", (sDATA): data])
 	}
-	wrender contentType: "text/html", data: "<!DOCTYPE html><html lang=\"en\">Received event $eventName.<body></body></html>"
+	wrender( [ (sCONTENTT): 'text/html', (sDATA): "<!DOCTYPE html><html lang=\"en\">Received event $eventName.<body></body></html>" ])
 }
 
 def api_email(){
@@ -2856,7 +2877,7 @@ def api_email(){
 	if(pistonId){
 		sendLocationEvent([(sNM): "email.${pistonId}", (sVAL): pistonId, isStateChange: true, linkText: "Email event", descriptionText: "${handle()} has received an email from $from", (sDATA): data])
 	}
-	wrender contentType: "text/plain", data: 'OK'
+	wrender( [ (sCONTENTT): 'text/plain', (sDATA): 'OK' ])
 }
 
 private api_execute(){
@@ -2870,8 +2891,9 @@ private api_execute(){
 	if(remoteAddr==null)remoteAddr='just'
 	debug "Dashboard or web request received to execute a piston from IP $remoteAddr Referer: ${request.headers.Referer}"
 //log.debug "params ${params} request: ${request}"
-	if(params){
-		for(param in (Map)params){
+	Map p=(Map)params
+	if(p){
+		for(param in p){
 			if(!((String)param.key in ['access_token', 'pistonIdOrName'])){
 				data[(String)param.key]=param.value
 			}
@@ -2880,7 +2902,7 @@ private api_execute(){
 	data=data+(request?.JSON ?: [:])
 	data.remoteAddr=remoteAddr
 	data.referer=request.headers.Referer
-	String pistonIdOrName=(String)params?.pistonIdOrName
+	String pistonIdOrName=sMs(p,'pistonIdOrName')
 	def piston= findPiston(pistonIdOrName,pistonIdOrName)
 	if(piston!=null){
 		sendExecuteEvt(hashPID(piston.id),
@@ -2894,7 +2916,7 @@ private api_execute(){
 		error "Piston not found for dashboard or web Request to execute a piston from IP $remoteAddr $pistonIdOrName"
 	}
 	result[sTMSTMP]=(new Date()).time
-	wrender contentType: sAPPJSON, data: JsonOutput.toJson(result)
+	wrender( [ (sCONTENTT): sAPPJAVA, (sDATA): JsonOutput.toJson(result) ] )
 }
 
 void sendExecuteEvt(String pistonId,val,String desc, String desc1,Map data){
@@ -2908,10 +2930,11 @@ private api_global(){
 	remoteAddr=request.headers.'X-forwarded-for' ?: request.headers.Host
 	if(remoteAddr==null)remoteAddr=request.'X-forwarded-for' ?: request.Host
 	if(remoteAddr==null)remoteAddr='just'
-	debug "web request received to get variable from IP $remoteAddr Referer: ${request.headers.Referer} | $params"
+	Map p=(Map)params
+	debug "web request received to get variable from IP $remoteAddr Referer: ${request.headers.Referer} | $p"
 	Map result=[:]
 	Boolean err; err=true
-	String varName=(String)params?.varName
+	String varName=sMs(p,'varName')
 	if(varName && (Boolean)varName.startsWith(sAT) ){
 		if((Boolean)varName.startsWith(sAT2)){
 			String vn=varName.substring(2)
@@ -2942,7 +2965,7 @@ private api_global(){
 	}
 	Integer st= err ? 400 : 200
 	result[sTMSTMP]=(new Date()).time
-	wrender contentType: sAPPJAVA, data: JsonOutput.toJson(result), status: st
+	wrender( [ (sCONTENTT): sAPPJAVA, (sDATA): JsonOutput.toJson(result), (sSTS): st ] )
 }
 
 @Field volatile static Map<String,Long> lastRecoveredFLD= [:]
@@ -3849,27 +3872,39 @@ Long wnow(){ return (Long)now() }
 List wgetChildApps(){ return (List)getChildApps() }
 private wgetChildAppByLabel(String n){ getChildAppByLabel(n) }
 
-private Map wrender(Map options=[:]){
+private Map renderRes(Map result){
 	//debug "wrender: params: ${params} "
-	//debug "wrender: options:: ${options} "
-	if( ((String)request?.headers?."Accept-encoding")?.contains('gzip')){
-//		debug "request: ${request} "
-//		debug "will accept gzip"
-		if( ((String)options.data).length() > 256){
-//			debug "options.data is > 256"
-//			def a= string2gzip((String)options.data)
-//			options.data=a
-//			options."Content-Encoding"='gzip'
-			return render(options)
-		}
-	}
-	render options
+	wrender( [ (sCONTENTT): sAPPJAVA, (sDATA): (String)params.callback+'('+JsonOutput.toJson(result)+')' ] )
 }
 
-def string2gzip(String s){
+@Field static final String sAE='Accept-encoding'
+@Field static final String sCE='Content-Encoding'
+@Field static final String sGZIP='gzip'
+private Map wrender(Map options=[:]){
+	//debug "wrender: options:: ${options} "
+	//debug "request: ${request} "
+	Map h=(Map)request?.headers
+	if(h && sMs(h,sAE)?.contains(sGZIP)){
+//		debug "will accept gzip"
+		String s=sMs(options,sDATA)
+		Integer sz=s?.length()
+		if(sz>256){
+			try{
+				String a= string2gzip(s)
+				Integer nsz=a.size()
+				if(eric1())debug "options.data is $sz after compression $nsz  saving ${1-(nsz/sz)}%"
+//				options[sDATA]=a
+//				options[sCE]=sGZIP
+			}catch(ignored){}
+		}
+	}
+	render(options)
+}
+
+static String string2gzip(String s){
 	ByteArrayOutputStream baos = new ByteArrayOutputStream()
 	GZIPOutputStream zipStream = new GZIPOutputStream(baos)
-	zipStream.write(s.getBytes('UTF-8'))
+	zipStream.write(s.getBytes(sUTF8))
 	zipStream.close()
 	byte[] result = baos.toByteArray()
 	baos.close()
@@ -4040,7 +4075,7 @@ Boolean isPisPaused(String pistonId){
 		if(meta && !((Boolean)meta[sA])) return true
 	}
 	if(!piston || !meta){
-		if(eric1()) debug "isPisPaused no piston $pistonId or metadata"
+		//if(eric1()) debug "isPisPaused no piston $pistonId or metadata"
 		return (Boolean)null
 	}
 	return false
@@ -4101,7 +4136,7 @@ void broadcastPistonList(Boolean frc=false){
 			(sDATA): [
 				(sID): getInstanceSid(),
 				(sNM): appName(),
-				pistons: gtCachedchildApps(wName).collect{
+				pistons: gtCachedchildApps(wName).collect{ Map it ->
 					[ (sID): it.pid, (sNM): it.nlabel, aname: it.label ]
 				}
 			]
@@ -4120,7 +4155,6 @@ def webCoREHandler(event){
 	def data=event.jsonData ?: null
 //log.error "GOT EVENT WITH DATA $data"
 /*	if(data && data.variable && ((String)data.event==sVARIABLE) && eV && eV.startsWith(sAT2)){
-		if(eV.startsWith(sAT2)) return // TODO ERS
 		Map variable=data.variable
 		String vType=(String)variable.type ?: sDYN
 		String vN=(String)variable.name
@@ -4191,7 +4225,7 @@ def newIncidentHandler(evt){
 @Field static final String sADDHSMEVT='addHsmEvent'
 
 void addHsmEvent(evt){
-	String evNm = (String)evt.name
+	String evNm= (String)evt.name
 	String evV=evt.value.toString()
 	String evDesc=(String)evt.descriptionText
 	String nevDesc= normalizeString(evDesc)
@@ -4210,7 +4244,7 @@ void addHsmEvent(evt){
 		String msg= evNm == 'hsmAlert' ?  'HSM '+evV+' Alert' : sNL
 
 		alert=[
-				date:((Date)evt.date).getTime(),
+				(sDATE):((Date)evt.date).getTime(),
 				(sNM): evNm,
 				(sV):evt.value,
 				des:evDesc,
@@ -4270,7 +4304,7 @@ private List<Map> getIncidents(Boolean haveLock=false){
 	def a; a=gtAS(sHSMALRTS)
 	alerts= a? (List<Map>)a : []
 	Integer osz; osz=alerts.size()
-	if(osz==0){
+	if(osz==iZ){
 		if(!haveLock) releaseTheLock(sGTINCIDENTS)
 		return []
 	}
@@ -4290,7 +4324,7 @@ private List<Map> getIncidents(Boolean haveLock=false){
 */
 	Long incidentThreshold=Math.round(wnow() - 604800000.0D) // 1 week
 	newAlerts=alerts.collect{ it }.findAll{
-		(Long)it.date >= incidentThreshold }.sort{ (Long)it.date }
+		(Long)it[sDATE] >= incidentThreshold }.sort{ (Long)it[sDATE] }
 
 	new2Alerts=[]
 	Map<String,List<Map>> rules
@@ -4300,7 +4334,7 @@ private List<Map> getIncidents(Boolean haveLock=false){
 
 	Boolean b
 	for(Map myE in newAlerts){
-		String evNm = sMs(myE,sNM)
+		String evNm= sMs(myE,sNM)
 		String v= sMs(myE,sV)
 		String desc= sMs(myE,'des')
 		if(evNm=='hsmAlert'){
@@ -4337,7 +4371,7 @@ private List<Map> getIncidents(Boolean haveLock=false){
 	for(l in rules.keySet()){
 		new3Alerts += rules[l]
 	}
-	new4Alerts = new3Alerts.collect { it }.sort { (Long)it.date }
+	new4Alerts = new3Alerts.collect { it }.sort { (Long)it[sDATE] }
 
 	Integer nsz=new4Alerts.size()
 	if(osz!=nsz || chgd){
@@ -5900,7 +5934,7 @@ private static String md5(String md5){
 	byte[] array=md.digest(md5.getBytes())
 	String result; result=sBLK
 	Integer l=array.size()
-	for(Integer i=0; i<l; ++i){
+	for(Integer i=iZ; i<l; ++i){
 		result += Integer.toHexString((array[i] & 0xFF)| 0x100).substring(i1,i3)
 	}
 	return result

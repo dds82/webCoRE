@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update February 23, 2023 for Hubitat
+ *  Last update March 16, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -33,7 +33,7 @@
 //file:noinspection UnnecessaryQualifiedReference
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230221_HE'
+@Field static final String sHVER='v0.3.114.20230222_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -203,7 +203,7 @@ def uninstalled(){
 }
 
 private removeChildDevices(delete){
-	delete.each{deleteChildDevice(it.deviceNetworkId)}
+	delete.each{ deleteChildDevice(it.deviceNetworkId) }
 }
 
 @Field static final String dupMSGFLD= "This graph is duplicated and has not had configuration completed... Please open graph and configure to complete setup..."
@@ -226,6 +226,7 @@ def updated(){
 
 	wremoveSetting('debug')
 	wremoveSetting('dummy')
+	wremoveSetting('graph_refresh_rate')
 
 	Map fs=state.fuelStream
 	String typ
@@ -2260,9 +2261,9 @@ Map getSubscriptions_gauge(){
 
 
 // Shared input method
-def inputGraphUpdateRate(){
+def inputGraphUpdateRate(String d=s0){
 	String defl
-	defl=s0
+	defl=d
 	List opt
 	opt=rateEnum
 	if(gtStB('hasFuel')){
@@ -3791,9 +3792,10 @@ def graphTimegraph(){
 			input( (sTYPE): sENUM, (sNM): 'graph_point_span',(sTIT): "<b>Integration Time</b><br><small>(The amount of time each data point covers)</small>",
 					(sMULTP): false, (sREQ): true, options: timespanEnum2, (sDEFV): "300000", (sSUBOC): true)
 
-			inputGraphUpdateRate()
-			input( (sTYPE): sENUM, (sNM): 'graph_refresh_rate',(sTIT): "<b>Graph Update Rate</b></br><small>(For panel viewing; the refresh rate of the graph)</small>",
-					(sMULTP): false, (sREQ): true, options: rateEnum, (sDEFV): "300000")
+			inputGraphUpdateRate("300000")
+			//input( (sTYPE): sENUM, (sNM): "graph_update_rate",(sTIT): "<b>Select graph update rate</b>", (sMULTP): false, (sREQ): false, options: opt, (sDEFV): defl)
+			//input( (sTYPE): sENUM, (sNM): 'graph_refresh_rate',(sTIT): "<b>Graph Update Rate</b></br><small>(For panel viewing; the refresh rate of the graph)</small>",
+			//		(sMULTP): false, (sREQ): true, options: rateEnum, (sDEFV): "300000")
 
 			container=[]
 
@@ -3820,7 +3822,7 @@ def graphTimegraph(){
 					(sDEFLT): 0, (sMIN): 0, (sMAX): 24, (sUNITS): " hours", (sSUBONCHG): true)
 
 			container << hubiForm_slider ((sTIT): "<b>Minutes</b>", (sNM): "graph_timespan_minutes",
-					(sDEFLT): 0, (sMIN): 0, (sMAX): 60, (sUNITS): " seconds", (sSUBONCHG): true)
+					(sDEFLT): 0, (sMIN): 0, (sMAX): 60, (sUNITS): " minutes", (sSUBONCHG): true)
 
 			Long msecs
 			if(graph_timespan_weeks==null){
@@ -4427,7 +4429,7 @@ Map getOptions_timegraph(){
 			"graphTimespan": Long.parseLong(gtSetStr('graph_timespan')),
 			"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
 			"graphPointSpan": Long.parseLong(gtSetStr('graph_point_span')),
-			"graphRefreshRate" : Integer.parseInt(gtSetStr('graph_refresh_rate')),
+//			"graphRefreshRate" : Integer.parseInt(gtSetStr('graph_refresh_rate')),
 			"overlays": [ "display_overlays" : show_overlay,
 							"horizontal_alignment" : overlay_horizontal_placement,
 							"vertical_alignment" : overlay_vertical_placement,
@@ -4668,7 +4670,7 @@ function parseEvent(event){
 
 		updateOverlay(deviceId, attribute, value);
 
-		if(options.graphRefreshRate === 0) update();
+		if(options.graphUpdateRate === 0) update();
 	}
 }
 
@@ -4827,7 +4829,7 @@ async function onLoad(){
 		}
 	} else{
 		//start our update cycle
-		if(options.graphRefreshRate !== -1){
+		if(options.graphUpdateRate !== -1){
 			//start websocket
 			websocket=new WebSocket("ws://" + location.hostname + "/eventsocket");
 			websocket.onopen=() =>{
@@ -4837,10 +4839,10 @@ async function onLoad(){
 				parseEvent(JSON.parse(event.data));
 			}
 
-			if(options.graphRefreshRate !== 0){
+			if(options.graphUpdateRate !== 0){
 				setInterval(() =>{
 					update();
-				}, options.graphRefreshRate);
+				}, options.graphUpdateRate);
 			}
 		}
 	}
@@ -4966,6 +4968,7 @@ function drawChart(callback){
 			extend_right=subscriptions.extend[deviceIndex][attribute].right;
 			let drop_line=subscriptions.drop[deviceIndex][attribute].valid;
 			let drop_val=null;
+			let newEntry=undefined;
 
 			if(drop_line == "true"){
 				drop_val=parseFloat(subscriptions.drop[deviceIndex][attribute].value);
@@ -5168,7 +5171,7 @@ Map getSubscriptions_timegraph(){
 			states_[sid]= states_[sid] ?: [:]
 
 			String varn= "attribute_${sa}_states".toString()
-			if((List)settings[varn] && gtSetB("attribute_${sa}_custom_states")){
+			if((List)settings[varn] /* && gtSetB("attribute_${sa}_custom_states") */){
 				states_[sid][attr]=[:]
 				for(String st in (List<String>)settings[varn]){
 					states_[sid][attr][st]=settings["attribute_${sa}_${st}"]
@@ -12755,7 +12758,7 @@ ${title}
 def hubiForm_section(String title, Integer pos, String icon, String suffix, Closure code){
 
 	String id=title.replace(' ', '_').replace('(', sBLK).replace(')',sBLK)
-	String title_=title.replace("'", "").replace("`", "")
+	String title_=title.replace("'", "").replace("`", "").replace(':',' ')
 
 	String titleHTML="""
 	<div class="mdl-layout__header" style="display: block; background:#033673; margin: 0 -16px; width: calc(100% + 32px); position: relative; z-index: ${pos}; overflow: visible;">
@@ -13684,6 +13687,7 @@ Boolean hubiTools_check_list(List<Map> dataSources, List<Map> list_){
 private static TimeZone mTZ(){ return TimeZone.getDefault() } // (TimeZone)location.timeZone
 
 import java.text.SimpleDateFormat
+import java.util.zip.GZIPOutputStream
 
 @CompileStatic
 static String formatTime(Date t){
@@ -14198,7 +14202,43 @@ private Map queueSemaphore(Map event){
 
 }
 
-private wrender(Map options=[:]){ render options }
+@Field static final String sAE='Accept-encoding'
+@Field static final String sCE='Content-Encoding'
+@Field static final String sGZIP='gzip'
+@Field static final String sDATA='data'
+@Field static final String sUTF8='UTF-8'
+
+private Map wrender(Map options=[:]){
+	//debug "wrender: options:: ${options} "
+	//debug "request: ${request} "
+	Map h=(Map)request?.headers
+	if(h && sMs(h,sAE)?.contains(sGZIP)){
+//		debug "will accept gzip"
+		String s=sMs(options,sDATA)
+		Integer sz=s?.length()
+		if(sz>256){
+			try{
+				String a= string2gzip(s)
+				Integer nsz=a.size()
+				if(eric1())debug "options.data is $sz after compression $nsz  saving ${Math.round((d1-(nsz/sz))*1000.0D)/10.0D}%",null
+//				options[sDATA]=a
+//				options[sCE]=sGZIP
+			}catch(ignored){}
+		}
+	}
+	render(options)
+}
+
+static String string2gzip(String s){
+	ByteArrayOutputStream baos= new ByteArrayOutputStream()
+	GZIPOutputStream zipStream= new GZIPOutputStream(baos)
+	zipStream.write(s.getBytes(sUTF8))
+	zipStream.close()
+	byte[] result= baos.toByteArray()
+	baos.close()
+	return result.encodeBase64()
+}
+
 private Long wnow(){ return (Long)now() }
 private Date wtoDateTime(String s){ return (Date)toDateTime(s) }
 private String sAppId(){ return ((Long)app.id).toString() }

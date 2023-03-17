@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update March 2, 2023 for Hubitat
+ * Last update March 16, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -617,6 +617,7 @@ private static Map<String,Object> rtnMap(String t,v){ return [(sT):t,(sV):v] }
 /** Returns t:duration,v:m.v,vt:m.vt  */
 @CompileStatic
 private static Map<String,Object> rtnMap1(Map m){ return [(sT):sDURATION,(sV):oMv(m),(sVT):sMvt(m)] }
+/** Returns t:string,v:v */
 @CompileStatic
 private static Map rtnMapS(String v){ return [(sT):sSTR,(sV):v] as LinkedHashMap }
 @CompileStatic
@@ -1125,7 +1126,7 @@ Map curPState(){
 	return rVal
 }
 
-private String decodeEmoji(String value){
+private static String decodeEmoji(String value){
 	if(!value) return sBLK
 	return value.replaceAll(/(\:%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}\:)/){
 		m -> URLDecoder.decode( ((String)m[0]).substring(1, 13), sUTF8)
@@ -2272,7 +2273,7 @@ private LinkedHashMap getParentCache(){
 				(sINSTID): sMs(t0,sINSTID),
 				(sSETTINGS): mMs(t0,'stsettings'),
 				(sENABLED): isEnbl(t0),
-				lifx: mMs(t0,'lifx'),
+				(sLIFX): mMs(t0,sLIFX),
 				('logPExec'): bIs(t0,'logPExec'),
 				accountId: sMs(t0,'accountId'),
 				(sNACCTSID): bIs(t0,sNACCTSID),
@@ -4452,7 +4453,7 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 				case sD:
 					if(priorActivity){
 						//add the required number of days
-						nxtSchd=time+Math.round(dMSDAY*(interval-(thisDay-lastDay)))
+						nxtSchd=addTime(time,Math.round(dMSDAY*(interval-(thisDay-lastDay))),level)
 					}else nxtSchd=time
 					break
 				case sW:
@@ -4462,10 +4463,10 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 					if(lg) myDetail r9,mySt1+"currentDay: $currentDay requiredDay: $requiredDay ",iN2
 					if(currentDay>requiredDay)requiredDay+=i7
 					//move to first matching day in future
-					nxtSchd=time+Math.round(dMSDAY*(requiredDay-currentDay)) // this is ahead of now on proper day (could be today)
+					nxtSchd=addTime(time,Math.round(dMSDAY*(requiredDay-currentDay)),level) // this is ahead of now on proper day (could be today)
 					Integer myInterval; myInterval=interval
 					if(requiredDay!=currentDay) myInterval-=i1 //if we changed the day adjust interval calculation
-					if(priorActivity)nxtSchd+=Math.round(604800000.0D*myInterval) // this is n weeks from now
+					if(priorActivity)nxtSchd=addTime(nxtSchd,Math.round(604800000.0D*myInterval),level) // this is n weeks from now
 					break
 				case sN: // months
 				case sY:
@@ -4474,7 +4475,7 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 					def odw=oMs(tlo,sODW)
 					Integer omy=intervlUnit==sY ? icast(r9,oMs(tlo,sOMY)):iZ
 					Integer day,year,month
-					Date date=adate // new Date(time)
+					Date date= new Date(time)
 					year=dyYear //date.year
 					month=Math.round((intervlUnit==sN ? dyMon /*date.month*/:omy)+(priorActivity ? interval:((nxtSchd<rightNow)? d1:dZ))*(intervlUnit==sN ? d1:i12)).toInteger()
 					if(month>=i12){
@@ -4517,7 +4518,10 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 						myDetail r9,mySt1+"odm: $odm odw: $odw omy: $omy day: $day month: $month year: $year",iN2
 					if(day){
 						date.setDate(day)
-						nxtSchd=date.getTime()
+						Long t0,t1
+						t0=time
+						t1=date.getTime()
+						nxtSchd=addTime(t0,t1-t0,level)
 					}
 					break
 			}
@@ -4531,7 +4535,7 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 					myDetail r9,mySt1+"TIME RESTRICTION PASSED cycle: ${tcy-cycles} nxtSchd: $nxtSchd priorActivity: $priorActivity lastRun: $lastRun lastR: $lastR rightNow: $rightNow",iN2
 				break
 			}
-			if(offset>lZ)nxtSchd+=offset
+			if(offset>lZ)nxtSchd=addTime(nxtSchd,offset,level)
 			if(lg) myDetail r9,mySt1+"offset: $offset",iN2
 		}
 		time=nxtSchd
@@ -4547,6 +4551,18 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 		requestWakeUp(r9,timer,[(sDLR):iN1],nxtSchd,sNL,false,sNL,msg)
 	}
 	if(lg)myDetail r9,mySt1+mySt
+}
+
+/**
+ * Add time (mode DST)
+ */
+@CompileStatic
+private static Long addTime(Long pastTime,Long add,Integer level){
+	Long t0,t1
+	TimeZone mtz=mTZ()
+	t0=pastTime+add
+	t1= level>=i5 ? Math.round( (t0+(mtz.getOffset(pastTime)-mtz.getOffset(t0))) *d1) : t0
+	return t1
 }
 
 /**
@@ -4889,12 +4905,12 @@ private Long do_setLevel(Map r9,device,List prms,String cmd,Integer val=null){
 	List<Object> larg
 	larg= [arg] as List<Object>
 	if(cmd==sSTLVL){ // setLevel takes seconds duration argument (optional)
-		delay=psz>i2 ? (prms[i2]!=null ? dcast(r9,prms[i2]):-d1) :-d1
+		delay=psz>i2 && prms[i2]!=null ? dcast(r9,prms[i2]):-d1
 	}else if(cmd==sSTCLRTEMP){ // setColorTemp takes level and seconds duration arguments (optional)
 		if(psz>i2){
 			Integer lvl=prms[i2]!=null ? icast(r9,prms[i2]):null
 			a=larg.push(lvl)
-			delay=psz>i3 ? (prms[i3]!=null ? dcast(r9,prms[i3]):-d1) :-d1
+			delay=psz>i3 && prms[i3]!=null ? dcast(r9,prms[i3]):-d1
 		}
 	}
 	if(delay>=dZ)a=larg.push(delay.toBigDecimal())
@@ -5805,7 +5821,7 @@ private Long do_lifx(Map r9,String cmd,String path,Map body,Long duration,String
 private Long vcmd_lifxScene(Map r9,device,List prms){
 	String sceneId; sceneId=sLi(prms,iZ)
 	Long duration=prms.size()>i1 ? Math.round( matchCastL(r9,prms[i1]) / d1000):lZ
-	Map scn=(Map)mMs(r9,'lifx')?.scenes
+	Map scn=(Map)mMs(r9,sLIFX)?.scenes
 	if(!scn){
 		error "Sorry, there seems to be no available LIFX scenes, please ensure the LIFX integration is working.",r9
 		return lZ
@@ -5831,7 +5847,7 @@ private static String getLifxSelector(Map r9,String selector){
 	Integer i; i=iZ
 	List<String> a=['scene_',sBLK,'group_','location_']
 	for(String m in ['scenes','lights','groups','locations']){
-		String obj=mMs(mMs(r9,'lifx'),m)?.find{ it.key==selector || it.value==selector }?.key
+		String obj=mMs(mMs(r9,sLIFX),m)?.find{ it.key==selector || it.value==selector }?.key
 		if(obj)return "${a[i]}id:${obj}".toString()
 		i+=i1
 	}
@@ -6022,7 +6038,7 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 
 void ahttpRequestHandler(resp,Map callbackData){
 	Boolean binary; binary=false
-	def t0=resp.getHeaders()
+	Map t0=resp.getHeaders()
 	String t1=t0!=null ? sMs(t0,'Content-Type'):sNL
 	String mediaType; mediaType=t1 ? t1.toLowerCase()?.tokenize(';')[iZ] :sNL
 	switch(mediaType){
@@ -6939,12 +6955,6 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 				case sHSMSARM:
 				case sHSMRULE:
 				case sHSMRULES:
-					mv= gtVdevRes(r9,rEN,oV,evntVal,!trigger)
-					break
-				case 'routine':
-					oV='routineExecuted'
-					mv= gtVdevRes(r9,rEN,oV,hashId(r9,evntVal),!trigger)
-					break
 				case sPSTNRSM:
 				case 'systemStart':
 				case 'severeLoad':
@@ -6957,10 +6967,13 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 					mv= gtVdevRes(r9,rEN,oV,evntVal,!trigger)
 					break
 				case 'ifttt':
-					mv= gtVdevRes(r9,rEN,'ifttt'+sDOT+evntVal,evntVal,!trigger)
-					break
 				case 'email':
-					mv=rtnMap('email',(rEN==('email'+sDOT+evntVal)? evntVal:sNL))
+					mv= gtVdevRes(r9,rEN,oV+sDOT+evntVal,evntVal,!trigger)
+					mv[sT]= oV=='email' ? oV:sMt(mv)
+					break
+				case 'routine':
+					oV='routineExecuted'
+					mv= gtVdevRes(r9,rEN,oV,hashId(r9,evntVal),!trigger)
 					break
 			}
 			break
@@ -7061,7 +7074,7 @@ private static Map gtVdevRes(Map r9,String rEN, String attr,String v,Boolean eXc
 }
 
 private static Map addVDevFlds(Map r9,String attr,Boolean eXcluded){
-	return [(sA):attr, (sD): sMs(r9,sLOCID), /*(sI):subDeviceIndex,*/ (sX):eXcluded]
+	return [(sA):attr, (sD):sMs(r9,sLOCID), /*(sI):subDeviceIndex,*/ (sX):eXcluded]
 }
 
 private Map callFunc(Map r9,String func,List p){
@@ -8457,7 +8470,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 						for(Map k in liMs(node,sK)){
 							String kc=sMs(k,sC)
 							if(kc in ['setLocationMode', 'setAlarmSystemStatus'] || kc.contains('Tile') ||
-										kc.contains('lifx') || kc.contains('Rule') ||
+										kc.contains(sLIFX) || kc.contains('Rule') ||
 										kc.contains('Piston')){
 								if(lge)myDetail r9,"Found location command $kc",iN2
 								incrementDevices(LID,sNL,kc)
@@ -8926,7 +8939,7 @@ private getDeviceAttributeValue(Map r9,device,String attr,Boolean skipCurEvt=fal
 	return result!=null ? result:sBLK
 }
 
-String gtAttrErr(device){
+static String gtAttrErr(device){
 	return "Error reading current value for ${device}.".toString()
 }
 
