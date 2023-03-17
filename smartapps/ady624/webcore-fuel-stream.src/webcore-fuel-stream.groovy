@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update March 16, 2023 for Hubitat
+ *  Last update March 17, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -2272,7 +2272,7 @@ def inputGraphUpdateRate(String d=s0){
 		opt=rateEnumF
 	}
 
-	input( (sTYPE): sENUM, (sNM): "graph_update_rate",(sTIT): "<b>Select graph update rate</b>", (sMULTP): false, (sREQ): false, options: opt, (sDEFV): defl)
+	input( (sTYPE): sENUM, (sNM): "graph_update_rate",(sTIT): "<b>Select graph update rate</b><br><small>(For panel viewing; the refresh rate of the graph)</small>", (sMULTP): false, (sREQ): false, options: opt, (sDEFV): defl)
 }
 
 
@@ -3793,9 +3793,6 @@ def graphTimegraph(){
 					(sMULTP): false, (sREQ): true, options: timespanEnum2, (sDEFV): "300000", (sSUBOC): true)
 
 			inputGraphUpdateRate("300000")
-			//input( (sTYPE): sENUM, (sNM): "graph_update_rate",(sTIT): "<b>Select graph update rate</b>", (sMULTP): false, (sREQ): false, options: opt, (sDEFV): defl)
-			//input( (sTYPE): sENUM, (sNM): 'graph_refresh_rate',(sTIT): "<b>Graph Update Rate</b></br><small>(For panel viewing; the refresh rate of the graph)</small>",
-			//		(sMULTP): false, (sREQ): true, options: rateEnum, (sDEFV): "300000")
 
 			container=[]
 
@@ -8030,7 +8027,7 @@ def deviceWeather2(){
 
 									}else if(sensor_list."${sensor_id}"."${attr}".supported_unit.var == key){
 										String units=sensor_list."${sensor_id}"."${attr}".supported_unit.name
-										container << hubiForm_text("<b>"+sensor_name+" :: "+attr+"</b></br>"+'&#9;'+" Units="+units)
+										container << hubiForm_text("<b>"+sensor_name+" :: "+attr+"</b><br>"+'&#9;'+" Units="+units)
 										measurement_list."${key}"."${sensor_id}"."${attr}"=[sensor_name: sensor_list."${sensor_id}"."${attr}".sensor_name,
 																							in_units: sensor_list."${sensor_id}"."${attr}".supported_unit.units
 										]
@@ -12757,8 +12754,8 @@ ${title}
 
 def hubiForm_section(String title, Integer pos, String icon, String suffix, Closure code){
 
-	String id=title.replace(' ', '_').replace('(', sBLK).replace(')',sBLK)
-	String title_=title.replace("'", "").replace("`", "").replace(':',' ')
+	String id=title.replace(' ', '_').replace('(', sBLK).replace(')',sBLK).replace(':','_')
+	String title_=title.replace("'", "").replace("`", "")
 
 	String titleHTML="""
 	<div class="mdl-layout__header" style="display: block; background:#033673; margin: 0 -16px; width: calc(100% + 32px); position: relative; z-index: ${pos}; overflow: visible;">

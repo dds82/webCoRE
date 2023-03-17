@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update March 16, 2023 for Hubitat
+ * Last update March 17, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20230222_HE'
-@Field static final String sHVERSTR='v0.3.114.20230222_HE - March 16, 2023'
+@Field static final String sHVERSTR='v0.3.114.20230222_HE - March 17, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -2132,7 +2132,6 @@ private api_intf_dashboard_piston_set_start(){
 		String wName=sAppId()
 		if((chunks > 0) && (chunks < 100)){
 			clearHashMap(wName)
-			//atomicState.chunks=[id: params?.id, count: chunks]
 			pPistonChunksFLD[wName]=[(sID): p?.id, count: chunks]
 			pPistonChunksFLD=pPistonChunksFLD
 			mb()
@@ -2148,16 +2147,13 @@ private api_intf_dashboard_piston_set_chunk(){
 	Map p=(Map)params
 	String mchunk="${p?.chunk}".toString()
 	Integer chunk=mchunk.isInteger() ? mchunk.toInteger() : -i1
-	//debug "Dashboard: Request received to set a piston chunk (#${1 + chunk}/${atomicState.chunks?.count})"
 	debug "Dashboard: Request received to set a piston chunk (#${1 + chunk}/${pPistonChunksFLD[wName]?.count})"
 	if(verifySecurityToken(p)){
 		String data=(String)p?.data
-		//def chunks=atomicState.chunks
 		mb()
 		LinkedHashMap<String,Object>chunks=pPistonChunksFLD[wName]
 		if(chunks && (Integer)chunks.count && (chunk >= 0) && (chunk < (Integer)chunks.count)){
 			chunks["chunk:$chunk".toString()]=data
-			//atomicState.chunks=chunks
 			pPistonChunksFLD[wName]=chunks
 			mb()
 			result=[(sSTS): "ST_READY"]
@@ -2171,7 +2167,6 @@ private api_intf_dashboard_piston_set_end(){
 	String wName=sAppId()
 	debug "Dashboard: Request received to set a piston (chunked end)"
 	if(verifySecurityToken((Map)params)){
-		//def chunks=atomicState.chunks
 		mb()
 		LinkedHashMap<String,Object> chunks=pPistonChunksFLD[wName]
 		if(chunks && (Integer)chunks.count){
@@ -2190,8 +2185,7 @@ private api_intf_dashboard_piston_set_end(){
 				}
 				i++
 			}
-			//atomicState.chunks=null
-			//state.remove("chunks")
+			state.remove("chunks")
 			pPistonChunksFLD[wName]=null
 			mb()
 			if(ok){
