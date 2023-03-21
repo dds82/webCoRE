@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update March 17, 2023 for Hubitat
+ *  Last update March 20, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -1551,7 +1551,7 @@ def local_graph_url(){
 def preview_tile(){
 	List<String> container
 	String typ=gtSetStr(sGRAPHT)
-	hubiForm_section("Preview of graph (sTYPE): ${typ}", 10, "show_chart", sBLK){
+	hubiForm_section("Preview of graph type: ${typ}", 10, "show_chart", sBLK){
 		container=[]
 		container << hubiForm_graph_preview()
 
@@ -2077,6 +2077,8 @@ let subscriptions={};
 let graphData={};
 
 let websocket;
+let chart;
+let callbackEvent=null;
 
 class Loader{
 	constructor(){
@@ -2160,6 +2162,8 @@ async function onLoad(){
 	//loader.setText('Getting events (3/4)');
 	await getGraphData();
 	//loader.setText('Drawing chart (4/4)');
+	
+	chart=new google.visualization.Gauge(document.getElementById("timeline"));
 
 	update(() =>{
 		//destroy loader when we are done with it
@@ -2195,7 +2199,7 @@ function onBeforeUnload(){
 	if(websocket) websocket.close();
 }
 
-function drawChart(){
+function drawChart(callback){
 	let dataTable=new google.visualization.DataTable();
 	dataTable.addColumn('string', 'Label');
 	dataTable.addColumn('number', 'Value');
@@ -2206,7 +2210,16 @@ function drawChart(){
 	);
 	formatter.format(dataTable, 1);
 
-	let chart=new google.visualization.Gauge(document.getElementById("timeline"));
+	if(callbackEvent){
+		google.visualization.events.removeListener(callbackEvent);
+		callbackEvent=null;
+	}
+
+	//if we have a callback
+	if(callback){
+		callbackEvent=google.visualization.events.addListener(chart, 'ready', callback);
+	}
+	
 	chart.draw(dataTable, options.graphOptions);
 }
 
@@ -2602,6 +2615,8 @@ let graphData={};
 let stack={};
 
 let websocket;
+let chart;
+let callbackEvent=null;
 
 class Loader{
 	constructor(){
@@ -2768,6 +2783,12 @@ async function onLoad(){
 	loader.setText('Getting events (3/4)');
 	await getGraphData();
 	loader.setText('Drawing chart (4/4)');
+	
+	if(options.graphType == 1){
+		chart=new google.visualization.BarChart(document.getElementById("timeline"));
+	} else{
+		chart=new google.visualization.ColumnChart(document.getElementById("timeline"));
+	}
 
 	update(() =>{
 		//destroy loader when we are done with it
@@ -2864,15 +2885,15 @@ function drawChart(callback){
 
 	});
 
-	var chart;
-
-	if(options.graphType == 1){
-		chart=new google.visualization.BarChart(document.getElementById("timeline"));
-	} else{
-		chart=new google.visualization.ColumnChart(document.getElementById("timeline"));
+	if(callbackEvent){
+		google.visualization.events.removeListener(callbackEvent);
+		callbackEvent=null;
 	}
+
 	//if we have a callback
-	if(callback) google.visualization.events.addListener(chart, 'ready', callback);
+	if(callback){
+		callbackEvent=google.visualization.events.addListener(chart, 'ready', callback);
+	}
 
 	chart.draw(dataTable, options.graphOptions);
 }
@@ -3258,6 +3279,9 @@ let graphData={};
 let unparsedData={};
 
 let websocket;
+let chart;
+let callbackEvent=null;
+let tooltipEvent=null;
 
 class Loader{
 	constructor(){
@@ -3561,6 +3585,8 @@ async function onLoad(){
 
 	loader.setText('Drawing chart (4/4)');
 
+	chart=new google.visualization.Timeline(document.getElementById("timeline"));
+	
 	//update data
 	update(() =>{
 		//destroy loader when we are done with it
@@ -3676,14 +3702,25 @@ function drawChart(now, min, callback){
 
 	});
 
-	let chart=new google.visualization.Timeline(document.getElementById("timeline"));
+	if(tooltipEvent){
+		google.visualization.events.removeListener(tooltipEvent);
+		tooltipEvent=null;
+	}
+	if(callbackEvent){
+		google.visualization.events.removeListener(callbackEvent);
+		callbackEvent=null;
+	}
 
 	//if we have a callback
-	if(callback) google.visualization.events.addListener(chart, 'ready', callback);
+	if(callback){
+		callbackEvent=google.visualization.events.addListener(chart, 'ready', callback);
+	}
 
 	chart.draw(dataTable, options.graphOptions);
 
-	google.visualization.events.addListener(chart, 'onmouseover', tooltipHandler);
+	if(!tooltipEvent){
+		tooltipEvent=google.visualization.events.addListener(chart, 'onmouseover', tooltipHandler);
+	}
 
 	function tooltipHandler(e){
 		if(e.row != null){
@@ -4597,6 +4634,10 @@ let graphData={};
 let stack={};
 
 let websocket;
+let chart;
+let callbackEvent=null;
+let overlayEvent=null;
+let overlayDone=0;
 
 class Loader{
 	constructor(){
@@ -4804,6 +4845,7 @@ async function onLoad(){
 	await getGraphData();
 
 	loader.setText('Drawing chart (4/4)');
+	chart=new ${drawType_timegraph}(document.getElementById("timeline"));
 
 	//create stack
 	Object.entries(graphData).forEach(([deviceId, attrs]) =>{
@@ -5025,12 +5067,25 @@ function drawChart(callback){
 
 	graphOptions.hAxis=Object.assign(graphOptions.hAxis,{ viewWindow:{ min: moment(min).toDate(), max: moment(now).toDate() } });
 
-	let chart=new ${drawType_timegraph}(document.getElementById("timeline"));
+	if(overlayEvent){
+		google.visualization.events.removeListener(overlayEvent);
+		overlayEvent=null;
+		overlayDone=1;
+	}
+
+	if(callbackEvent){
+		google.visualization.events.removeListener(callbackEvent);
+		callbackEvent=null;
+	}
 
 	//if we have a callback
-	if(callback) google.visualization.events.addListener(chart, 'ready', callback);
+	if(callback){
+		callbackEvent=google.visualization.events.addListener(chart, 'ready', callback);
+	}
 
-	if(options.overlays.display_overlays) google.visualization.events.addListener(chart, 'ready', placeMarker.bind(chart, dataTable));
+	if(options.overlays.display_overlays && !overlayDone){
+		overlayEvent=google.visualization.events.addListener(chart, 'ready', placeMarker.bind(chart, dataTable));
+	}
 
 	chart.draw(dataTable, graphOptions);
 
@@ -5045,32 +5100,30 @@ function updateOverlay(deviceId, attribute, value){
 }
 
 function placeMarker(dataTable){
-		var cli=this.getChartLayoutInterface();
-		var chartArea=cli.getChartAreaBoundingBox();
-		let width=jQuery('#graph-overlay').outerWidth();
-		let height=jQuery('#graph-overlay').outerHeight();
-		let overlay=options.overlays;
+	var cli=this.getChartLayoutInterface();
+	var chartArea=cli.getChartAreaBoundingBox();
+	let width=jQuery('#graph-overlay').outerWidth();
+	let height=jQuery('#graph-overlay').outerHeight();
+	let overlay=options.overlays;
 
-		console.debug("Width =", width);
-		console.debug(chartArea);
-		console.debug(cli);
+	console.debug("Width =", width);
+	console.debug(chartArea);
+	console.debug(cli);
 
-		switch (overlay.vertical_alignment){
-			case "Top":	document.querySelector('.overlay').style.top=Math.floor(chartArea.top) + "px"; + "px"; break;
-			case "Middle": document.querySelector('.overlay').style.top=Math.floor(chartArea.height/2+chartArea.top-height/2) + "px"; + "px"; break;
-			case "Bottom":	document.querySelector('.overlay').style.top=Math.floor(chartArea.height+chartArea.top-height) + "px"; + "px"; break;
+	switch (overlay.vertical_alignment){
+		case "Top":	document.querySelector('.overlay').style.top=Math.floor(chartArea.top) + "px"; + "px"; break;
+		case "Middle": document.querySelector('.overlay').style.top=Math.floor(chartArea.height/2+chartArea.top-height/2) + "px"; + "px"; break;
+		case "Bottom":	document.querySelector('.overlay').style.top=Math.floor(chartArea.height+chartArea.top-height) + "px"; + "px"; break;
+	}
+	switch (overlay.horizontal_alignment){
+		case "Left":	document.querySelector('.overlay').style.left=Math.floor(chartArea.left) + "px"; break;
+		case "Middle": document.querySelector('.overlay').style.left=Math.floor(chartArea.width/2-(width/2)+chartArea.left) + "px"; break;
+		case "Right":	document.querySelector('.overlay').style.left=Math.floor(chartArea.width+chartArea.left-width) + "px"; break;
+	}
 
-		}
-		switch (overlay.horizontal_alignment){
-			case "Left":	document.querySelector('.overlay').style.left=Math.floor(chartArea.left) + "px"; break;
-			case "Middle": document.querySelector('.overlay').style.left=Math.floor(chartArea.width/2-(width/2)+chartArea.left) + "px"; break;
-			case "Right":	document.querySelector('.overlay').style.left=Math.floor(chartArea.width+chartArea.left-width) + "px"; break;
-
-		}
-
-		//document.querySelector('.overlay').style.width=Math.floor(chartArea.width*0.25) + "px";
-		//document.querySelector('.overlay').style.height=Math.floor(chartArea.height*0.25) + "px";
-	};
+	//document.querySelector('.overlay').style.width=Math.floor(chartArea.width*0.25) + "px";
+	//document.querySelector('.overlay').style.height=Math.floor(chartArea.height*0.25) + "px";
+};
 
 		google.charts.setOnLoadCallback(onLoad);
 		window.onBeforeUnload=onBeforeUnload;
@@ -5546,6 +5599,8 @@ let graphData={};
 let stack={};
 
 let websocket;
+let chart;
+let callbackEvent=null;
 
 class Loader{
 	constructor(){
@@ -5749,6 +5804,8 @@ async function onLoad(){
 	loader.setText('Getting events (3/4)');
 	await getGraphData();
 	loader.setText('Drawing chart (4/4)');
+	
+	chart=new google.visualization.BarChart(document.getElementById("timeline"));
 
 	update(() =>{
 		//destroy loader when we are done with it
@@ -5940,9 +5997,15 @@ function drawChart(callback){
 	}
 	var dataTable=google.visualization.arrayToDataTable(dataArray);
 
-	chart=new google.visualization.BarChart(document.getElementById("timeline"));
+	if(callbackEvent){
+		google.visualization.events.removeListener(callbackEvent);
+		callbackEvent=null;
+	}
 
-	if(callback) google.visualization.events.addListener(chart, 'ready', callback);
+	//if we have a callback
+	if(callback){
+		callbackEvent=google.visualization.events.addListener(chart, 'ready', callback);
+	}
 
 	chart.draw(dataTable, options.graphOptions);
 }
@@ -6530,6 +6593,8 @@ let graphData={};
 let stack={};
 
 let websocket;
+let chart;
+let callbackEvent=null;
 
 class Loader{
 	constructor(){
@@ -6742,6 +6807,8 @@ async function onLoad(){
 	await getGraphData();
 
 	loader.setText('Drawing chart (4/4)');
+	
+	chart=new ${drawType_linegraph}(document.getElementById("timeline"));
 
 	//create stack
 	Object.entries(graphData).forEach(([deviceId, attrs]) =>{
@@ -6858,10 +6925,15 @@ function drawChart(callback){
 
 	graphOptions.hAxis=Object.assign(graphOptions.hAxis,{ viewWindow:{ min: moment(min).toDate(), max: moment(now).toDate() } });
 
-	let chart=new ${drawType_linegraph}(document.getElementById("timeline"));
+	if(callbackEvent){
+		google.visualization.events.removeListener(callbackEvent);
+		callbackEvent=null;
+	}
 
 	//if we have a callback
-	if(callback) google.visualization.events.addListener(chart, 'ready', callback);
+	if(callback){
+		callbackEvent=google.visualization.events.addListener(chart, 'ready', callback);
+	}
 
 	chart.draw(dataTable, graphOptions);
 }
@@ -7256,6 +7328,8 @@ let graphData={};
 let stack={};
 
 let websocket;
+let chart;
+let callbackEvent=null;
 
 class Loader{
 	constructor(){
@@ -7425,6 +7499,12 @@ async function onLoad(){
 	await getGraphData();
 	loader.setText('Drawing chart (4/4)');
 
+	if(options.graphType == 1){
+		chart=new google.visualization.BarChart(document.getElementById("timeline"));
+	} else{
+		chart=new google.visualization.ColumnChart(document.getElementById("timeline"));
+	}
+
 	update(() =>{
 		//destroy loader when we are done with it
 		loader.remove();
@@ -7589,15 +7669,15 @@ function drawChart(callback){
 
 	});
 
-	var chart;
-
-	if(options.graphType == 1){
-		chart=new google.visualization.BarChart(document.getElementById("timeline"));
-	} else{
-		chart=new google.visualization.ColumnChart(document.getElementById("timeline"));
+	if(callbackEvent){
+		google.visualization.events.removeListener(callbackEvent);
+		callbackEvent=null;
 	}
+
 	//if we have a callback
-	if(callback) google.visualization.events.addListener(chart, 'ready', callback);
+	if(callback){
+		callbackEvent=google.visualization.events.addListener(chart, 'ready', callback);
+	}
 
 	chart.draw(dataTable, options.graphOptions);
 }
