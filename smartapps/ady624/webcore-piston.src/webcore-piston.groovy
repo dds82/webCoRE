@@ -1756,39 +1756,6 @@ Map clearLogs(){
 }
 
 
-Map test(){
-	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):'test',(sVAL):wnow()])
-	return [:]
-}
-
-Map clickTile(tidx){
-	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):sTILE,(sVAL):tidx])
-	return (Map)gtSt(sST) ?: [:]
-}
-
-
-
-Map execute(Map data,String src){
-	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):'execute',(sVAL): src!=null ? src:wnow(),(sJSOND):data],false)
-	return [:]
-}
-
-Map clearCache(){
-	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):sCLRC,(sVAL):wnow()])
-	return [:]
-}
-
-Map clearLogsQ(){
-	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):sCLRL,(sVAL):wnow()])
-	return [:]
-}
-
-Map clearAllQ(){
-	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):sCLRA,(sVAL):wnow()])
-	return [:]
-}
-
-
 @Field volatile static Map<String,Long> lockTimesVFLD=[:]
 @Field volatile static Map<String,String> lockHolderVFLD=[:]
 
@@ -2427,41 +2394,6 @@ private void checkVersion(Map r9){
 		error 'Your location is not setup correctly - timezone information is missing. Please select your location by placing the pin and radius on the map, then tap Save, and then tap Done. You may encounter error or incorrect timing until fixed.',r9
 }
 
-/** EVENT HANDLING								**/
-
-void resumeHandler(){
-	handleEvents([(sDATE): new Date(), (sDEV): gtLocation(), (sNM): sPSTNRSM, (sVAL): wnow()])
-}
-
-void deviceHandler(event){ handleEvents(event) }
-
-@Field static final String sTIMHNDR='timeHandler'
-void timeHandler(event){ timeHelper(event,false) }
-
-void timeHelper(event,Boolean recovery){
-	Long t=lMt(event)
-	handleEvents([(sDATE):new Date(t),(sDEV):gtLocation(),(sNM):sTIME,(sVAL):t,(sSCH):event,(sRECOVERY):recovery],!recovery)
-}
-
-/* wrappers */
-void sendExecuteEvt(String pistonId,String val,String desc,Map data){
-	String json= JsonOutput.toJson(data)
-	sendLocationEvent((sNM):pistonId,(sVAL):val,isStateChange:true,displayed:false,linkText:desc,(sDESCTXT):desc,(sDATA):json)
-}
-
-private static Boolean stJson(String c){ return c.startsWith(sOB) && c.endsWith(sCB) }
-private static Boolean stJson1(String c){ return c.startsWith(sLB) && c.endsWith(sRB) }
-
-void executeHandler(event){
-	Map data; data=null
-	def d1=event[sDATA]
-	if(d1 instanceof String){
-		String d=(String)d1
-		if(stJson(d))data= (LinkedHashMap)new JsonSlurper().parseText(d)
-	}
-	handleEvents([(sDATE):event.date,(sDEV):gtLocation(),(sNM):'execute',(sVAL):event[sVAL],(sJSOND):(data ?: event[sJSOND])])
-}
-
 @Field static Map FLDPLimits
 static Map gtPLimits(){
 	if(!FLDPLimits) FLDPLimits=fillPL()
@@ -2482,20 +2414,21 @@ static Map gtPLimits(){
 
 static Map fillPL(){
 	return [
-		(sSCHREM): 15000L, // this or longer remaining executionTime to process additional schedules
-		(sSCHVARIANCE): 63L,
-		(sEXCTIME): 40000L, // time we stop execution of this run
-		(sSHLIMTIME): 14300L, // time before we start inserting pauses
-		(sLONGLIMTIME): 20000L, // transition from short to Long delay
-		(sSHORTDEL): 150L,
-		(sLONGDEL): 500L,
-		(sTPAUSELIM): 250L, // piston requested delay less than this can pause
-		(sDEVMAXDEL): 1000L,
-		(sMSTATS): 50,
-		(sMLOGS): 50,
+			(sSCHREM): 15000L, // this or longer remaining executionTime to process additional schedules
+			(sSCHVARIANCE): 63L,
+			(sEXCTIME): 40000L, // time we stop execution of this run
+			(sSHLIMTIME): 14300L, // time before we start inserting pauses
+			(sLONGLIMTIME): 20000L, // transition from short to Long delay
+			(sSHORTDEL): 150L,
+			(sLONGDEL): 500L,
+			(sTPAUSELIM): 250L, // piston requested delay less than this can pause
+			(sDEVMAXDEL): 1000L,
+			(sMSTATS): 50,
+			(sMLOGS): 50,
 	]
 }
 
+@CompileStatic
 static String stripH(String str){
 	if(!str) return sBLK
 	Integer first; first = str.indexOf('<span')
@@ -2506,8 +2439,70 @@ static String stripH(String str){
 	return res
 }
 
+@CompileStatic
+private static Boolean stJson(String c){ return c.startsWith(sOB) && c.endsWith(sCB) }
+@CompileStatic
+private static Boolean stJson1(String c){ return c.startsWith(sLB) && c.endsWith(sRB) }
+
+
+/** EVENT HANDLING								**/
+
+@CompileStatic
+Map commonHandle(String nm){
+	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):nm,(sVAL):wnow()])
+	return [:]
+}
+
+Map test(){ commonHandle('test') }
+
+Map clearCache(){ commonHandle(sCLRC) }
+
+Map clearLogsQ(){ commonHandle(sCLRL) }
+
+Map clearAllQ(){ commonHandle(sCLRA) }
+
+void resumeHandler(){ commonHandle(sPSTNRSM) }
+
+void deviceHandler(event){ handleEvents(event) }
+
+Map clickTile(tidx){
+	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):sTILE,(sVAL):tidx])
+	return (Map)gtSt(sST) ?: [:]
+}
+
+Map execute(Map data,String src){
+	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):'execute',(sVAL): src!=null ? src:wnow(),(sJSOND):data],false)
+	return [:]
+}
+
+@Field static final String sTIMHNDR='timeHandler'
+void timeHandler(event){ timeHelper(event,false) }
+
+void timeHelper(event,Boolean recovery){
+	Long t=lMt(event)
+	handleEvents([(sDATE):new Date(t),(sDEV):gtLocation(),(sNM):sTIME,(sVAL):t,(sSCH):event,(sRECOVERY):recovery],!recovery)
+}
+
+/* wrappers */
+void sendExecuteEvt(String pistonId,String val,String desc,Map data){
+	String json= JsonOutput.toJson(data)
+	sendLocationEvent((sNM):pistonId,(sVAL):val,isStateChange:true,displayed:false,linkText:desc,(sDESCTXT):desc,(sDATA):json)
+}
+
+void executeHandler(event){
+	Map data; data=null
+	def d1=event[sDATA]
+	if(d1 instanceof String){
+		String d=(String)d1
+		if(stJson(d))data= (LinkedHashMap)new JsonSlurper().parseText(d)
+	}
+	handleEvents([(sDATE):event.date,(sDEV):gtLocation(),(sNM):'execute',(sVAL):event[sVAL],(sJSOND):(data ?: event[sJSOND])])
+}
+
 @Field static final String sEXS='Execution stage started'
 @Field static final String sEXC='Execution stage complete.'
+@Field static final String sEPS='Event processed successfully'
+@Field static final String sEPF='Event processing failed'
 
 @CompileStatic
 void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
@@ -2515,7 +2510,7 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 	LinkedHashMap event,tmpRtD,retSt
 	event=fixEvt(evt)
 	tmpRtD=getTemporaryRunTimeData(startTime)
-	Map msg=timer 'Event processed successfully',tmpRtD,iN1
+	Map msg=timer sEPS,tmpRtD,iN1
 	String evntName; evntName=sMs(event,sNM)
 	String evntVal; evntVal="${event[sVAL]}".toString()
 	Long eventDelay=Math.round(d1*startTime-lMt(event))
@@ -2802,7 +2797,7 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 		}
 
 		((Map)((Map)r9[sSTATS])[sTIMING])[sE]=elapseT(eStrt)
-		if(!success)msg[sM]='Event processing failed'
+		if(!success)msg[sM]=sEPF
 		if(eric()&& lg>i1){
 			String s; s=sMs(msg,sM)
 			s+=' Total pauses ms: '+lMs(r9,sTPAUSE).toString()
@@ -2847,7 +2842,7 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 			releaseTheLock(mSmaNm)
 
 			if(qsize>i8)error "large queue size ${qsize}".toString(),null
-			theEvent.date=new Date(lMt(theEvent))
+			theEvent[sDATE]=new Date(lMt(theEvent))
 			handleEvents(theEvent,false,true)
 		}
 	}
