@@ -843,32 +843,32 @@ static String doLineStrt(Integer level,List<Boolean>newLevel){
 @CompileStatic
 static String dumpListDesc(List data,Integer level,List<Boolean> lastLevel,String listLabel,Boolean html=false,Boolean reorder=true){
 	String str; str=sBLK
-	Integer cnt; cnt=i1
+	Integer n; n=i1
 	List<Boolean> newLevel=lastLevel
 
 	List list1=data?.collect{it}
 	Integer sz=list1.size()
 	for(Object par in list1){
-		String lbl=listLabel+"[${cnt-i1}]".toString()
+		String lbl=listLabel+"[${n-i1}]".toString()
 		if(par instanceof Map){
 			Map newmap=[:]
 			newmap[lbl]=(Map)par
-			Boolean t1=cnt==sz
+			Boolean t1=n==sz
 			newLevel[level]=t1
-			str+=dumpMapDesc(newmap,level,newLevel,cnt,sz,!t1,html,reorder)
+			str+=dumpMapDesc(newmap,level,newLevel,n,sz,!t1,html,reorder)
 		}else if(par instanceof List || par instanceof ArrayList){
 			Map newmap=[:]
 			newmap[lbl]=par
-			Boolean t1=cnt==sz
+			Boolean t1=n==sz
 			newLevel[level]=t1
-			str+=dumpMapDesc(newmap,level,newLevel,cnt,sz,!t1,html,reorder)
+			str+=dumpMapDesc(newmap,level,newLevel,n,sz,!t1,html,reorder)
 		}else{
 			String lineStrt
 			lineStrt=doLineStrt(level,lastLevel)
-			lineStrt+=cnt==i1 && sz>i1 ? sSPCST:(cnt<sz ? sSPCSM:sSPCSE)
+			lineStrt+=n==i1 && sz>i1 ? sSPCST:(n<sz ? sSPCSM:sSPCSE)
 			str+=spanStr(html, lineStrt+lbl+": ${par} (${objType(par)})".toString() )
 		}
-		cnt+=i1
+		n+=i1
 	}
 	return str
 }
@@ -876,7 +876,7 @@ static String dumpListDesc(List data,Integer level,List<Boolean> lastLevel,Strin
 @CompileStatic
 static String dumpMapDesc(Map data,Integer level,List<Boolean> lastLevel,Integer listCnt=null,Integer listSz=null,Boolean listCall=false,Boolean html=false,Boolean reorder=true){
 	String str; str=sBLK
-	Integer cnt; cnt=i1
+	Integer n; n=i1
 	Integer sz=data?.size()
 	Map svMap,svLMap,newMap; svMap=[:]; svLMap=[:]; newMap=[:]
 	for(par in data){
@@ -893,7 +893,7 @@ static String dumpMapDesc(Map data,Integer level,List<Boolean> lastLevel,Integer
 	for(par in newMap){
 		String lineStrt
 		List<Boolean> newLevel=lastLevel
-		Boolean thisIsLast=cnt==sz && !listCall
+		Boolean thisIsLast=n==sz && !listCall
 		if(level>iZ)newLevel[(level-i1)]=thisIsLast
 		Boolean theLast
 		theLast=thisIsLast
@@ -902,7 +902,7 @@ static String dumpMapDesc(Map data,Integer level,List<Boolean> lastLevel,Integer
 			theLast=theLast && thisIsLast
 			lineStrt=doLineStrt(level,newLevel)
 			if(listSz && listCnt && listCall)lineStrt+=listCnt==i1 && listSz>i1 ? sSPCST:(listCnt<listSz ? sSPCSM:sSPCSE)
-			else lineStrt+=((cnt<sz || listCall) && !thisIsLast) ? sSPCSM:sSPCSE
+			else lineStrt+=((n<sz || listCall) && !thisIsLast) ? sSPCSM:sSPCSE
 		}
 		String k=(String)par.key
 		def v=par.value
@@ -920,7 +920,7 @@ static String dumpMapDesc(Map data,Integer level,List<Boolean> lastLevel,Integer
 		else{
 			str+=spanStr(html, lineStrt+"${k}: (${v}) (${objType})".toString() )
 		}
-		cnt+=i1
+		n+=i1
 	}
 	return str
 }
@@ -1131,7 +1131,7 @@ Map curPState(){
 private static String decodeEmoji(String value){
 	if(!value) return sBLK
 	return value.replaceAll(/(\:%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}%[0-9A-F]{2}\:)/){
-		m -> URLDecoder.decode( ((String)m[0]).substring(1, 13), sUTF8)
+		m -> URLDecoder.decode( ((String)m[0]).substring(1,13),sUTF8)
 	}
 }
 
@@ -1165,7 +1165,7 @@ private LinkedHashMap recreatePiston(Boolean shorten=false,Boolean inMem=false,B
 			thePistonCacheFLD[pNm]=pData
 			mb()
 		}
-		if(pData[sPIS]!=null)return (LinkedHashMap)(pData[sPIS]+[cached:true])
+		if(pData[sPIS]!=null)return (LinkedHashMap)(pData[sPIS]+[('cached'):true])
 	}
 
 	if(eric())debug "recreating piston shorten: $shorten inMem: $inMem useCache: $useCache",null
@@ -1710,7 +1710,7 @@ static Map shortRtd(Map r9){
 			(sZ):sMs(r9,'pistonZ')
 		],
 		(sST):st,
-		Cached:bIs(r9,'Cached') ?: false
+		('Cached'):bIs(r9,'Cached') ?: false
 	]
 	return myRt
 }
@@ -2166,7 +2166,7 @@ private LinkedHashMap getDSCache(String meth,Boolean Upd=true){
 		m0=mMs(aS,sCACHE); t1[sCACHE]=m0 ? m0:[:]
 		m0=mMs(aS,sSTORE); t1[sSTORE]=m0 ? m0:[:]
 		m0=mMs(aS,sST); t1[sST]=m0 ? m0:[:]
-		t1.pistonZ=sMs(aS,'pistonZ')
+		t1['pistonZ']=sMs(aS,'pistonZ')
 		m0=mMs(aS,sTRC); t1[sTRC]=m0 ? m0:[:]
 		l0=liMs(aS,sSCHS); t1[sSCHS]=l0 ? []+l0:[]
 		t1[sNSCH]=lMs(aS,sNSCH)
@@ -4435,9 +4435,9 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 		if(delta!=lZ){ // anything of [sMS, sS, sM, sH]
 			if(nxtSchd<(rightNow-delta)){
 				//behind, catch up to where the next future occurrence
-				Long cnt=Math.floor(((rightNow-nxtSchd)/delta*d1).toDouble()).toLong()
-				//if(lg)debug "Timer fell behind by $cnt interval${cnt>i1 ? sS:sBLK}, catching up",r9
-				nxtSchd+=Math.round(delta*cnt*d1)
+				Long n=Math.floor(((rightNow-nxtSchd)/delta*d1).toDouble()).toLong()
+				//if(lg)debug "Timer fell behind by $n interval${n>i1 ? sS:sBLK}, catching up",r9
+				nxtSchd+=Math.round(delta*n*d1)
 			}
 			nxtSchd+=delta
 		}else{ // [sD, sW, sN, sY]
@@ -6614,11 +6614,11 @@ private Long vcmd_loadStateLocally(Map r9,device,List prms,Boolean global=false)
 	}
 
 	def value
-	Integer cnt; cnt=iZ
+	Integer n; n=iZ
 	String exactCommand,fuzzyCommand,fuzzyCommand1,t0
 	for(String attr in newattrs){
-		value=vals[cnt]
-		cnt+=i1
+		value=vals[n]
+		n+=i1
 		exactCommand=sNL
 		fuzzyCommand=sNL
 		fuzzyCommand1=sNL
@@ -7857,8 +7857,8 @@ private void traverseStatements(node,Closure closure,parentNode=null,Map<String,
 	String ty=sMt(node)
 	if(ty==sON && data!=null) data[sTIMER]=true // force downgrade of triggers
 	if(!data[sINMEM] && ty in [sIF,sWHILE,sREPEAT]){
-		Integer cnt=doCcheck(sMs(node,sO),liMs(node,sC))
-		if(cnt>i1)
+		Integer n=doCcheck(sMs(node,sO),liMs(node,sC))
+		if(n>i1)
 			addWarning(node,'Found multiple trigger comparisons ANDed together')
 		if(ty==sIF && node[sEI]){
 			Integer bnt
@@ -7885,8 +7885,8 @@ private void traverseStatements(node,Closure closure,parentNode=null,Map<String,
 
 @CompileStatic
 private static Integer doCcheck(String grouping,List<Map> cndtns){
-	Integer cnt
-	cnt=iZ
+	Integer n
+	n=iZ
 	if(cndtns){
 		Boolean isAND=grouping==sAND
 		String ty
@@ -7894,12 +7894,12 @@ private static Integer doCcheck(String grouping,List<Map> cndtns){
 			ty=sMt(cndtn)
 			if(ty==sGROUP){
 				Integer i=doCcheck(sMs(cndtn,sO),liMs(cndtn,sC))
-				cnt+=i
-				if(!isAND && i==i1)cnt--
-			}else if(ty==sCONDITION && sMs(cndtn,sCT)==sT && isAND)cnt++
+				n+=i
+				if(!isAND && i==i1)n--
+			}else if(ty==sCONDITION && sMs(cndtn,sCT)==sT && isAND)n++
 		}
 	}
-	return cnt
+	return n
 }
 
 private void traverseEvents(node,Closure closure,parentNode=null){
@@ -8630,8 +8630,8 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 							}
 						}
 					}
-					Integer cnt
-					cnt=ss.events
+					Integer n
+					n=ss.events
 					if(!(a in (LT1+nosub))){ // timers, tile, pistonResume events don't have hub subscription
 						List<String> avals=(List)sub.avals
 						if(allowA && avals.size()<i9){
@@ -8642,7 +8642,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 									wsubscribe(device,myattr,'deviceHandler')
 									skip=false
 								}
-								cnt+=i1
+								n+=i1
 							}
 						}else{
 							if(doit){
@@ -8650,12 +8650,12 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 								wsubscribe(device,a,'deviceHandler')
 								skip=false
 							}
-							cnt+=i1
+							n+=i1
 						}
 					}
-					if(a in nosub) cnt+=i1
+					if(a in nosub) n+=i1
 
-					ss.events=cnt
+					ss.events=n
 					String didS=dvStr(device)
 					if(!dds[didS]){
 						ss[sDEVS]=ss[sDEVS]+i1
@@ -10404,15 +10404,15 @@ private static String typIL(String t1,String t2){ return t1==sLONG || t2==sLONG 
 @CompileStatic
 private static String buildList(List list,String suffix=sAND){
 	if(!list)return sBLK
-	Integer cnt,t0,t1
-	cnt=i1
+	Integer n,t0,t1
+	n=i1
 	String res; res=sBLK
 	t0=list.size()
 	t1=t0-i1
 	String a=sCOMMA+sSPC
 	for(item in list){
-		res+=item.toString()+(cnt<t0 ? (cnt==t1 ? sSPC+suffix+sSPC:a):sBLK)
-		cnt++
+		res+=item.toString()+(n<t0 ? (n==t1 ? sSPC+suffix+sSPC:a):sBLK)
+		n++
 	}
 	return res
 }
@@ -10621,11 +10621,11 @@ private Map func_format(Map r9,List<Map> prms){ return func_sprintf(r9,prms)}
 private Map func_left(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i2))return rtnErr('left(string, count)')
 	String value=strEvalExpr(r9,prms[iZ])
-	Integer cnt,sz
-	cnt=intEvalExpr(r9,prms[i1])
+	Integer n,sz
+	n=intEvalExpr(r9,prms[i1])
 	sz=value.size()
-	if(cnt>sz)cnt=sz
-	rtnMapS(value.substring(iZ,cnt))
+	if(n>sz)n=sz
+	rtnMapS(value.substring(iZ,n))
 }
 
 /** right returns a substring of a value				**/
@@ -10633,11 +10633,11 @@ private Map func_left(Map r9,List<Map> prms){
 private Map func_right(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i2))return rtnErr('right(string, count)')
 	String value=strEvalExpr(r9,prms[iZ])
-	Integer cnt,sz
-	cnt=intEvalExpr(r9,prms[i1])
+	Integer n,sz
+	n=intEvalExpr(r9,prms[i1])
 	sz=value.size()
-	if(cnt>sz)cnt=sz
-	rtnMapS(value.substring(sz-cnt,sz))
+	if(n>sz)n=sz
+	rtnMapS(value.substring(sz-n,sz))
 }
 
 /** strlen returns the length of a string value				**/
@@ -10700,27 +10700,27 @@ private Map func_substring(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i2))return rtnErr('substring(string, start, count)')
 	String value,result
 	value=strEvalExpr(r9,prms[iZ])
-	Integer start,cnt
+	Integer start,n
 	start=intEvalExpr(r9,prms[i1])
-	cnt=prms.size()>i2 ? intEvalExpr(r9,prms[i2]):null
+	n=prms.size()>i2 ? intEvalExpr(r9,prms[i2]):null
 	//def end=null
 	result=sBLK
 	Integer t0=value.size()
 	if(start<t0 && start>-t0){
-		if(cnt!=null){
-			if(cnt<iZ){
+		if(n!=null){
+			if(n<iZ){
 				//reverse
 				start=start<iZ ? -start:t0-start
-				cnt=-cnt
+				n=-n
 				value=value.reverse()
 			}
 			if(start>=iZ){
-				if(cnt>t0-start)cnt=t0-start
-			}else if(cnt>-start)cnt=-start
+				if(n>t0-start)n=t0-start
+			}else if(n>-start)n=-start
 		}
 		start=start>=iZ ? start:t0+start
-		if(cnt>t0-start)cnt=t0-start
-		result=cnt==null ? value.substring(start):value.substring(start,start+cnt)
+		if(n>t0-start)n=t0-start
+		result=n==null ? value.substring(start):value.substring(start,start+n)
 	}
 	rtnMapS(result)
 }
@@ -10730,13 +10730,13 @@ private Map func_mid(Map r9,List<Map> prms){ return func_substring(r9,prms)}
 /** replace replaces a search text inside of a value				**/
 /** Usage: replace(string, search, replace[, [..],search, replace])		**/
 private Map func_replace(Map r9,List<Map> prms){
-	Integer sz,i,cnt
+	Integer sz,i,n
 	sz=prms.size()
 	if(badParams(r9,prms,i3) || sz%i2!=i1)return rtnErr('replace(string, search, replace[, [..],search, replace])')
 	String value,search,replace
 	value=strEvalExpr(r9,prms[iZ])
-	cnt=Math.floor((sz-i1)/i2).toInteger()
-	for(i=iZ; i<cnt; i++){
+	n=Math.floor((sz-i1)/i2).toInteger()
+	for(i=iZ; i<n; i++){
 		search=strEvalExpr(r9,prms[i*i2+i1])
 		replace=strEvalExpr(r9,prms[i*i2+i2])
 		sz=search.size()
@@ -10755,10 +10755,10 @@ private Map func_rangevalue(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i2) || sz%i2!=iZ)return rtnErr('rangeValue(input, defaultValue,point1, value1[, [..],pointN, valueN])')
 	Double input=dblEvalExpr(r9,prms[iZ])
 	Map value; value=prms[i1]
-	Integer cnt=Math.floor((sz-i2)/i2).toInteger()
+	Integer n=Math.floor((sz-i2)/i2).toInteger()
 	Double point
 	Integer i
-	for(i=iZ; i<cnt; i++){
+	for(i=iZ; i<n; i++){
 		point=dblEvalExpr(r9,prms[i*i2+i2])
 		if(input>=point)value=prms[i*i2 +i3]
 	}
@@ -11153,9 +11153,9 @@ private Map func_hsltohex(Map r9,List<Map> prms){
 /** Usage: count(values)										**/
 private Map func_count(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnMapI(iZ)
-	Integer cnt,i
+	Integer n,i
 	Integer sz; sz=prms.size()
-	cnt=iZ
+	n=iZ
 	if(sz==i1){
 		String t= sMt(prms[iZ])
 		String tt1=t.replace(sLRB,sBLK)
@@ -11175,20 +11175,20 @@ private Map func_count(Map r9,List<Map> prms){
 				for(j in m){
 					//if(isEric(r9)) myDetail r9, "j.value is $j.value ${myObj(j.value)}",iN2
 					t1=bcast(r9,j.value)
-					cnt+=t1 ? i1:iZ
+					n+=t1 ? i1:iZ
 				}
 			}else{
 				sz=list.size()
 				for(i=iZ; i<sz; i++){
 					t1=bcast(r9,list[i])
-					cnt+=t1 ? i1:iZ
+					n+=t1 ? i1:iZ
 				}
 			}
-			return rtnMapI(cnt)
+			return rtnMapI(n)
 		}
 	}
-	for(Map prm in prms) cnt+=boolEvalExpr(r9,prm) ? i1:iZ
-	rtnMapI(cnt)
+	for(Map prm in prms) n+=boolEvalExpr(r9,prm) ? i1:iZ
+	rtnMapI(n)
 }
 
 /** size returns the number of values provided				**/
@@ -11197,7 +11197,7 @@ private Map func_size(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnMapI(iZ)
 	Integer sz=prms.size()
 	if(sz==i1){
-		Integer cnt
+		Integer n
 		String t= sMt(prms[iZ])
 		String tt1=t.replace(sLRB,sBLK)
 		//if(eric1())myDetail r9,"size t: ${t} tt1: $tt1",iN2
@@ -11211,9 +11211,9 @@ private Map func_size(Map r9,List<Map> prms){
 				m= a instanceof Map ? (Map)a : null
 			}else
 				list=strEvalExpr(r9,prms[iZ]).split(sCOMMA)
-			if(m) cnt=m.size()
-			else cnt=list.size()
-			return rtnMapI(cnt)
+			if(m) n=m.size()
+			else n=list.size()
+			return rtnMapI(n)
 		}
 	}
 	rtnMapI(sz)
@@ -12148,8 +12148,7 @@ private Long stringToTime(dateOrTimeOrString){ // convert to dtime
 	Long lnull=(Long)null
 	Long result
 	result=lnull
-	Integer cnt
-	cnt=iZ
+	Integer n; n=iZ
 	def a=dateOrTimeOrString
 	try{
 		if("$a".isNumber()){
@@ -12157,26 +12156,26 @@ private Long stringToTime(dateOrTimeOrString){ // convert to dtime
 			Long tt= aa.toLong()
 			if(tt<lMSDAY){
 				result=gtWCTimeToday(tt)
-				cnt=i1
+				n=i1
 			}else{
 // deal with a time in sec (vs. ms)
 				Long span=63072000L // Math.round(730*(dMSDAY/d1000)) // 2 years in secs
 				Long nowInsecs=Math.round((wnow()/lTHOUS).toDouble())
 				if(tt<(nowInsecs+span) && tt>(nowInsecs-span)){
 					result=tt*lTHOUS
-					cnt=i2
+					n=i2
 				}
 			}
 			if(result==lnull){
 				result=tt
-				cnt=i3
+				n=i3
 			}
 		}
 	}catch(ignored){}
 
 	if(result==lnull && dateOrTimeOrString instanceof String){
 		String sdate=dateOrTimeOrString
-		cnt=i4
+		n=i4
 		try{
 			Date tt1=wtoDateTime(sdate)
 			result=tt1.getTime()
@@ -12185,7 +12184,7 @@ private Long stringToTime(dateOrTimeOrString){ // convert to dtime
 
 		// additional ISO 8601 that Hubitat does not parse
 		if(result==lnull){
-			cnt=i5
+			n=i5
 			try{
 				String tt=sdate
 				def regex1=/Z/
@@ -12196,35 +12195,35 @@ private Long stringToTime(dateOrTimeOrString){ // convert to dtime
 
 		// next 3 format local time formatting done by cast
 		if(result==lnull){
-			cnt=14
+			n=14
 			try{
 				result=(new Date()).parse( 'EEE, MMM d yyyy @ h:mm:ss a z',sdate).getTime()
 			}catch(ignored){ result=lnull }
 		}
 
 		if(result==lnull){
-			cnt=15
+			n=15
 			try{
 				result=(new Date()).parse( 'EEE, MMM d yyyy',sdate).getTime()
 			}catch(ignored){ result=lnull }
 		}
 
 		if(result==lnull){
-			cnt=i16
+			n=i16
 			try{
 				result=(new Date()).parse( 'h:mm:ss a z',sdate).getTime()
 			}catch(ignored){ result=lnull }
 		}
 
 		if(result==lnull){
-			cnt=i6
+			n=i6
 			try{
 				result=(new Date()).parse(sdate)
 			}catch(ignored){ result=lnull }
 		}
 
 		if(result==lnull){
-			cnt=i7
+			n=i7
 			try{
 				//get unix time
 				//if(!(sdate =~ /(\s[A-Z]{3}([+\-][0-9]{2}:[0-9]{2}|\s[0-9]{4})?$)/)){
@@ -12236,7 +12235,7 @@ private Long stringToTime(dateOrTimeOrString){ // convert to dtime
 		}
 
 		if(result==lnull){
-			cnt=i8
+			n=i8
 			try{
 				TimeZone tz
 				tz=mTZ()
@@ -12275,18 +12274,18 @@ private Long stringToTime(dateOrTimeOrString){ // convert to dtime
 
 				try{
 					if(t0.length()==i8){
-						cnt=i9
+						n=i9
 						String tt=t0
 						time=(new Date()).parse('HH:mm:ss',tt).getTime()
 						time=gtWCTimeToday(time)
 					}else{
-						cnt=i10
+						n=i10
 						time=wtimeToday(t0,tz).getTime()
 					}
 				}catch(ignored){}
 
 				if(hasMeridian && time){
-					cnt=i11
+					n=i11
 					Date t1=new Date(time)
 					Integer hr
 					hr=t1.hours
@@ -12311,12 +12310,12 @@ private Long stringToTime(dateOrTimeOrString){ // convert to dtime
 
 	if(result==lnull){
 		if(dateOrTimeOrString instanceof Date){
-			cnt=i12
+			n=i12
 			result=((Date)dateOrTimeOrString).getTime()
 		}
 	}
 	if(result==lnull){
-		cnt=13
+		n=13
 		result=lZ
 	}
 	return result

@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update March 20, 2023 for Hubitat
+ *  Last update March 23, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -5018,15 +5018,8 @@ function drawChart(callback){
 			current=then;
 
 			while (current < now){
-				//if (subscriptions.states[deviceIndex][attribute] != undefined && events.length > 0){
-				//	if(drop_val == null){
-				//		drop_val=events[0].value;
-				//	} else{
-				//		drop_val=newEntry.value;
-				//	}
-				//}
 				if(subscriptions.graph_type[deviceIndex][attribute] == "Stepped"){
-					drop_val=newEntry == undefined ? events[0].value : newEntry.value;
+					drop_val=newEntry?.value ?? events[0]?.value ?? null;
 				}
 				next=current+spacing;
 
