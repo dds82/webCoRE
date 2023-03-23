@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update March 22, 2023 for Hubitat
+ * Last update March 23, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -228,6 +228,7 @@ static Boolean eric1(){ return false }
 @Field static final String sCED='ced'
 @Field static final String sDCO='dco'
 @Field static final String sDES='des'
+@Field static final String sISH='ish'
 
 @Field static final String sTCP='tcp'
 @Field static final String sCTP='ctp'
@@ -6008,7 +6009,7 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 			(sCONTENTT): '*/*',
 			requestContentType: reqCntntT,
 			body: !useQryS ? data:null,
-			ignoreSSLIssues: internal, // (protocol=='https' && internal),
+			ignoreSSLIssues: internal || !!gtPOpt(r9,sISH), // ignore ssl issues (protocol=='https' && internal)
 			followRedirects: true,
 			timeout:i20
 		]
@@ -8567,7 +8568,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 		if(!LT1)LT1=fill_TIM()
 		Map<String,Integer> dds=[:]
 		List<String>nosub=[sTILE,sPSTNRSM]
-		Boolean des=gtPOpt(r9,sDES)
+		Boolean des=!!gtPOpt(r9,sDES)
 		if(doit && lg>i2){
 			String m
 			m= des ? 'disable event subscriptions':sBLK
