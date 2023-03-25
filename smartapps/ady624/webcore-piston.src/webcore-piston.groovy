@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update March 23, 2023 for Hubitat
+ * Last update March 25, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -2448,8 +2448,8 @@ private static Boolean stJson1(String c){ return c.startsWith(sLB) && c.endsWith
 /** EVENT HANDLING								**/
 
 @CompileStatic
-Map commonHandle(String nm){
-	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):nm,(sVAL):wnow()])
+Map commonHandle(String nm,v=null){
+	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):nm,(sVAL):v!=null? v:wnow()])
 	return [:]
 }
 
@@ -2461,14 +2461,11 @@ Map clearLogsQ(){ commonHandle(sCLRL) }
 
 Map clearAllQ(){ commonHandle(sCLRA) }
 
+Map clickTile(tidx){ commonHandle(sTILE,tidx); return (Map)gtSt(sST) ?: [:] }
+
 void resumeHandler(){ commonHandle(sPSTNRSM) }
 
 void deviceHandler(event){ handleEvents(event) }
-
-Map clickTile(tidx){
-	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):sTILE,(sVAL):tidx])
-	return (Map)gtSt(sST) ?: [:]
-}
 
 Map execute(Map data,String src){
 	handleEvents([(sDATE):new Date(),(sDEV):gtLocation(),(sNM):'execute',(sVAL): src!=null ? src:wnow(),(sJSOND):data],false)
@@ -9272,16 +9269,15 @@ private Map<String,Object> getVariable(Map r9,String name, Boolean rtnL=false){
 	Map<String,String> var=parseVariableName(name)
 	String tn,mySt,rt
 	tn=sanitizeVariableName(var[sNM])
-//	if(eric())doLog(sDBG,"getVariable ${name} ${tn} ${var}")
 
-	mySt="get Variable '${tn}' "
+	mySt="get Variable '${name} ${var} ${tn}' "
 	Boolean lge=isEric(r9)
 	if(lge) myDetail r9,mySt,i1
 	Map<String,Object> res
 	if(tn==sNL){
 		res=rtnMapE('Invalid empty variable name')
 		error mySt+sMv(res),r9
-		if(lge)myDetail r9,mySt+"${var} ${name} "+"result:$res"
+		if(lge)myDetail r9,mySt+" "+"result:$res"
 		return res
 	}
 	Map err=rtnMapE(mySt+"not found".toString())
@@ -13205,8 +13201,8 @@ Map fixHeGType(Boolean toHubV,String typ,v){
 				String[] t1=tt.split(T)
 
 				if(typ==sDATE){
-					// comes in long format should be string -> 2021-10-13T99:99:99:999-9999
-					String t2=t1[iZ]+'T99:99:99:999-9999'
+					// comes in long format should be string -> 2021-10-13T99:99:99.999-9999
+					String t2=t1[iZ]+'T99:99:99.999-9999'
 					ret=[(sDTIME):t2]
 					break
 				}

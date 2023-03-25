@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update February 22, 2023 for Hubitat
+ * Last update March 25, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -26,7 +26,7 @@
 //file:noinspection unused
 //file:noinspection SpellCheckingInspection
 //file:noinspection GroovyFallthrough
-//file:noinspection GrMethodMayBeStatic
+//ffile:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20230222_HE'
@@ -247,13 +247,12 @@ public void updateWeatherD(){
 @Field static Map theObsFLD
 
 public void ahttpRequestHandler(resp, callbackData){
-	def json
-	json = [:]
-	def obs
-	obs = [:]
+	Map json; json = [:]
+	Map obs; obs = [:]
 //	def err
 	String weatherType = (String)state.weatherType ?: sNL
 	String wunits= (String)state.wunits ?:'imperial'
+	Long t=wnow()
 	if((resp.status == 200) && resp.data){
 		try {
 			json = resp.getJson()
@@ -264,8 +263,11 @@ public void ahttpRequestHandler(resp, callbackData){
 
 		if(!json) return
 
+		json.time=t
 		json.weatherType=weatherType
 		json.wunits=wunits
+		json.name = location.name
+		json.zipCode = location.zipCode
 
 		if(weatherType == 'apiXU'){
 			if(json.forecast && json.forecast.forecastday){
@@ -293,13 +295,11 @@ public void ahttpRequestHandler(resp, callbackData){
 
 			sunrise = sunTimes.sunrise.time
 			sunset = sunTimes.sunset.time
-			time = wnow()
+			time = t
 
 			Boolean is_day
 			is_day = (sunrise <= time && sunset >= time)
 
-			json.name = location.name
-			json.zipCode = location.zipCode
 			if(json.currently){
 				Map t0
 				t0 = (Map)json.currently
@@ -408,6 +408,65 @@ public void ahttpRequestHandler(resp, callbackData){
 		} else if(weatherType == 'OpenWeatherMap'){
 //			String jsonData = groovy.json.JsonOutput.toJson(json)
 //log.debug jsonData
+
+			def sunTimes = app.getSunriseAndSunset()
+			Long sunrise, sunset, time
+			sunrise = sunTimes.sunrise.time
+			sunset = sunTimes.sunset.time
+			time = t
+			Boolean is_day
+			is_day = (sunrise <= time && sunset >= time)
+
+			if(json.current){
+				fillCodes((Map)((List)((Map)json.current).weather)[0],is_day)
+			}
+
+			if(json.daily){
+				Integer i
+				for(i=0;i<8;i++){
+					fillCodes((Map)((List)((Map)((List)json.daily)[i]).weather)[0],true)
+				}
+			}
+
+			if(json.hourly){
+				Integer i,indx,hr
+				hr = new Date(wnow()).hours
+				indx = 0
+				for(i=0;i<48;i++){
+					Map t0=(Map)((List)json.hourly)[i] ?: [:]
+					Map t1 = (Map)((List)json.daily)[indx] ?: [:]
+
+					sunrise = (Integer)t1.sunrise
+					sunset = (Integer)t1.sunset
+					time = (Integer)t0.dt
+					is_day = (sunrise <= time && sunset >= time)
+
+					fillCodes((Map)((List)t0.weather)[0],is_day)
+					hr+=1
+					if(hr != hr%24){
+						hr %= 24
+						indx += 1
+					}
+				}
+			}
+
+
+/*
+
+				List owmCweat = owm?.current?.weather
+                myUpdData('condition_id', owmCweat==null || owmCweat[0]?.id==null ? '999' : owmCweat[0].id.toString())
+                myUpdData('condition_code', getCondCode(myGetData('condition_id').toInteger(), myGetData('is_day')))
+                myUpdData('OWN_icon', owmCweat == null || owmCweat[0]?.icon==null ? (myGetData('is_day')==sTRU ? '50d' : '50n') : owmCweat[0].icon)
+
+                List<Map> owmDaily
+                owmDaily = owm?.daily != null && ((List)owm.daily)[0]?.weather != null ? ((List)owm?.daily)[0].weather : null
+                myUpdData('forecast_id', owmDaily==null || owmDaily[0]?.id==null ? '999' : owmDaily[0].id.toString())
+                myUpdData('forecast_code', getCondCode(myGetData('forecast_id').toInteger(), sTRU))
+                myUpdData('forecast_text', owmDaily==null || owmDaily[0]?.description==null ? 'Unknown' : owmDaily[0].description.capitalize())
+
+        myUpdData('condition_text', myGetData('iconType')== sTRU ? (owmCweat==null || owmCweat[0]?.description==null ? 'Unknown' : owmCweat[0].description.capitalize()): (owm?.daily==null || owm?.daily[0]?.weather[0]?.description==null ? 'Unknown' : owm.daily[0].weather[0].description.capitalize()))
+*/
+
 		}
 	}else{
 		if(resp.hasError()){
@@ -419,8 +478,24 @@ public void ahttpRequestHandler(resp, callbackData){
 	}
 	theObsFLD = json
 	def wdev=parent?.getWeatDev()
-	if(wdev) wdev.setVar('updated', "${wnow()}".toString())
+	if(wdev) wdev.setVar('updated', "${t}".toString())
 	//log.debug "$json"
+}
+
+void fillCodes(Map t0,Boolean is_day){
+	String c_code
+	c_code = getCondCode((Integer)t0.id ?: 999,is_day.toString())
+	t0.condition_code = c_code
+	t0.condition_text = getcondText(c_code)
+
+	c_code = getCondCode((Integer)t0.id ?: 999,sTRU)
+	String c1 = getStdIcon(c_code)
+	Integer wuCode
+	wuCode = getWUConditionCode(c1)
+	String tt2
+	tt2 = getWUIconNum(wuCode)
+	t0.code = wuCode
+	t0.wuicon = tt2
 }
 
 public Map getWData(){
@@ -834,19 +909,18 @@ String getWUIconName(Integer condition_code, Integer is_day=0)	 {
 	String wuIcon
 	wuIcon = (conditionFactor[cC] ? (String)conditionFactor[cC][2] : sBLK)
 	if(is_day != 1 && wuIcon) wuIcon = 'nt_' + wuIcon
+	//log.info("getWUIconName Input: code: " + condition_code + ' is_day: ' + is_day.toString() + ' result: '+wuIcon)
 	return wuIcon
 }
 
 Integer getWUConditionCode(String code){
+	Integer res; res=null
 	for (myMap in conditionFactor){
-		if((String)myMap.value[2] == code) return myMap.key
+		if((String)myMap.value[2] == code) res= myMap.key
 	}
-	return 0
-}
-
-String getWUIconNum(Integer wCode)	 {
-	Map imgItem = imgNames.find{ (Integer)it.code == wCode }
-	return (imgItem ? (String)imgItem.img : '44')
+	if(res==null)  res=0
+	//log.info("getWUConditionCode Input: code: " + code + ' result: '+res)
+	return res
 }
 
 @Field final Map<Integer,List>	conditionFactor = [
@@ -875,6 +949,13 @@ String getWUIconNum(Integer wCode)	 {
 	1273: ['Patchy light rain with thunder', 0.5, 'tstorms'],		1276: ['Moderate or heavy rain with thunder', 0.3, 'tstorms'],
 	1279: ['Patchy light snow with thunder', 0.5, 'tstorms'],		1282: ['Moderate or heavy snow with thunder', 0.3, 'tstorms']
 ]
+
+String getWUIconNum(Integer wCode)	 {
+	Map imgItem = imgNames.find{ (Integer)it.code == wCode }
+	String res= imgItem ? (String)imgItem.img : '44'
+	//log.info("getWUIconNum Input: code: " + wCode + ' result: '+res)
+	return res
+}
 
 private String getImgName(Integer wCode, is_day){
 	String url = "https://cdn.rawgit.com/adey/bangali/master/resources/icons/weather/"
@@ -1080,15 +1161,18 @@ static String getdsIconCode(String iicon='unknown', String idcs='unknown', Boole
 }
 
 String getcondText(String wCode){
-	String code = wCode.contains('nt_') ? wCode.substring(3, wCode.size()-1) : wCode
-	//log.info("getImgName Input: wCode: " + code)
+	String code = wCode.contains('nt_') ? wCode.substring(3, wCode.size()) : wCode
 	Map LUitem = LUTable.find{ Map it -> (String)it.ccode == code }
-	return (LUitem ? (String)LUitem.ctext : sBLK)
+	String res= (LUitem ? (String)LUitem.ctext : sBLK)
+	//log.info("getcondText Input: wCode: " + code + ' result: '+res)
+	return res
 }
 
 String getStdIcon(String code){
 	Map LUitem = LUTable.find{ Map it -> (String)it.ccode == code }
-	return (LUitem ? (String)LUitem.stdIcon : sBLK)
+	String res= (LUitem ? (String)LUitem.stdIcon : sBLK)
+	//log.info("getStdIcon Input: code: " + code + ' result: '+res)
+	return res
 }
 
 @Field final List<Map> LUTable = [
@@ -1172,6 +1256,90 @@ String getStdIcon(String code){
 [ ccode: 'nt_windovercast', altIcon: '49.png', ctext: 'Windy and Overcast', owmIcon: '50n', stdIcon: 'nt_cloudy', luxpercent: 0 ],
 [ ccode: 'nt_windpartlycloudy', altIcon: '52.png', ctext: 'Windy and Partly Cloudy', owmIcon: '50n', stdIcon: 'nt_cloudy', luxpercent: 0 ],
 ]
+
+
+
+String getCondCode(Integer cid, String iconTOD){
+	Map LUitem = LUTable1.find{ (Integer)it.id == cid }
+	String res= iconTOD==sTRU ? (LUitem ? (String)LUitem.sId : sNPNG) : (LUitem ? (String)LUitem.sIn : sNPNG)
+	//log.info 'getCondCode Inputs: ' + cid.toString() + ', ' + iconTOD + ';  Result: ' + res
+	return res
+}
+
+@Field static final String sTRU='true'
+@Field static final String sFLS='false'
+@Field static final String sNPNG='na.png'
+@Field static final String s11D='11d.png'
+@Field static final String s11N='11n.png'
+@Field static final String sCTS='chancetstorms'
+@Field static final String sNCTS='nt_chancetstorms'
+@Field static final String sRAIN='rain'
+@Field static final String sNRAIN='nt_rain'
+@Field static final String sPCLDY='partlycloudy'
+@Field static final String sNPCLDY='nt_partlycloudy'
+@Field static final String s23='23.png'
+@Field static final String s9='9.png'
+@Field static final String s39='39.png'
+
+@Field final List<Map>  LUTable1 =       [
+		[id: 200, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+		[id: 201, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+		[id: 202, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+		[id: 210, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+		[id: 211, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+		[id: 212, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+		[id: 221, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+		[id: 230, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+		[id: 231, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+		[id: 232, OWMd: s11D, OWMn: s11N, Icd: '38.png', Icn: '47.png', luxp: 0.2, sId: sCTS, sIn: sNCTS],
+		[id: 300, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 301, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 302, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 310, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 311, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 312, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 313, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 314, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 321, OWMd: '09d.png', OWMn: '09n.png', Icd: s9, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 500, OWMd: '10d.png', OWMn: '09n.png', Icd: s39, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 501, OWMd: '10d.png', OWMn: '10n.png', Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 502, OWMd: '10d.png', OWMn: '10n.png', Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 503, OWMd: '10d.png', OWMn: '10n.png', Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 504, OWMd: '10d.png', OWMn: '10n.png', Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 511, OWMd: '10d.png', OWMn: '10n.png', Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 520, OWMd: '10d.png', OWMn: '09n.png', Icd: s39, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 521, OWMd: '10d.png', OWMn: '10n.png', Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 522, OWMd: '10d.png', OWMn: '10n.png', Icd: s39, Icn: '11.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 531, OWMd: '10d.png', OWMn: '09n.png', Icd: s39, Icn: s9, luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 600, OWMd: '13d.png', OWMn: '13n.png', Icd: '13.png', Icn: '46.png', luxp: 0.4, sId: 'flurries', sIn: 'nt_snow'],
+		[id: 601, OWMd: '13d.png', OWMn: '13n.png', Icd: '14.png', Icn: '46.png', luxp: 0.3, sId: 'snow', sIn: 'nt_snow'],
+		[id: 602, OWMd: '13d.png', OWMn: '13n.png', Icd: '16.png', Icn: '46.png', luxp: 0.3, sId: 'snow', sIn: 'nt_snow'],
+		[id: 611, OWMd: '13d.png', OWMn: '13n.png', Icd: s9, Icn: '46.png', luxp: 0.5, sId: sRAIN, sIn: 'nt_snow'],
+		[id: 612, OWMd: '13d.png', OWMn: '13n.png', Icd: '8.png', Icn: '46.png', luxp: 0.5, sId: 'sleet', sIn: 'nt_snow'],
+		[id: 613, OWMd: '13d.png', OWMn: '13n.png', Icd: s9, Icn: '46.png', luxp: 0.5, sId: sRAIN, sIn: 'nt_snow'],
+		[id: 615, OWMd: '13d.png', OWMn: '13n.png', Icd: s39, Icn: '45.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 616, OWMd: '13d.png', OWMn: '13n.png', Icd: s39, Icn: '45.png', luxp: 0.5, sId: sRAIN, sIn: sNRAIN],
+		[id: 620, OWMd: '13d.png', OWMn: '13n.png', Icd: '13.png', Icn: '46.png', luxp: 0.4, sId: 'flurries', sIn: 'nt_snow'],
+		[id: 621, OWMd: '13d.png', OWMn: '13n.png', Icd: '16.png', Icn: '46.png', luxp: 0.3, sId: 'snow', sIn: 'nt_snow'],
+		[id: 622, OWMd: '13d.png', OWMn: '13n.png', Icd: '42.png', Icn: '42.png', luxp: 0.6, sId: 'snow', sIn: 'nt_snow'],
+		[id: 701, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+		[id: 711, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+		[id: 721, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+		[id: 731, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+		[id: 741, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+		[id: 751, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+		[id: 761, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+		[id: 762, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+		[id: 771, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+		[id: 781, OWMd: '50d.png', OWMn: '50n.png', Icd: s23, Icn: s23, luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+		[id: 800, OWMd: '01d.png', OWMn: '01n.png', Icd: '32.png', Icn: '31.png', luxp: 1, sId: 'clear', sIn: 'nt_clear'],
+		[id: 801, OWMd: '02d.png', OWMn: '02n.png', Icd: '34.png', Icn: '33.png', luxp: 0.9, sId: sPCLDY, sIn: sNPCLDY],
+		[id: 802, OWMd: '03d.png', OWMn: '03n.png', Icd: '30.png', Icn: '29.png', luxp: 0.8, sId: sPCLDY, sIn: sNPCLDY],
+		[id: 803, OWMd: '04d.png', OWMn: '04n.png', Icd: '28.png', Icn: '27.png', luxp: 0.6, sId: 'mostlycloudy',sIn:'nt_mostlycloudy'],
+		[id: 804, OWMd: '04d.png', OWMn: '04n.png', Icd: '26.png', Icn: '26.png', luxp: 0.6, sId: 'cloudy', sIn: 'nt_cloudy'],
+		[id: 999, OWMd: '50d.png', OWMn: '50n.png', Icd: sNPNG, Icn: sNPNG, luxp: 1.0, sId: 'unknown', sIn: 'unknown'],
+]
+
 
 Long wnow(){ return (Long)now() }
 /******************************************************************************/
