@@ -16,7 +16,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update March 25, 2023 for Hubitat
+ * Last update March 26, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -26,7 +26,6 @@
 //file:noinspection unused
 //file:noinspection SpellCheckingInspection
 //file:noinspection GroovyFallthrough
-//ffile:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20230222_HE'
@@ -434,7 +433,9 @@ public void ahttpRequestHandler(resp, callbackData){
 				indx = 0
 				for(i=0;i<48;i++){
 					Map t0=(Map)((List)json.hourly)[i] ?: [:]
+					if(!t0) continue
 					Map t1 = (Map)((List)json.daily)[indx] ?: [:]
+					if(!t1) continue
 
 					sunrise = (Integer)t1.sunrise
 					sunset = (Integer)t1.sunset
@@ -449,24 +450,6 @@ public void ahttpRequestHandler(resp, callbackData){
 					}
 				}
 			}
-
-
-/*
-
-				List owmCweat = owm?.current?.weather
-                myUpdData('condition_id', owmCweat==null || owmCweat[0]?.id==null ? '999' : owmCweat[0].id.toString())
-                myUpdData('condition_code', getCondCode(myGetData('condition_id').toInteger(), myGetData('is_day')))
-                myUpdData('OWN_icon', owmCweat == null || owmCweat[0]?.icon==null ? (myGetData('is_day')==sTRU ? '50d' : '50n') : owmCweat[0].icon)
-
-                List<Map> owmDaily
-                owmDaily = owm?.daily != null && ((List)owm.daily)[0]?.weather != null ? ((List)owm?.daily)[0].weather : null
-                myUpdData('forecast_id', owmDaily==null || owmDaily[0]?.id==null ? '999' : owmDaily[0].id.toString())
-                myUpdData('forecast_code', getCondCode(myGetData('forecast_id').toInteger(), sTRU))
-                myUpdData('forecast_text', owmDaily==null || owmDaily[0]?.description==null ? 'Unknown' : owmDaily[0].description.capitalize())
-
-        myUpdData('condition_text', myGetData('iconType')== sTRU ? (owmCweat==null || owmCweat[0]?.description==null ? 'Unknown' : owmCweat[0].description.capitalize()): (owm?.daily==null || owm?.daily[0]?.weather[0]?.description==null ? 'Unknown' : owm.daily[0].weather[0].description.capitalize()))
-*/
-
 		}
 	}else{
 		if(resp.hasError()){
@@ -693,13 +676,7 @@ def pageDumpWeather(){
 
 private static TimeZone mTZ(){ return TimeZone.getDefault() } // (TimeZone)location.timeZone
 
-TimeZone getTimeZone(){
-	TimeZone tz = mTZ()
-	if(!tz){ log.error "getTimeZone: Hub TimeZone not found" }
-	return tz
-}
-
-String getDtNow(){
+static String getDtNow(){
 	Date now = new Date()
 	return formatDt(now)
 }
@@ -707,14 +684,13 @@ String getDtNow(){
 import java.text.SimpleDateFormat
 //import groovy.time.*
 
-String formatDt(Date dt){
+static String formatDt(Date dt){
 	SimpleDateFormat tf = new SimpleDateFormat("E MMM dd HH:mm:ss z yyyy")
-	if(getTimeZone()){ tf.setTimeZone(getTimeZone()) }
-	else { log.error "HE TimeZone is not set; Please open your location and Press Save" }
+	tf.setTimeZone(mTZ())
 	return tf.format(dt)
 }
 
-Long GetTimeDiffSeconds(String strtDate, String stpDate=sNL, String methName=sNL){
+static Long GetTimeDiffSeconds(String strtDate, String stpDate=sNL, String methName=sNL){
 	if((strtDate && !stpDate) || (strtDate && stpDate)){
 		//if(strtDate?.contains("dtNow")){ return 10000 }
 		Date now = new Date()
@@ -888,7 +864,7 @@ private static String md5(String md5){
 
 @Field static Map theHashMapFLD=[:]
 
-private String hashId(id){
+static private String hashId(id){
 	//enabled hash caching for faster processing
 	String myId=id.toString()
 	String result

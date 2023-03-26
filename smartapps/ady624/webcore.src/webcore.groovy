@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update March 25, 2023 for Hubitat
+ * Last update March 26, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -1408,11 +1408,11 @@ mappings{
 	path("/intf/dashboard/piston/evaluate"){action: [GET: "api_intf_dashboard_piston_evaluate"]}
 	path("/intf/dashboard/piston/test"){action: [GET: "api_intf_dashboard_piston_test"]}
 	path("/intf/dashboard/piston/activity"){action: [GET: "api_intf_dashboard_piston_activity"]}
-	path("/intf/dashboard/presence/create"){action: [GET: "api_intf_dashboard_presence_create"]}
 	path("/intf/dashboard/variable/set"){action: [GET: "api_intf_variable_set"]}
 	path("/intf/dashboard/settings/set"){action: [GET: "api_intf_settings_set"]}
 	path("/intf/fuelstreams/list"){action: [GET: "api_intf_fuelstreams_list"]}
 	path("/intf/fuelstreams/get"){action: [GET: "api_intf_fuelstreams_get"]}
+	path("/intf/dashboard/presence/create"){action: [GET: "api_intf_dashboard_presence_create"]}
 	path("/intf/location/entered"){action: [GET: "api_intf_location_entered"]}
 	path("/intf/location/exited"){action: [GET: "api_intf_location_exited"]}
 	path("/intf/location/updated"){action: [GET: "api_intf_location_updated"]}
@@ -2241,24 +2241,6 @@ private api_intf_dashboard_piston_resume(){
 	common_pause_resume((Map)params, 'resume', 'Received resume a piston')
 }
 
-private api_intf_dashboard_presence_create(){
-	Map result
-	Map p=(Map)params
-	if(verifySecurityToken(p)){
-		String dni=sMs(p,'dni')
-		def sensor=(dni ? getChildDevices().find{ (String)it.getDeviceNetworkId()==dni } : null) ?: addChildDevice("ady624", handlePres(), dni ?: hashId("${wnow()}"), null, [label: sMs(p,'name')])
-		if(sensor){
-			sensor.label=sMs(p,'name')
-			result=[
-				(sSTS): sSUCC,
-				deviceId: hashId(sensor.id)
-			]
-			refreshDevices()
-		}else result=api_get_error_result("ERR_COULD_NOT_CREATE_DEVICE")
-	}else result=api_get_error_result(sERRTOK)
-	renderRes(result)
-}
-
 private common_Simple(Map params, String msg, String oper, arg=null, Boolean clrC=false){
 	Map result
 	debug "Dashboard: "+msg
@@ -2342,6 +2324,24 @@ private api_intf_dashboard_piston_delete(){
 			runIn(21, broadcastPistonList)
 		}else{ result=api_get_error_result(sERRID) }
 	}else{ result=api_get_error_result(sERRTOK) }
+	renderRes(result)
+}
+
+private api_intf_dashboard_presence_create(){
+	Map result
+	Map p=(Map)params
+	if(verifySecurityToken(p)){
+		String dni=sMs(p,'dni')
+		def sensor=(dni ? getChildDevices().find{ (String)it.getDeviceNetworkId()==dni } : null) ?: addChildDevice("ady624", handlePres(), dni ?: hashId("${wnow()}"), null, [label: sMs(p,'name')])
+		if(sensor){
+			sensor.label=sMs(p,'name')
+			result=[
+					(sSTS): sSUCC,
+					deviceId: hashId(sensor.id)
+			]
+			refreshDevices()
+		}else result=api_get_error_result("ERR_COULD_NOT_CREATE_DEVICE")
+	}else result=api_get_error_result(sERRTOK)
 	renderRes(result)
 }
 
@@ -3833,7 +3833,7 @@ private Map getHubitatVersion(){
 	return ((List)location.getHubs()).collectEntries{ [(it.id.toString()): it.getFirmwareVersionString()] }
 } */
 
-private TimeZone mTZ(){ return (TimeZone)location.timeZone }
+private static TimeZone mTZ(){ return TimeZone.getDefault() }
 private gtLocation(){ return location }
 private String gtLtScale(){ return (String)location.getTemperatureScale() }
 private String gtLname(){ return (String)location.getName() }

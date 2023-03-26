@@ -183,21 +183,24 @@ static String getOrdinalSuffix(ivalue) {
     return 'th'
 }
 
+Long wnow(){ return (Long)now() }
+
 def processEvent(Map event) {
 	//log.error "GOT EVENT $event"
-	List<Map> places = getPlaces((List)event?.places)
-    Long timestamp = ((Long)event.location?.timestamp ?: (Long)event.timestamp) ?: 0
-   	Long delay = now() - timestamp
-    if ((event.name == 'updated') && !!event.location && !event.location.error) {
-        if (delay > 30000) {
+	List<Map> places = getPlaces((List)event.places)
+	Map loc=(Map)event.location
+    Long timestamp = ((Long)loc?.timestamp ?: (Long)event.timestamp) ?: 0L
+   	Long delay = wnow() - timestamp
+    if (((String)event.name == 'updated') && loc && !loc.error) {
+        if (delay > 30000L) {
             if (debugging) {
-                def info = "Received stale location update with a delay of ${delay}ms"
+                String info = "Received stale location update with a delay of ${delay}ms"
                 log.debug info
                 sendEvent( name: "debug", value: info, descriptionText: info, isStateChange: true, displayed: true )
             }
             return
         }
-        if (timestamp < state.lastTimestamp) {
+        if (timestamp < (Long)state.lastTimestamp) {
             if (debugging) {
                 String info = "Received location update that is older than the last update"
                 log.debug info
@@ -207,27 +210,27 @@ def processEvent(Map event) {
         }
         state.lastTimestamp = timestamp
     	//filter out accuracy
-    	doSendEvent("latitude", event.location.latitude)
-    	doSendEvent("longitude", event.location.longitude)
-    	doSendEvent("altitude", event.location.altitude / 0.3048)
-        doSendEvent("altitudeMetric", event.location.altitude)
-        doSendEvent("altitudeDisplay", advanced == "No" ? '' : (scale == 'Metric' ? sprintf('%.1f', event.location.altitude) + ' m' : sprintf('%.1f', event.location.altitude / 0.3048) + ' ft'))
-    	doSendEvent("floor", event.location.floor)
-        doSendEvent("floorDisplay", advanced == "No" ? '' : (event.location.floor ? "${event.location.floor}${getOrdinalSuffix(event.location.floor)} floor" : 'Unknown floor'))
-    	doSendEvent("horizontalAccuracy", event.location.horizontalAccuracy / 0.3048)
-    	doSendEvent("horizontalAccuracyMetric", event.location.horizontalAccuracy)
-    	doSendEvent("verticalAccuracy", event.location.verticalAccuracy / 0.3048)
-    	doSendEvent("verticalAccuracyMetric", event.location.verticalAccuracy)
-    	doSendEvent("speed", (event.location.speed ?: 0) / 0.3048)
-        Float speed = event.location.speed ?: 0
-        Double bearing = event.location.bearing ?: (event.location.course ?: 0.0D)
+    	doSendEvent("latitude", loc.latitude)
+    	doSendEvent("longitude", loc.longitude)
+    	doSendEvent("altitude", loc.altitude / 0.3048)
+        doSendEvent("altitudeMetric", loc.altitude)
+        doSendEvent("altitudeDisplay", advanced == "No" ? '' : (scale == 'Metric' ? sprintf('%.1f', loc.altitude) + ' m' : sprintf('%.1f', loc.altitude / 0.3048) + ' ft'))
+    	doSendEvent("floor", loc.floor)
+        doSendEvent("floorDisplay", advanced == "No" ? '' : (loc.floor ? "${loc.floor}${getOrdinalSuffix(loc.floor)} floor" : 'Unknown floor'))
+    	doSendEvent("horizontalAccuracy", loc.horizontalAccuracy / 0.3048)
+    	doSendEvent("horizontalAccuracyMetric", loc.horizontalAccuracy)
+    	doSendEvent("verticalAccuracy", loc.verticalAccuracy / 0.3048)
+    	doSendEvent("verticalAccuracyMetric", loc.verticalAccuracy)
+    	doSendEvent("speed", (loc.speed ?: 0) / 0.3048)
+        Float speed = (Float)loc.speed ?: 0
+        Double bearing = (Double)loc.bearing ?: ((Double)loc.course ?: 0.0D)
         doSendEvent("speedMetric", speed)
         doSendEvent("bearing", bearing)
         doSendEvent("speedDisplay", advanced == "No" ? '' : (speed < 0 ? 'Unknown speed' : (speed == 0 ? 'Stationary' : (sprintf('%.1f', (scale == 'Metric' ? speed * 3.6 : speed * 3.6 / 1.609344)) + (scale == 'Metric' ? ' km/h' : ' mph') + (bearing >= 0 ? ' to ' + getBearingName(bearing) : '')))))
-        processLocation((Float)event.location.latitude, (Float)event.location.longitude, places, event.location.horizontalAccuracy)
+        processLocation((Float)loc.latitude, (Float)loc.longitude, places, loc.horizontalAccuracy)
     } else {
-        state.lastTimestamp = timestamp > state.lastTimestamp ? timestamp : state.lastTimestamp
-    	if (event?.place && ((String)event.place).size() == 71) {
+        state.lastTimestamp = timestamp > (Long)state.lastTimestamp ? timestamp : (Long)state.lastTimestamp
+    	if (event.place && ((String)event.place).size() == 71) {
         	List<String> parts = ((String)event.place).tokenize('|')
             if (parts.size() == 3) {
                 Map place = places.find{ it.id == parts[1] }
@@ -290,7 +293,7 @@ private void processLocation(Float lat, Float lng, List<Map> places, horizontalA
             }
             place.meta.d = distance
             if (place.h) {
-                homeDistance = distance / 1000.0D
+                homeDistance = distance / 1000.0
                 bearing = getBearing((Float)((List)place.p)[0], (Float)((List)place.p)[1], lat, lng)
             }
         }
