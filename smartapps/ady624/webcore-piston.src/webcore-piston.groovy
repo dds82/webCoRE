@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update March 28, 2023 for Hubitat
+ * Last update March 29, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -4637,7 +4637,10 @@ private void scheduleTimeCondition(Map r9,Map cndtn){
 	Integer cndNm=stmtNum(cndtn)
 	//if already scheduled once during run, don't do it again
 	String i=sI; Integer iz=iZ // compiler bug
-	if(sgtSch(r9).find{ Map it -> iMsS(it)==cndNm && iMs(it,i)==iz })return
+	if(sgtSch(r9).find{ Map it -> iMsS(it)==cndNm && iMs(it,i)==iz }){
+		if(lge)myDetail r9,mySt+' FOUND EXISTING TIMER '
+		return
+	}
 	String co=sMs(cndtn,sCO)
 	Map comparison; comparison=Comparisons()[sCONDITIONS][co]
 	Boolean trigger; trigger=false
