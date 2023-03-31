@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update March 28, 2023 for Hubitat
+ * Last update March 30, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -3886,7 +3886,7 @@ private Map wrender(Map options=[:]){
 			try{
 				String a= string2gzip(s)
 				Integer nsz=a.size()
-				if(eric1())debug "options.data is $sz after compression $nsz  saving ${1-(nsz/sz)}%"
+				if(eric1())debug "options.data is $sz after compression $nsz  saving ${Math.round((1.0D-(nsz/sz))*1000.0D)/10.0D}%"
 //				options[sDATA]=a
 //				options[sCE]=sGZIP
 			}catch(ignored){}
