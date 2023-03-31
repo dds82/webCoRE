@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update March 29, 2023 for Hubitat
+ * Last update March 31, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -1546,7 +1546,8 @@ private void cleanCode(Map i,Boolean inMem){
 			if(comparison==null) comparison=Comparisons()[sTRIGGERS][co]
 			if(comparison!=null){
 				Integer pCnt= comparison[sP]!=null ? iMs(comparison,sP):iZ
-				switch(pCnt){
+				Integer tCnt= comparison[sT]!=null ? iMs(comparison,sT):iZ
+				switch(pCnt+tCnt){
 					case iZ:
 						if(item[sRO]!=null)item.remove(sRO)
 						if(item[sTO]!=null)item.remove(sTO)
@@ -1554,6 +1555,7 @@ private void cleanCode(Map i,Boolean inMem){
 						if(item[sRO2]!=null)item.remove(sRO2)
 						if(item[sTO2]!=null)item.remove(sTO2)
 					default:
+						if(tCnt>iZ) break
 						if(item[sRO]!=null && sMt(mMs(item,sRO))==sC) item.remove(sTO)
 						if(item[sRO2]!=null && sMt(mMs(item,sRO2))==sC) item.remove(sTO2)
 				}
@@ -9329,7 +9331,7 @@ private Map<String,Object> getVariable(Map r9,String name, Boolean rtnL=false){
 	String tn,mySt,rt
 	tn=sanitizeVariableName(var[sNM])
 
-	mySt="get Variable '${name} ${var} ${tn}' "
+	mySt="get Variable ${name} ${var} ${tn} "
 	Boolean lge=isEric(r9)
 	if(lge) myDetail r9,mySt,i1
 	Map<String,Object> res
