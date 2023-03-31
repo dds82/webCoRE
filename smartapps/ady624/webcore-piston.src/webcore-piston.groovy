@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update March 25, 2023 for Hubitat
+ * Last update March 28, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -418,6 +418,8 @@ static Boolean eric1(){ return false }
 @Field static final String sDATTRHT='([device:attribute] [,.., [device:attribute]],threshold)'
 @Field static final String sPSTNRSM='pistonResume'
 @Field static final String sTILE='tile'
+@Field static final String sSUNRISE='sunrise'
+@Field static final String sSUNSET='sunset'
 
 @Field static final String sMULP='*'
 @Field static final String sQM='?'
@@ -1530,12 +1532,33 @@ private void cleanCode(Map i,Boolean inMem){
 		if(item.str!=null)a=item.remove('str')
 		if(item.ok!=null)a=item.remove('ok')
 		if(item[sL]!=null && item[sL] instanceof String)a=item.remove(sL)
-	}
 
-	// operands
-	if(ty==sEVERY){ // scheduleTimer
-		if(sMvt(mMs(item,sLO)) in [sMS,sS,sM,sH]){ a=item.remove(sLO2); a=item.remove(sLO3) }
-		else if(sMt(mMs(item,sLO2))==sC)a=item.remove(sLO3)
+		// operands
+		if(ty==sEVERY){ // scheduleTimer
+			if(sMvt(mMs(item,sLO)) in [sMS,sS,sM,sH]){ a=item.remove(sLO2); a=item.remove(sLO3) }
+			else if(sMt(mMs(item,sLO2))==sC)a=item.remove(sLO3)
+		}
+
+		if(item[sCO]!=null){
+			String co=sMs(item,sCO)
+			Map comparison
+			comparison=Comparisons()[sCONDITIONS][co]
+			if(comparison==null) comparison=Comparisons()[sTRIGGERS][co]
+			if(comparison!=null){
+				Integer pCnt= comparison[sP]!=null ? iMs(comparison,sP):iZ
+				switch(pCnt){
+					case iZ:
+						if(item[sRO]!=null)item.remove(sRO)
+						if(item[sTO]!=null)item.remove(sTO)
+					case i1:
+						if(item[sRO2]!=null)item.remove(sRO2)
+						if(item[sTO2]!=null)item.remove(sTO2)
+					default:
+						if(item[sRO]!=null && sMt(mMs(item,sRO))==sC) item.remove(sTO)
+						if(item[sRO2]!=null && sMt(mMs(item,sRO2))==sC) item.remove(sTO2)
+				}
+			}
+		}
 	}
 
 	if(item[sEXP]!=null)cleanCode(mMs(item,sEXP),inMem)
@@ -2431,11 +2454,11 @@ static Map fillPL(){
 @CompileStatic
 static String stripH(String str){
 	if(!str) return sBLK
-	Integer first; first = str.indexOf('<span')
-	String res; res = str[iZ..(first>iZ ? first-i1 : str.length()-i1)]
-	first = str.indexOf('CancelAlert')
-	String res1; res1 = res[iZ..(first>iZ ? first-i1 : res.length()-i1)]
-	res = res1.trim()
+	Integer first; first= str.indexOf('<span')
+	String res; res= str[iZ..(first>iZ ? first-i1 : str.length()-i1)]
+	first= str.indexOf('CancelAlert')
+	String res1; res1= res[iZ..(first>iZ ? first-i1 : res.length()-i1)]
+	res= res1.trim()
 	return res
 }
 
@@ -4396,6 +4419,8 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 			Map offset=mevaluateOperand(r9,tlo3)
 			time+=longEvalExpr(r9,rtnMap1(offset))
 		}
+		time=fixPresetSRSS(r9,tlo2,time)
+
 		//result is sDTIME
 		if(lastRun==lZ) //first run, just adjust the time so in the future
 			time=pushTimeAhead(time,wnow())
@@ -4552,7 +4577,28 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 }
 
 /**
- * Add time (mode DST)
+ * fix preset sunrise or sunset time for future calculations due to DST changes
+ */
+@CompileStatic
+private Long fixPresetSRSS(Map r9,Map oper,Long itime){
+	Long time; time=itime
+	if(sMt(oper)==sS && sMs(oper,sS) in [sSUNSET, sSUNRISE]){
+		TimeZone mtz=mTZ()
+		Long t=wnow()
+		Boolean timeOk= time>getMidnightTime() && time<getNextMidnightTime() && t<time
+		time= timeOk ? time :
+				Math.round(
+					(time+ (
+						mtz.getOffset(wtimeToday('03:00',mtz).getTime())
+							-mtz.getOffset(wtimeTodayAfter('23:59','03:00',mtz).getTime())
+					)
+				) *d1)
+	}
+	return time
+}
+
+/**
+ * Add time (mod DST)
  */
 @CompileStatic
 private static Long addTime(Long pastTime,Long add,Integer level){
@@ -4607,15 +4653,25 @@ private void scheduleTimeCondition(Map r9,Map cndtn){
 
 	Long v1,v2,n,n1
 	Map tv1,tv2
-	tv1=cndtn[sRO]!=null && sMt(mMs(cndtn,sRO))!=sC ? mevaluateOperand(r9,mMs(cndtn,sTO)):null
-	v1=longEvalExpr(r9,mevaluateOperand(r9,mMs(cndtn,sRO)),sDTIME) + (tv1!=null ? longEvalExpr(r9,rtnMap1(tv1)) : lZ)
-	tv2=cndtn[sRO2]!=null && sMt(mMs(cndtn,sRO2))!=sC && pCnt>i1 ? mevaluateOperand(r9,mMs(cndtn,sTO2)):null
-	v2=trigger ? v1:(pCnt>i1 ? (longEvalExpr(r9,mevaluateOperand(r9,mMs(cndtn,sRO2),null,false,true),sDTIME) + (tv2!=null ? longEvalExpr(r9,rtnMap1(tv2)) :lZ)) : sMv(cLO)==sTIME ? getMidnightTime():v1 )
+	Map ro,ro2
+	ro=mMs(cndtn,sRO)
+	tv1=ro!=null && sMt(ro)!=sC ? mevaluateOperand(r9,mMs(cndtn,sTO)):null
+	v1=longEvalExpr(r9,mevaluateOperand(r9,ro),sDTIME) + (tv1!=null ? longEvalExpr(r9,rtnMap1(tv1)) : lZ)
+
+	v1=fixPresetSRSS(r9,ro,v1)
+
+	ro2=mMs(cndtn,sRO2)
+	tv2=ro2!=null && sMt(ro2)!=sC && pCnt>i1 ? mevaluateOperand(r9,mMs(cndtn,sTO2)):null
+	v2=trigger ? v1:(pCnt>i1 ? (longEvalExpr(r9,mevaluateOperand(r9,ro2,null,false,true),sDTIME) + (tv2!=null ? longEvalExpr(r9,rtnMap1(tv2)) :lZ)) : sMv(cLO)==sTIME ? getMidnightTime():v1 )
+
+	v2=!trigger && pCnt>i1 ? fixPresetSRSS(r9,ro2,v2) : v2
+
 	n=Math.round(d1*wnow()+2000L)
 	if(sMv(cLO)==sTIME){
 		v1=pushTimeAhead(v1,n)
 		v2=pushTimeAhead(v2,n)
 	}
+
 	//figure out the next time
 	v1=v1<n ? v2:v1
 	v2=v2<n ? v1:v2
@@ -6982,8 +7038,8 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 				case sDTIME:
 					Long v; v=lZ
 					switch(sMs(operand,sS)){
-						case 'sunset': v=getSunsetTime(r9); break
-						case 'sunrise': v=getSunriseTime(r9); break
+						case sSUNSET: v=getSunsetTime(r9); break
+						case sSUNRISE: v=getSunriseTime(r9); break
 						case 'midnight': v=nextMidnight ? getNextMidnightTime():getMidnightTime(); break
 						case 'noon': v=getNoonTime(); break
 					}
@@ -12640,6 +12696,7 @@ private Map initSunrSunst(Map r9){
 		Long nmnght=getNextMidnightTime()
 		Long c,d,a1,b1
 		d=lZ
+
 		Boolean good
 		good=true
 		try{
@@ -12658,11 +12715,16 @@ private Map initSunrSunst(Map r9){
 			c=agtr ? a:Math.round(a+dMSDAY+srSkew)
 			d=bgtr ? b:Math.round(b+dMSDAY+ssSkew)
 		}
-		Long c1=Math.round(c-dMSDAY)
-		Long db1=Math.round(d-dMSDAY)
+		TimeZone mtz=mTZ()
+		Long dstoffset=Math.round(
+				( mtz.getOffset(wtimeToday('03:00',mtz).getTime())
+						-mtz.getOffset(wtimeTodayAfter('23:59','03:00',mtz).getTime())
+				) *d1)
+		Long c1=Math.round(c-dMSDAY)-dstoffset
+		Long db1=Math.round(d-dMSDAY)-dstoffset
 		t0=[
-			('sunrise'): a,
-			('sunset'):b,
+			(sSUNRISE): a,
+			(sSUNSET):b,
 			('todayssunrise'): a1,
 			('calcsunrise'): (a>c1 ? a:c1),
 			('todayssunset'):b1,
