@@ -1547,17 +1547,18 @@ private void cleanCode(Map i,Boolean inMem){
 			if(comparison!=null){
 				Integer pCnt= comparison[sP]!=null ? iMs(comparison,sP):iZ
 				Integer tCnt= comparison[sT]!=null ? iMs(comparison,sT):iZ
-				switch(pCnt+tCnt){
-					case iZ:
-						if(item[sRO]!=null)item.remove(sRO)
-						if(item[sTO]!=null)item.remove(sTO)
-					case i1:
-						if(item[sRO2]!=null)item.remove(sRO2)
-						if(item[sTO2]!=null)item.remove(sTO2)
-					default:
-						if(tCnt>iZ) break
-						if(item[sRO]!=null && sMt(mMs(item,sRO))==sC) item.remove(sTO)
-						if(item[sRO2]!=null && sMt(mMs(item,sRO2))==sC) item.remove(sTO2)
+				if(tCnt==iZ){
+					switch(pCnt){
+						case iZ:
+							if(item[sRO]!=null)item.remove(sRO)
+							if(item[sTO]!=null)item.remove(sTO)
+						case i1:
+							if(item[sRO2]!=null)item.remove(sRO2)
+							if(item[sTO2]!=null)item.remove(sTO2)
+						default:
+							if(item[sRO]!=null && sMt(mMs(item,sRO))==sC) item.remove(sTO)
+							if(item[sRO2]!=null && sMt(mMs(item,sRO2))==sC) item.remove(sTO2)
+					}
 				}
 			}
 		}
