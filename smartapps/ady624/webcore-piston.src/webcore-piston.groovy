@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update April 2, 2023 for Hubitat
+ * Last update April 3, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -12338,7 +12338,7 @@ private Long stringToTime(dateOrTimeOrString){ // convert to dtime
 					if(t0.length()==i8){
 						n=i9
 						String tt=t0
-						time=(new Date()).parse('HH:mm:ss',tt).getTime()
+						time=(new Date()).parse('HH:mm:ssXX',tt+'-0000').getTime()
 						time=gtWCTimeToday(time)
 					}else{
 						n=i10
@@ -12380,6 +12380,8 @@ private Long stringToTime(dateOrTimeOrString){ // convert to dtime
 		n=13
 		result=lZ
 	}
+	//if(eric1() && ((String)gtSetting(sLOGNG))?.toInteger()>i2)
+	//	log.warn "stringToTime n is $n"
 	return result
 }
 
