@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update March 31, 2023 for Hubitat
+ * Last update April 2, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -292,6 +292,7 @@ static Boolean eric1(){ return false }
 @Field static final String sGVSTOREC='gvStoreCache'
 @Field static final String sINITGS='initGStore'
 @Field static final String sGSTORE='globalStore'
+@Field static final String sDID3OR5='did3or5'
 
 @Field static final String sLOCID='locationId'
 @Field static final String sUSELFUELS='useLocalFuelStreams'
@@ -2683,7 +2684,8 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 		Long sVariance=lMs(gtPLimits(),sSCHVARIANCE)
 		Long eT=lMs(gtPLimits(),sEXCTIME)
 		Long schdR=lMs(gtPLimits(),sSCHREM)
-		while(success && eT+lMs(r9,sTMSTMP)-wnow()>schdR){
+		r9[sDID3OR5]=false
+		while(success && !bIs(r9,sDID3OR5) && eT+lMs(r9,sTMSTMP)-wnow()>schdR){
 			// if no queued events
 			if(!firstTime && serializationOn){
 				Boolean inq; inq=false
@@ -2927,12 +2929,13 @@ private Boolean executeEvent(Map r9,Map event){
 	Boolean res,ended; res=false; ended=false
 	try{
 		Integer index; index=iZ //event?.index ?: iZ
-		if(event[sJSOND]){
+		Map ejson=mMs(event,sJSOND)
+		if(ejson){
 			Map attribute=Attributes()[evntName]
 			String attrI=attribute!=null ? sMs(attribute,sI):sNL
 			if(attrI!=sNL)
-				if(event[sJSOND][attrI]) // .i is the attribute to lookup
-					index=((String)((Map)event[sJSOND])[attrI]).toInteger()
+				if(ejson[attrI]) // .i is the attribute to lookup
+					index=sMs(ejson,attrI).toInteger()
 				else if(!index)index=i1
 		}
 
@@ -3056,7 +3059,7 @@ private Boolean executeEvent(Map r9,Map event){
 									//execute a device schedule
 									def device=getDevice(r9,d)
 									if(device!=null){
-										//used by command execution delay, fades, flashes,etc.
+										//used by command execution delay
 										Boolean dco=data['dc']!=null ? bIs(data,'dc'):true
 										r9[sCURTSK]=[(sDLR):data[sTASK]] as LinkedHashMap
 										executePhysicalCommand(r9,device,c,data[sP],lZ,sNL,dco,false,false)
@@ -3066,10 +3069,11 @@ private Boolean executeEvent(Map r9,Map event){
 							}else
 								if(lg)debug 'Piston device timer execution aborted due to restrictions in effect',r9
 						}
+						r9[sDID3OR5]=true
 						break
 
 					case iN5:
-						//repeat related time schedules
+						//repeat related time schedules, fades, flashes
 						if(!restr){
 							Map jq=mMs(es,'jq')
 							if(jq!=null){
@@ -3087,6 +3091,7 @@ private Boolean executeEvent(Map r9,Map event){
 							}
 						}else
 							if(lg)debug 'Piston repeat task timer execution aborted due to restrictions in effect',r9
+						r9[sDID3OR5]=true
 						break
 
 					default:
@@ -3128,7 +3133,7 @@ private Boolean executeEvent(Map r9,Map event){
 		needUpdateFLD[myId]=false
 		needUpdateFLD=needUpdateFLD
 	}
-	else tracePoint(r9,sBREAK,lZ,iZ)
+	else if(!bIs(r9,sDID3OR5)) tracePoint(r9,sBREAK,lZ,iZ)
 	processSchedules r9
 	if(lge)myDetail r9,myS+" result:${res}"
 	return res
@@ -3136,7 +3141,7 @@ private Boolean executeEvent(Map r9,Map event){
 
 @Field static List<String> cleanData
 private static List<String> fill_cleanData(){
-	return ['allDevices', sPCACHE, sMEM, sBREAK, sPWRSRC, 'oldLocations', sINCIDENTS, 'semaphoreDelay', sVARS,
+	return ['allDevices', sDID3OR5, sPCACHE, sMEM, sBREAK, sPWRSRC, 'oldLocations', sINCIDENTS, 'semaphoreDelay', sVARS,
 			sSTACCESS, sATHR, sBLD, sNWCACHE, 'mediaData', 'weather', sLOGS, sTRC, sSYSVARS, sLOCALV, sPREVEVT, sJSON, sRESP,
 			sCACHE, sSTORE, sSETTINGS, sLOCMODEID, 'coreVersion', 'hcoreVersion', sCNCLATNS, sCNDTNSTC, sPSTNSTC, sFFT, sRUN,
 			sRESUMED, sTERM, sINSTID, sWUP, sSTMTL, sARGS, 'nfl', sTEMP]
@@ -3158,7 +3163,8 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 	updateLogs(r9,lMs(r9,sTMSTMP))
 //	Long el2=elapseT(startTime)
 
-	((Map)r9[sTRC])[sD]=elapseT(lMt(mMs(r9,sTRC)))
+	if(!bIs(r9,sDID3OR5))
+		((Map)r9[sTRC])[sD]=elapseT(lMt(mMs(r9,sTRC)))
 
 	//save / update changed cache values
 	for(item in msMs(r9,sNWCACHE)) ((Map)r9[sCACHE])[(String)item.key]=item.value
@@ -3181,7 +3187,8 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 			nc[sCACHE]=[:]+mMs(r9,sCACHE)
 			nc[sSTORE]=[:]+mMs(r9,sSTORE)
 			nc[sST]=[:]+mMs(r9,sST)
-			nc[sTRC]=[:]+mMs(r9,sTRC)
+			if(!bIs(r9,sDID3OR5))
+				nc[sTRC]=[:]+mMs(r9,sTRC)
 			theCacheVFLD[myId]=nc
 			theCacheVFLD=theCacheVFLD
 		}
@@ -3191,12 +3198,14 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 		assignAS(sCACHE,mMs(r9,sCACHE))
 		assignAS(sSTORE,mMs(r9,sSTORE))
 		assignAS(sST,[:]+mMs(r9,sST))
-		assignAS(sTRC,mMs(r9,sTRC))
+		if(!bIs(r9,sDID3OR5))
+			assignAS(sTRC,mMs(r9,sTRC))
 	}else{
 		assignSt(sCACHE,mMs(r9,sCACHE))
 		assignSt(sSTORE,mMs(r9,sSTORE))
 		assignSt(sST,[:]+mMs(r9,sST))
-		assignSt(sTRC,mMs(r9,sTRC))
+		if(!bIs(r9,sDID3OR5))
+			assignSt(sTRC,mMs(r9,sTRC))
 	}
 
 //	Long el4=elapseT(startTime)
@@ -5816,7 +5825,7 @@ private Long vcmd_iftttMaker(Map r9,device,List prms){
 	if(r9[sSETTINGS]==null){
 		error "no settings",r9
 	}else{
-		key=((String)((Map)r9[sSETTINGS]).ifttt_url ?: sBLK).trim().replace('https://',sBLK).replace('http://',sBLK).replace('maker.ifttt.com/use/',sBLK)
+		key=(sMs(mMs(r9,sSETTINGS),'ifttt_url') ?: sBLK).trim().replace('https://',sBLK).replace('http://',sBLK).replace('maker.ifttt.com/use/',sBLK)
 	}
 	if(!key){
 		error "Failed to send IFTTT event, because the IFTTT integration is not properly set up. Please visit Settings in your webCoRE dashboard and configure the IFTTT integration.",r9
@@ -9232,7 +9241,7 @@ private Map<String,Object> getArgument(Map r9,String name){
 
 private Map<String,Object> getJson(Map r9,String name){ return getJsonData(r9,r9[sJSON],name) }
 
-private Map<String,Object> getPlaces(Map r9,String name){ return getJsonData(r9,((Map)r9[sSETTINGS])?.places,name) }
+private Map<String,Object> getPlaces(Map r9,String name){ return getJsonData(r9,mMs(r9,sSETTINGS)?.places,name) }
 
 private Map<String,Object> getResponse(Map r9,String name){ return getJsonData(r9,r9[sRESP],name) }
 
@@ -13010,7 +13019,7 @@ private gtSysVarVal(Map r9,String name, Boolean frcStr=false){
 		case sCURUNIT: return ce[sUNIT]
 		case sDJSON: return rtnStr(r9[sJSON],frcStr)
 		case '$lastexecuted': return lMs(r9,sLEXEC)
-		case '$places': return rtnStr(((Map)r9[sSETTINGS])?.places)
+		case '$places': return rtnStr(mMs(r9,sSETTINGS)?.places)
 		case sDRESP: return rtnStr(r9[sRESP],frcStr)
 		case '$weather': return rtnStr(r9['weather'],frcStr)
 		case '$nfl': return rtnStr(r9.nfl)

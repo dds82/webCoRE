@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update March 31, 2023 for Hubitat
+ * Last update April 2, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20230222_HE'
-@Field static final String sHVERSTR='v0.3.114.20230222_HE - March 28, 2023'
+@Field static final String sHVERSTR='v0.3.114.20230222_HE - April 2, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -5225,7 +5225,7 @@ Map getChildComparisons(){
 
 // m - multiple
 // p - parameter count
-// t - timed
+// t - timed  1 - for/last; 2-at least/less than (using .f )
 // used by ide
 // g types
 //      t = timed
