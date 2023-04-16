@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update April 3, 2023 for Hubitat
+ * Last update April 15, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20230222_HE'
-@Field static final String sHVERSTR='v0.3.114.20230222_HE - April 3, 2023'
+@Field static final String sHVERSTR='v0.3.114.20230222_HE - April 15, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -389,12 +389,13 @@ private pageEngineBlock(){
 
 private pageSelectDevices(){
 	dynamicPage((sNM): "pageSelectDevices", nextPage: "pageFinishInstall"){
+		Boolean inst=(Boolean)state.installed
 		section(){
-			paragraph ((Boolean)state.installed ? "Select the devices you want webCoRE to have access to." : "Great, now let's select some devices.")
+			paragraph (inst ? "Select the devices you want webCoRE to have access to." : "Great, now let's select some devices.")
 			paragraph "A DEVICE ONLY NEEDS TO BE SELECTED ONCE, THE CATEGORIES BELOW ARE TO MAKE THEM EASIER TO FIND."
 			paragraph "It is a good idea to only select the devices you plan on using with webCoRE pistons. Pistons will only have access to the devices you selected."
 		}
-		if(!(Boolean)state.installed){
+		if(!inst){
 			section ('Note'){
 				paragraph "Remember, you can always come back to webCoRE and add or remove devices as needed.", (sREQ): true
 			}
@@ -1514,10 +1515,10 @@ static void clearCachedchildApps(String wName){
  * get Piston details
  * @returns [ [(sID): pid, (sNM): normalizeLabel(it), meta: [:]+meta],... ]
  */
+@CompileStatic
 private List<Map> presult(String wName,Boolean haveLock=false){
-	String n=handlePistn()
-	return gtCachedchildApps(wName,haveLock).sort{ Map it -> sMs(it,'label') }.collect{ Map it ->
-		String pid= sMs(it,'pid') //hashPID(it.id)
+	List<Map> a= gtCachedchildApps(wName,haveLock).sort{ Map it -> sMs(it,'label') }.collect{ Map it ->
+		String pid= sMs(it,'pid')
 		/*Map meta=[
 			(sA):isAct(t0),
 			(sC):t0[sCTGRY],
@@ -1530,9 +1531,13 @@ private List<Map> presult(String wName,Boolean haveLock=false){
 			heCached:(Boolean)t0.Cached ?: false
 		] */
 		Map meta; meta=gtMeta(null,wName,pid)
-		//[ (sID): pid, (sNM): normalizeLabel(it), (sMETA): (meta ? [:]+meta : [:])]
-		[ (sID): pid, (sNM): it.nlabel, (sMETA): (meta ? [:]+meta : [:])]
+		pitem(pid, (String)it.nlabel, meta)
 	}
+	a
+}
+
+Map pitem(String pid, String n, Map meta){
+	return [ (sID): pid, (sNM): n, (sMETA): (meta ? [:]+meta : [:])]
 }
 
 @Field static final String sCB='clearB'
