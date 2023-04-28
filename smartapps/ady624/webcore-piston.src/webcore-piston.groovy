@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update April 15, 2023 for Hubitat
+ * Last update April 28, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -1277,15 +1277,12 @@ private void clearMsetIds(Map node){
 }
 
 @Field static List<String> ListCmd=[]
-private static void fill_CMD(){
-	if(ListCmd.size()==iZ)
-		ListCmd=[sIF,sACTION,sCONDITION,sWHILE,sREPEAT,sFOR,sEACH,sSWITCH,sEVERY,sRESTRIC,sGROUP,sDO,sON,sEVENT,sEXIT,sBREAK]
-}
-
 @Field static List<String> ListStmt=[]
 private static void fill_STMT(){
 	if(ListStmt.size()==iZ)
 		ListStmt=[sIF,sACTION,sWHILE,sREPEAT,sFOR,sEACH,sSWITCH,sEVERY,sDO,sON,sEXIT,sBREAK]
+	if(ListCmd.size()==iZ)
+		ListCmd= ListStmt+[sCONDITION,sRESTRIC,sGROUP,sEVENT]
 }
 
 
@@ -1294,7 +1291,6 @@ private Integer msetIds(Boolean shorten,Boolean inMem,Map node,Integer mId=iZ,Ma
 	String nodeT=node?.t
 	Integer maxId; maxId=mId
 	//Boolean lg= eric() && settings[sLOGNG]?.toInteger()>i2
-	fill_CMD()
 	if(nodeT in ListCmd){
 		Integer id
 		id=iMs(node,sDLR)?:iZ
@@ -1352,14 +1348,8 @@ private Integer msetIds(Boolean shorten,Boolean inMem,Map node,Integer mId=iZ,Ma
 @Field static List<String> ListAL=[]
 @Field static List<String> ListC1=[]
 @Field static List<String> ListC2=[]
-
-// to reduce memory code size or remove cruft for IDE
-@CompileStatic
-private void cleanCode(Map i,Boolean inMem){
-	if(i==null || !(i instanceof Map))return
-	Map<String,Object> item=(Map<String,Object>)i
-
-	if(ListC1.size()==iZ){
+private static void fill_ListAL(){
+	if(ListAL.size()==iZ){
 		// sP phys/avg (uses a, d, g, p, i, f?)
 		// sD devices  (uses d)
 		// sV virt (uses v)
@@ -1371,8 +1361,15 @@ private void cleanCode(Map i,Boolean inMem){
 		ListAL=[sP,sD,sV,sS,sX,sC,sE,sU]	//  don't need
 		ListC1=[      sV,sS,   sC,sE,sU]	//		g,a
 		ListC2=[      sV,sS,sX,sC,sE,sU]	//		d
-		mb()
 	}
+}
+
+// to reduce memory code size or remove cruft for IDE
+@CompileStatic
+private void cleanCode(Map i,Boolean inMem){
+	if(i==null || !(i instanceof Map))return
+	Map<String,Object> item=(Map<String,Object>)i
+
 	def a
 	if(inMem && bIs(item,sDI)){ // disabled statements
 		List<String> b=item.collect{ (String)it.key }
@@ -1420,7 +1417,6 @@ private void cleanCode(Map i,Boolean inMem){
 			}
 			if(ty==sX && vt!=sDEV) // operand values that don't need f,g
 				if(g in [av,sANY])a=item.remove(sG)
-			fill_TIM()
 			if(ty==sC && !(vt in LT1))a=item.remove(sC)
 			if(ty==sE && item[sE]!=null)a=item.remove(sE)
 		}
@@ -1450,7 +1446,6 @@ private void cleanCode(Map i,Boolean inMem){
 
 	if(item[sDATA] instanceof Map && !mMs(item,sDATA))a=item.remove(sDATA)
 
-	fill_STMT()
 	if(inMem){
 		// defaults
 		if(sMs(item,sF)==sL)a=item.remove(sF) // timeValue.f
@@ -1941,8 +1936,7 @@ private static LinkedHashMap fixEvt(event){
 			b=event[sRESPCODE]; if(b!=null)mEvt[sRESPCODE]=b
 			b=event[sSRTDATA]; if(b!=null)mEvt[sSRTDATA]=b
 		}
-		b=event.device
-		if(b!=null)mEvt[sDEV]=cvtDev(b)
+		b=event.device; if(b!=null)mEvt[sDEV]=cvtDev(b)
 		return mEvt
 	}
 	return null
@@ -2259,6 +2253,18 @@ private void loadCDB(){
 	Map vcmd=VirtualCommandsF()
 	Map attr=AttributesF()
 	List col=getColorsF()
+	fill_ListAL()
+	fill_LS()
+	fill_TIM()
+	fill_mL()
+	fill_are_async()
+	fill_STMT()
+	fill_HttpAsync()
+	fill_cleanData()
+	fill_WCMDS()
+	fill_cls()
+	fill_FATTRS()
+	fill_CACH()
 	Map cmd=PhysicalCommandsF()
 }
 
@@ -2687,7 +2693,6 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 		if(evntName==sTIME && !bIs(event,sRECOVERY))
 			chgNextSch(r9,lZ)
 
-		fill_ListAsync()
 		syncTime=true
 		Boolean sv_syncTime=syncTime
 
@@ -2720,8 +2725,7 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 			if(evntName==sASYNCREP){
 				String r=sR
 				event[sSCH]=schedules.sort{ Map it -> lMt(it) }.find{ Map it -> sMs(it,r)==evntVal }
-			}
-			else{
+			}else{
 				//anything less than scheduleVariance (63ms) in the future is considered due; will do some pause to sync with it
 				Long tv=t+sVariance
 				sch=schedules.sort{ Map it -> lMt(it) }.find{ Map it -> lMt(it)<tv }
@@ -2794,7 +2798,7 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 				evntVal=t.toString()
 			}else{
 				String ttyp=sMs(sch,sR)
-				if(ttyp in ListAsync){
+				if(ttyp in HttpAsync){
 					error "Timeout Error "+ttyp,r9
 					syncTime=false
 					Integer rCode=408
@@ -2920,20 +2924,30 @@ private void sendLEvt(Map r9){
 @Field static final String sGENIN='generatedIn'
 @Field static final String sPSTART='pStart'
 @Field static final String sPEND='pEnd'
-@Field static final List<String>cleanData1=['lstarted','lended','generatedIn','pStart','pEnd']
 
+@Field static List<String>cleanData=[]
+@Field static List<String>cleanData1=[]
 @Field static List<String>cleanData2=[]
-private static void fill_cleanData2(){
+@Field static List<String>cleanData3=[]
+
+private static void fill_cleanData(){
+	if(cleanData.size()==iZ)
+		cleanData= ['allDevices', sDID3OR5, sPCACHE, sMEM, sBREAK, sPWRSRC, 'oldLocations', sINCIDENTS, 'semaphoreDelay', sVARS,
+					sSTACCESS, sATHR, sBLD, sNWCACHE, 'mediaData', 'weather', sLOGS, sTRC, sSYSVARS, sLOCALV, sPREVEVT, sJSON, sRESP,
+					sCACHE, sSTORE, sSETTINGS, sLOCMODEID, 'coreVersion', 'hcoreVersion', sCNCLATNS, sCNDTNSTC, sPSTNSTC, sFFT, sRUN,
+					sRESUMED, sTERM, sINSTID, sWUP, sSTMTL, sARGS, 'nfl', sTEMP]
+	if(cleanData1.size()==iZ)
+		cleanData1= [sLSTART,sLSEND,sGENIN,sPSTART,sPEND]
 	if(cleanData2.size()==iZ)
 		cleanData2= [sRECOVERY,sCONTENTT,sRESPDATA,sRESPCODE,sSRTDATA]
+	if(cleanData3.size()==iZ)
+		cleanData3= [sSCH,sJSOND]
 }
 
-@Field static final List<String>cleanData3=['schedule','jsonData']
-
-@Field static List<String> ListAsync=[]
-private static void fill_ListAsync(){
-	if(ListAsync.size()==iZ)
-		ListAsync= [sHTTPR,sSTOREM,sLIFX,sSENDE,sIFTTM]
+@Field static List<String> HttpAsync=[]
+private static void fill_HttpAsync(){
+	if(HttpAsync.size()==iZ)
+		HttpAsync= [sHTTPR,sSTOREM,sLIFX,sSENDE,sIFTTM]
 }
 
 @CompileStatic
@@ -2991,7 +3005,6 @@ private Boolean executeEvent(Map r9,Map event){
 		String theFinalDevice=theDevice1!=null ? (!isDeviceLocation(event[sDEV]) ? hashD(r9,theDevice1):a):a
 
 		def aa
-		fill_cleanData2()
 		for(String foo in cleanData2)aa=event.remove(foo)
 		aa=event.remove(sJSOND)
 		def sv=event[sDEV]
@@ -3151,15 +3164,6 @@ private Boolean executeEvent(Map r9,Map event){
 	return res
 }
 
-@Field static List<String> cleanData=[]
-private static void fill_cleanData(){
-	if(cleanData.size()==iZ)
-		cleanData= ['allDevices', sDID3OR5, sPCACHE, sMEM, sBREAK, sPWRSRC, 'oldLocations', sINCIDENTS, 'semaphoreDelay', sVARS,
-			sSTACCESS, sATHR, sBLD, sNWCACHE, 'mediaData', 'weather', sLOGS, sTRC, sSYSVARS, sLOCALV, sPREVEVT, sJSON, sRESP,
-			sCACHE, sSTORE, sSETTINGS, sLOCMODEID, 'coreVersion', 'hcoreVersion', sCNCLATNS, sCNDTNSTC, sPSTNSTC, sFFT, sRUN,
-			sRESUMED, sTERM, sINSTID, sWUP, sSTMTL, sARGS, 'nfl', sTEMP]
-}
-
 @Field static final String sFINLZ='finalize'
 @CompileStatic
 private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
@@ -3223,7 +3227,6 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 
 //	Long el4=elapseT(startTime)
 //remove large stuff
-	fill_cleanData()
 	for(String foo in cleanData)aa=r9.remove(foo)
 
 	if(bIs(r9,'updateDevices'))updateDeviceList(r9)
@@ -3508,9 +3511,6 @@ private Boolean executeStatements(Map r9,List<Map>statements,Boolean async=false
 	return true
 }
 
-@Field static List<String> ls0=[]
-@Field static List<String> ls1=[]
-
 @Field static final String sRUN='running'
 @Field static final String sFFT='ffTo'
 /**  ffto == 0 */
@@ -3551,6 +3551,12 @@ private static void popStk(Map r9,Integer v,Boolean stacked){
 	if(stacked) Integer tc=((List<Integer>)stk[sCS]).pop()
 	stk[sS]=(Integer)((List<Integer>)stk[sSS]).pop()
 	r9[sSTACK]=stk
+}
+
+@Field static List<String> are_async=[]
+@Field static List<String> loops=[]
+private static void fill_are_async(){
+	if(!are_async){ are_async=[sEVERY,sON]; if(!loops)loops=[sWHILE,sREPEAT,sFOR,sEACH] }
 }
 
 @CompileStatic
@@ -3605,9 +3611,7 @@ private Boolean executeStatement(Map r9,Map statement,Boolean asynch=false){
 	Double svIndex=(Double)oMv(sysV[sDLLRINDX])
 	List svDevice=liMv(sysV[sDLLRDEVICE])
 
-	if(!ls0){ ls0=[sEVERY,sON]; if(!ls1)ls1=[sWHILE,sREPEAT,sFOR,sEACH] }
-
-	Boolean selfAsync=sMa(statement)==s1 || stateType in ls0 // execution method (async)
+	Boolean selfAsync=sMa(statement)==s1 || stateType in are_async // execution method (async)
 	Boolean async=asynch||selfAsync
 
 	Boolean myPep=isPep(r9)
@@ -3907,7 +3911,7 @@ private Boolean executeStatement(Map r9,Map statement,Boolean asynch=false){
 			}
 			if(ffwd(r9) || isIf)perform=false
 
-			Boolean loop=(stateType in ls1)
+			Boolean loop=(stateType in loops)
 			//break the loop
 			if(loop && !value && isBrk(r9)){
 				//someone requested a break from loop
@@ -4152,7 +4156,6 @@ private Boolean executeTask(Map r9,List devices,Map statement,Map task,Boolean a
 	def virtualDevice=devices.size()!=iZ ? null:gtLocation()
 	for(device in (virtualDevice!=null ? [virtualDevice]:devices)){
 		if(virtualDevice==null && wdeviceHascommand(device,command) && !voverride){
-			fill_WCMDS()
 			if(command in LWCMDS){
 				Map msg=timer "Executed [$device].${command}",r9
 				try{
@@ -5319,7 +5322,6 @@ private void smart_toggle(Map r9,device,Boolean prob=null){
 	}else{
 		List da= (List)device?.getSupportedAttributes()
 		def b
-		fill_cls()
 		for(List<String> a in cls1){
 			a0=a[iZ]
 			b= da.find{ (String)it.getName()==a0 }
@@ -7339,7 +7341,6 @@ private Boolean evaluateCondition(Map r9,Map cndtn,String collection,Boolean asy
 		debug msg,r9
 	}
 	if(currun(r9)<=iZ && bIs(cndtn,sS) && sMt(cndtn)==sCONDITION && cndtn[sLO]!=null && sMt(mMs(cndtn,sLO))==sV){
-		fill_TIM()
 		if(sMv(mMs(cndtn,sLO)) in LT1) scheduleTimeCondition(r9,cndtn)
 	}
 	if(lge)myDetail r9,myS+" resumed: ${bIs(r9,sRESUMED)} result:$res"
@@ -7422,7 +7423,6 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 	//if multiple left values go through each
 	Map tvalue=to && to[sOPERAND] && to[sVALUES] ? mMs(to,sVALUES)+[(sF): mMs(to,sOPERAND)[sF]]:null
 	Map tvalue2=to2 && to2[sOPERAND] && to2[sVALUES]? mMs(to2,sVALUES):null
-	fill_TIM()
 	Boolean fa=bIs(options,sFRCALL)
 	for(Map<String,Map> value in liMs(lo,sVALUES)){
 		res=false
@@ -7805,7 +7805,6 @@ private Boolean comp_did_not_change		(Map r9,Map lv,Map rv=null,Map rv2=null,Map
 
 private static Boolean comp_is_any		(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ return true }
 private Boolean comp_is_before			(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){
-	fill_TIM()
 	Map l=mMv(lv)
 	String lvt= sMt(l) in LT1 ? sMt(l) : sNL
 
@@ -7820,7 +7819,6 @@ private Boolean comp_is_before			(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=
 }
 private Boolean comp_is_after			(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ return !comp_is_before(r9,lv,rv,rv2,tv,tv2)}
 private Boolean comp_is_between			(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){
-	fill_TIM()
 	Map l=mMv(lv)
 	String lvt= sMt(l) in LT1 ? sMt(l) : sNL
 
@@ -8628,7 +8626,6 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 				}
 			}
 		}
-		fill_TIM()
 		Map<String,Integer> dds=[:]
 		List<String>nosub=[sTILE,sPSTNRSM]
 		Boolean des=!!gtPOpt(r9,sDES)
@@ -8879,21 +8876,16 @@ private getDevice(Map r9,String idOrName){
 	return device
 }
 
-@Field static List<String>  LTHR=[]
-private static void fill_THR(){
+@Field static List<String> LTHR=[]
+@Field static List<String> FATTRS=[]
+private static void fill_FATTRS(){
 	if(LTHR.size()==iZ)
 		LTHR= [sORIENT,sAXISX,sAXISY,sAXISZ]
-}
-
-@Field static List<String>  FATTRS=[]
-private static void fill_FATTRS(){
-	fill_THR()
 	if(FATTRS.size()==iZ)
 		FATTRS= LTHR+[sALRMSSTATUS,sALRMSYSALRT,sALRMSYSEVT,'alarmSystemRule','alarmSystemRules']
 }
 
 private static String fixAttr(String attr){
-	fill_FATTRS()
 	if(!(attr in FATTRS)) return attr
 	if(attr in LTHR) return sTHREAX
 	switch(attr){
@@ -8991,39 +8983,39 @@ private getDeviceAttributeValue(Map r9,device,String attr,Boolean skipCurEvt=fal
 		if(lge)myDetail r9,s+" event $result (${myObj(result)})",iN2
 	}else{
 		String nattr=fixAttr(attr)
-		if(nattr in [sLSTACTIVITY,sSTS,sTHREAX]){
-			switch(nattr){
-				case sLSTACTIVITY:
-					result= ((Date)device.getLastActivity())?.getTime()
-					break
-				case sSTS:
-					result= device.getStatus()
-					break
-				case sTHREAX:
-					def xyz
-					xyz= !skipCurEvt && r9EvN==sTHREAX && r9EdID && ce && ce[sVAL] ? ce[sVAL] :null
-					if(lge && xyz)myDetail r9,s+" event $xyz (${myObj(xyz)})",iN2
-					Boolean errmsg; errmsg=false
-					if(!xyz){
-						try{
-							xyz=device.currentValue(sTHREAX,true)
-							if(xyz && lge)myDetail r9,s+" read $xyz (${myObj(xyz)})",iN2
-						}catch(al){
-							error gtAttrErr(device)+sTHREAX+sCLN,r9,iN2,al
-							errmsg=true
+		try{
+			if(nattr in [sLSTACTIVITY,sSTS,sTHREAX]){
+				switch(nattr){
+					case sLSTACTIVITY:
+						result= ((Date)device.getLastActivity())?.getTime()
+						break
+					case sSTS:
+						result= device.getStatus()
+						break
+					case sTHREAX:
+						def xyz
+						xyz= !skipCurEvt && r9EvN==sTHREAX && r9EdID && ce && ce[sVAL] ? ce[sVAL] :null
+						if(lge && xyz)myDetail r9,s+" event $xyz (${myObj(xyz)})",iN2
+						Boolean errmsg; errmsg=false
+						if(!xyz){
+							try{
+								xyz=device.currentValue(sTHREAX,true)
+								if(xyz && lge)myDetail r9,s+" read $xyz (${myObj(xyz)})",iN2
+							}catch(al){
+								error gtAttrErr(device)+sTHREAX+sCLN,r9,iN2,al
+								errmsg=true
+							}
 						}
-					}
-					if(xyz){
-						result= gtThreeAxisVal(xyz,attr)
-					}else if(!errmsg) error gtAttrErr(device)+sTHREAX+sCLN,r9,iN2
-					break
-			}
-		}else{
-			try{
+						if(xyz){
+							result= gtThreeAxisVal(xyz,attr)
+						}else if(!errmsg) error gtAttrErr(device)+sTHREAX+sCLN,r9,iN2
+						break
+				}
+			}else{
 				result=device.currentValue(attr,true)
-			}catch(all){
-				error gtAttrErr(device)+attr+sCLN,r9,iN2,all
 			}
+		}catch(all){
+			error gtAttrErr(device)+attr+sCLN,r9,iN2,all
 		}
 	}
 
@@ -9032,7 +9024,7 @@ private getDeviceAttributeValue(Map r9,device,String attr,Boolean skipCurEvt=fal
 }
 
 static String gtAttrErr(device){
-	return "Error reading current value for ${device}.".toString()
+	return "Error reading current value for ${device}:".toString()
 }
 
 /**
@@ -9680,21 +9672,21 @@ private static Long matchCastL(Map r9,v){ Long res=matchCast(r9,v,sLONG) ? (Long
 
 @CompileStatic
 private static Boolean matchCastD(Map r9,v,String t){
-	fill_TIM()
 	Boolean match= v!=null && t in LT1 && (v instanceof Long)
 	return match
 }
 
 @Field static List<String> mL=[]
 @Field static List<String> mL1=[]
-
-@CompileStatic
-private static Boolean matchCast(Map r9,v,String t){
+private static void fill_mL(){
 	if(mL.size()==iZ){
-		fill_LS()
 		mL1=[sDYN]+LS
 		mL=mL1+[sLONG,sDEC,sINT,sBOOLN,sDEV,sVEC]
 	}
+}
+
+@CompileStatic
+private static Boolean matchCast(Map r9,v,String t){
 	Boolean match= v!=null && t in mL && (
 		(v instanceof String && t in mL1)||
 		(t==sDEC && v instanceof Double) ||
@@ -9769,16 +9761,38 @@ private static Map simplifyExpression(Map express){
 @Field static List<String> pn3=[]
 @Field static List<String> pn4=[]
 
-@Field static List<String> LT1=[]
-private static void fill_TIM(){
-	if(LT1.size()==iZ)
-		LT1= [sDTIME,sTIME,sDATE]
-}
-
 @Field static List<String> LS=[]
 private static void fill_LS(){
 	if(LS.size()==iZ)
 		LS= [sSTR,sENUM,sERROR,sPHONE,sURI,sTEXT]
+}
+
+@Field static List<String> LT1=[]
+private static void fill_TIM(){
+	if(LT1.size()==iZ)
+		LT1= [sDTIME,sTIME,sDATE]
+	if(L1opt.size()==iZ){
+		L1opt=[sPLUS,sMINUS,sPWR,sAMP,sBOR,sBXOR,sBNOT,sBNAND,sBNOR,sBNXOR,sLTH,sGTH,sLTHE,sGTHE,sEQ,sNEQ,sNEQA,sSBL,sSBR,sNEG,sDNEG,sQM]
+		lPLSMIN=[sPLUS,sMINUS]
+		LN=[sNUMBER,sINT,sLONG] // number is ambiguous for devices
+		LD=[sDEC,sFLOAT]
+		LT2=[sDEV,sVARIABLE]
+		tL2=[sNEG,sDNEG,sBNOT]
+		tL4=[sMULP,sDIV,sMOD1,sMOD]
+		tL6=[sSBL,sSBR]
+		tL7=[sGTH,sLTH,sGTHE,sLTHE]
+		tL8=[sEQ,sNEQ,sNEQA]
+		tL9=[sAMP,sBNAND]
+		tL10=[sBXOR,sBNXOR]
+		tL11=[sBOR,sBNOR]
+		tL12=[sLAND,sLNAND]
+		tL13=[sLXOR,sLNXOR]
+		tL14=[sLOR,sLNOR]
+		pn1=[sMULP,sDIV,sPWR,sMINUS] // number fixes
+		pn2=[sMOD1,sMOD,sAMP,sBOR,sBXOR,sBNAND,sBNOR,sBNXOR,sSBL,sSBR] // int fixes
+		pn3=[sLAND,sLOR,sLXOR,sLNAND,sLNOR,sLNXOR,sNEG,sDNEG] // bool fixes
+		pn4=[sEQ,sNEQ,sLTH,sGTH,sLTHE,sGTHE,sNEQA]
+	}
 }
 
 /** return Double for given expression */
@@ -9790,7 +9804,6 @@ private Double dblEvalExpr(Map r9,Map express,String rtndataType=sDEC){
 /** return Long for given expression */
 @CompileStatic
 private Long longEvalExpr(Map r9,Map express,String rtndataType=sNL){
-	fill_TIM()
 	String rtn= rtndataType!=sSTR ? rtndataType : sNL
 	return oMv(evaluateExpression(r9,express,rtndataType)) as Long
 }
@@ -9816,32 +9829,6 @@ private String strEvalExpr(Map r9,Map express,String rtndataType=sSTR){
 @CompileStatic
 private Map evaluateExpression(Map r9,Map express,String rtndataType=sNL){
 	//if dealing with an expression that has multiple items let's evaluate each item one by one
-	if(L1opt.size()==iZ){
-		L1opt=[sPLUS,sMINUS,sPWR,sAMP,sBOR,sBXOR,sBNOT,sBNAND,sBNOR,sBNXOR,sLTH,sGTH,sLTHE,sGTHE,sEQ,sNEQ,sNEQA,sSBL,sSBR,sNEG,sDNEG,sQM]
-		mb()
-		fill_LS()
-		lPLSMIN=[sPLUS,sMINUS]
-		fill_TIM()
-		LN=[sNUMBER,sINT,sLONG] // number is ambiguous for devices
-		LD=[sDEC,sFLOAT]
-		LT2=[sDEV,sVARIABLE]
-		tL2=[sNEG,sDNEG,sBNOT]
-		tL4=[sMULP,sDIV,sMOD1,sMOD]
-		tL6=[sSBL,sSBR]
-		tL7=[sGTH,sLTH,sGTHE,sLTHE]
-		tL8=[sEQ,sNEQ,sNEQA]
-		tL9=[sAMP,sBNAND]
-		tL10=[sBXOR,sBNXOR]
-		tL11=[sBOR,sBNOR]
-		tL12=[sLAND,sLNAND]
-		tL13=[sLXOR,sLNXOR]
-		tL14=[sLOR,sLNOR]
-		pn1=[sMULP,sDIV,sPWR,sMINUS] // number fixes
-		pn2=[sMOD1,sMOD,sAMP,sBOR,sBXOR,sBNAND,sBNOR,sBNXOR,sSBL,sSBR] // int fixes
-		pn3=[sLAND,sLOR,sLXOR,sLNAND,sLNOR,sLNXOR,sNEG,sDNEG] // bool fixes
-		pn4=[sEQ,sNEQ,sLTH,sGTH,sLTHE,sGTHE,sNEQA]
-		mb()
-	}
 	if(!express)return rtnMapE('Null expression')
 	Long time=wnow()
 	Map expression=simplifyExpression(express)
@@ -9952,17 +9939,22 @@ private Map evaluateExpression(Map r9,Map express,String rtndataType=sNL){
 						prm=simplifyExpression(i)
 						if(sMt(prm) in LT2){ // sDEV or sVARIABLE
 							prm=evaluateExpression(r9,prm)
-							//if multiple devices, or list of numbers, spread into multiple prms
-							if(sMt(prm) in [sSTR,sDYN] && oMv(prm) instanceof String){
-								String s= sMv(prm)
-								if(stJson1(s)){
-									try{
-										List l= (List)new JsonSlurper().parseText(s)
-										prm[sV]= l
-									}catch(ignored){}
-								}
+							Integer sz
+							switch(fn){
+								case sJSON: sz=1; break
+								default:
+									//if multiple devices, or list of numbers, spread into multiple prms
+									if(sMt(prm) in [sSTR,sDYN] && oMv(prm) instanceof String){
+										String s= sMv(prm)
+										if(stJson1(s)){
+											try{
+												List l= (List)new JsonSlurper().parseText(s)
+												prm[sV]= l
+											}catch(ignored){}
+										}
+									}
+									sz=oMv(prm) instanceof List ? liMv(prm).size():i1
 							}
-							Integer sz=oMv(prm) instanceof List ? liMv(prm).size():i1
 							switch(sz){
 								case iZ: break
 								case i1: a=prms.push(prm); break
@@ -13175,7 +13167,6 @@ private static void stSysVarVal(Map r9,String nm,value/*,Boolean cachePersist=tr
 	Map<String,Map>sysV=msMs(r9,sSYSVARS)
 	Map var=sysV[nm]
 	if(var==null)return
-	fill_CACH()
 	if(cachePersist && nm in ListCache){
 		LinkedHashMap<String,Map> c=(LinkedHashMap<String,Map>)r9[sPCACHE]
 		if(value!=null) c[nm]= var+[(sV):value] as LinkedHashMap
@@ -13384,7 +13375,7 @@ Map fixHeGType(Boolean toHubV,String typ,v){
 				try{
 					tt1=wtoDateTime(res)
 				} catch(e){
-					error "datetime parse of hub variable failed",null,-2,e
+					error "datetime parse of hub variable failed",null,iN2,e
 				}
 				if(tt1!=null){
 					lres=tt1.getTime()

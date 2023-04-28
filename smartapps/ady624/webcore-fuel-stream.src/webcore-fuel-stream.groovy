@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update April 15, 2023 for Hubitat
+ *  Last update April 28, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -1271,7 +1271,7 @@ def displayQuant(String sid, Boolean allowLastActivity, Boolean create=false){
 				(sSUBONCHG): true)
 
 	}else{
-		container << hubiForm_sub_section("Create new quantized source $sid")
+		container << hubiForm_sub_section("Add quantized source $sid")
 
 		container << hubiForm_enum ((sTIT):	"Source type",
 				(sNM):	sid+'_type',

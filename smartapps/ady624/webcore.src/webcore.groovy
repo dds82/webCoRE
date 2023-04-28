@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update April 15, 2023 for Hubitat
+ * Last update April 28, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -32,7 +32,7 @@
 
 @Field static final String sVER='v0.3.114.20220203'
 @Field static final String sHVER='v0.3.114.20230222_HE'
-@Field static final String sHVERSTR='v0.3.114.20230222_HE - April 15, 2023'
+@Field static final String sHVERSTR='v0.3.114.20230222_HE - April 28, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -917,7 +917,7 @@ def pageDumpGlob(){
 	String n=handlePistn()
 	List t0
 	t0=wgetChildApps().findAll{ (String)it.name==n }
-	def t1=t0[0]
+	def t1=t0[iZ]
 	Map<String,List> t2= t1!=null ? (Map<String,List>)t1.gtGlobalVarsInUse() : [:]
 	Map<String,Object> newMap
 	newMap=[:]
@@ -1086,7 +1086,7 @@ private void clearParentPistonCache(String meth=sNL, Boolean frcResub=false, Boo
 	String n=handlePistn()
 	List t0; t0=wgetChildApps().findAll{ (String)it.name==n }
 	if(t0){
-		def t1=t0[0]
+		def t1=t0[iZ]
 		if(t1!=null) t1.clearParentCache(meth) // will cause one child to read gtPdata
 		if(frcResub){
 			t0.sort().each{ chld -> // this runs updated on all child pistons
@@ -1149,7 +1149,7 @@ void clearChldCaches(Boolean all=false, Boolean clrLogs=false, Boolean uber=fals
 private void clearGlobalPistonCache(String meth=null){
 	String n=handlePistn()
 	List t0; t0=wgetChildApps().findAll{ (String)it.name==n }
-	def t1=t0[0]
+	def t1=t0[iZ]
 	if(t1!=null) t1.clearGlobalCache(meth) // will cause a child to read global Vars
 	t0=null
 }
@@ -2565,8 +2565,8 @@ def findCreateFuel(Map req){
 	if(req[sC] == 'LTS'){
 		def lts = gtLTS()
 		String[] s= ((String)req[sN]).split('_')
-		String sensorId= s[0]
-		String attribute= s[1]
+		String sensorId= s[iZ]
+		String attribute= s[i1]
 		if(lts!=null && (Boolean)lts.isStorage(sensorId, attribute)){
 			result= lts
 		}
@@ -3338,8 +3338,8 @@ Map getDevDetails(dev, Boolean addtransform=false){
 					if(ok && prms[i] && prms[i].type){
 						String nm1; nm1=(String)prms[i].name
 						if(nm1){
-							if(nm1[-1]=='*'){
-								nm1=nm1[0..-2]
+							if(nm1[iN1]=='*'){
+								nm1=nm1[iZ..iN2]
 								myD[sM]=i1 // mandatory
 							}
 							myD[sN]= nm1
@@ -4462,7 +4462,7 @@ private Map<String,Boolean> getLogging(){
 	]
 }
 
-private Map log(message, Integer shift=-2, err=null, String cmd=sNL){
+private Map log(message, Integer shift=iN2, err=null, String cmd=sNL){
 	Long lnow=wnow()
 	if(cmd==sTIMER){
 		return [(sM): message, (sT): lnow, (sS): shift, (sE): err]
@@ -4551,13 +4551,13 @@ void doLog(String mcmd, String msg){
 	log."$mcmd" span(myMsg,clr)
 }
 
-private void info(String message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, sINFO }
-private void debug(String message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, sDBG }
-private void trace(message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, sTRC }
-private void warn(String message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, sWARN }
-private void error(String message, Integer shift=-2, err=null)	{ Map a=log message, shift, err, sERR }
+private void info(String message, Integer shift=iN2, err=null)	{ Map a=log message, shift, err, sINFO }
+private void debug(String message, Integer shift=iN2, err=null)	{ Map a=log message, shift, err, sDBG }
+private void trace(message, Integer shift=iN2, err=null)	{ Map a=log message, shift, err, sTRC }
+private void warn(String message, Integer shift=iN2, err=null)	{ Map a=log message, shift, err, sWARN }
+private void error(String message, Integer shift=iN2, err=null)	{ Map a=log message, shift, err, sERR }
 //error "object: ${describeObject(e)}",r9
-private Map timer(String message, Integer shift=-2, err=null)	{ log message, shift, err, sTIMER }
+private Map timer(String message, Integer shift=iN2, err=null)	{ log message, shift, err, sTIMER }
 
 @Field static final String sLTH='<'
 @Field static final String sGTH='>'
@@ -4747,15 +4747,15 @@ Map getChildAttributes(){
 @Field final Map<String,Map> attributesFLD=[
 	acceleration		: [ (sN): "acceleration",		(sT): sENUM,		(sO): [sACT, sINACT],						],
 	activities			: [ (sN): "activities",			(sT): "object",											],
-	airQualityIndex		: [ (sN): "air quality index",	(sT): sINT,	(sR): [0, 500],		u: "AQI",				],
+	airQualityIndex		: [ (sN): "air quality index",	(sT): sINT,	(sR): [iZ, 500],		u: "AQI",				],
 	alarm				: [ (sN): "alarm",				(sT): sENUM,		(sO): ["both", sOFF, "siren", "strobe"],	],
-	amperage			: [ (sN): "amperage",			(sT): sDEC,	(sR): [0, null],		u: "A",					],
+	amperage			: [ (sN): "amperage",			(sT): sDEC,	(sR): [iZ, null],		u: "A",					],
 	axisX				: [ (sN): "X axis",				(sT): sINT,	(sR): [-1024, 1024],	/*(sS): "threeAxis",*/			],
 	axisY				: [ (sN): "Y axis",				(sT): sINT,	(sR): [-1024, 1024],	/*(sS): "threeAxis",*/			],
 	axisZ				: [ (sN): "Z axis",				(sT): sINT,	(sR): [-1024, 1024],	/*(sS): "threeAxis",*/			],
-	battery				: [ (sN): "battery",			(sT): sINT,	(sR): [0, 100],		u: "%",							],
+	battery				: [ (sN): "battery",			(sT): sINT,	(sR): [iZ, 100],		u: "%",							],
 	camera				: [ (sN): "camera",				(sT): sENUM,		(sO): [sON, sOFF, "restarting", "unavailable"],				],
-	carbonDioxide		: [ (sN): "carbon dioxide",		(sT): sDEC,	(sR): [0, null],									],
+	carbonDioxide		: [ (sN): "carbon dioxide",		(sT): sDEC,	(sR): [iZ, null],									],
 	carbonMonoxide		: [ (sN): "carbon monoxide",	(sT): sENUM,		(sO): [sCLEAR, sDETECTED, "tested"],					],
 	codeChanged			: [ (sN): "lock code",			(sT): sENUM,		(sO): ["added", "changed", "deleted", "failed"],				],
 //	codeLength			: [ (sN): "Lock code length",	(sT): sINT,											],
@@ -4769,45 +4769,45 @@ Map getChildAttributes(){
 	currentActivity		: [ (sN): "current activity",	(sT): sSTR,											],
 //	p: is interaction type
 	door				: [ (sN): "door",				(sT): sENUM,		(sO): [sCLOSED, "closing", sOPEN, "opening", "unknown"],		(sP): true,	],
-	energy				: [ (sN): "energy",				(sT): sDEC,	(sR): [0, null],		u: "kWh",						],
+	energy				: [ (sN): "energy",				(sT): sDEC,	(sR): [iZ, null],		u: "kWh",						],
 	eta					: [ (sN): "ETA",				(sT): sDTIME,											],
 	effectName			: [ (sN): "effect name",		(sT): sSTR,											],
 	filterStatus		: [ (sN): "filter status",		(sT): sENUM,		(sO):["normal", "replace"],						],
 	frequency			: [ (sN): "frequency",			(sT): sDEC,		u: "Hz",							],
-	goal				: [ (sN): "goal",				(sT): sINT,	(sR): [0, null],									],
+	goal				: [ (sN): "goal",				(sT): sINT,	(sR): [iZ, null],									],
 	heatingSetpoint		: [ (sN): "heating setpoint",	(sT): sDEC,	(sR): [-127, 127],		u: '°?',						],
 	hex					: [ (sN): "hexadecimal code",	(sT): "hexcolor",											],
-	hue					: [ (sN): "hue",				(sT): sINT,	(sR): [0, 360],		u: "°",							],
-	humidity			: [ (sN): "relative humidity",	(sT): sINT,	(sR): [0, 100],		u: "%",							],
-	illuminance			: [ (sN): "illuminance",		(sT): sINT,	(sR): [0, null],		u: "lux",						],
+	hue					: [ (sN): "hue",				(sT): sINT,	(sR): [iZ, 360],		u: "°",							],
+	humidity			: [ (sN): "relative humidity",	(sT): sINT,	(sR): [iZ, 100],		u: "%",							],
+	illuminance			: [ (sN): "illuminance",		(sT): sINT,	(sR): [iZ, null],		u: "lux",						],
 	image				: [ (sN): "image",				(sT): "image",											],
 	indicatorStatus		: [ (sN): "indicator status",	(sT): sENUM,		(sO): ["never", "when off", "when on"],					],
-//	infraredLevel		: [ (sN): "infrared level",		(sT): sINT,	(sR): [0, 100],		u: "%",							],
+//	infraredLevel		: [ (sN): "infrared level",		(sT): sINT,	(sR): [iZ, 100],		u: "%",							],
 	lastActivityWC		: [ (sN): "last activity",		(sT): sDTIME,											],
 //	lastCodeName		: [ (sN): "last lock code",		(sT): sSTR,											],
-	level				: [ (sN): sLVL,					(sT): sINT,	(sR): [0, 100],		u: "%",							],
-	levelPreset			: [ (sN): "preset level",		(sT): sINT,	(sR): [1, 100],		u: "%",							],
+	level				: [ (sN): sLVL,					(sT): sINT,	(sR): [iZ, 100],		u: "%",							],
+	levelPreset			: [ (sN): "preset level",		(sT): sINT,	(sR): [i1, 100],		u: "%",							],
 	lightEffects		: [ (sN): "light effects",		(sT): "object",											],
 // (sS): is subdevices
 	lock				: [ (sN): "lock",				(sT): sENUM,		(sO): ["locked", "unknown", "unlocked", "unlocked with timeout"],	(sC): "lock",		(sP):true,		(sS):"numberOfCodes,numCodes", (sI):"usedCode", sd: "user code"		],
 	lockCodes			: [ (sN): "lock codes",			(sT): "object",											],
-	lqi					: [ (sN): "link quality",		(sT): sINT,	(sR): [0, 255],									],
+	lqi					: [ (sN): "link quality",		(sT): sINT,	(sR): [iZ, 255],									],
 //	maxCodes			: [ (sN): "Max Lock codes",		(sT): sINT,											],
 //	momentary			: [ (sN): "momentary",			(sT): sENUM,		(sO): ["pushed"],								],
 	motion				: [ (sN): "motion",				(sT): sENUM,		(sO): [sACT, sINACT],						],
 	mute				: [ (sN): "mute",				(sT): sENUM,		(sO): ["muted", "unmuted"],						],
 	naturalGas			: [ (sN): "natural gas",		(sT): sENUM,		(sO): [sCLEAR, sDETECTED, "tested"],					],
 	orientation			: [ (sN): "orientation",		(sT): sENUM,		(sO): ["rear side up", "down side up", "left side up", "front side up", "up side up", "right side up"],	],
-	pH					: [ (sN): "pH level",			(sT): sDEC,	(sR): [0, 14],									],
+	pH					: [ (sN): "pH level",			(sT): sDEC,	(sR): [iZ, 14],									],
 	phraseSpoken		: [ (sN): "phrase",				(sT): sSTR,											],
-	position			: [ (sN): "position",			(sT): sINT,	(sR): [0, 100],		u: "%",							],
+	position			: [ (sN): "position",			(sT): sINT,	(sR): [iZ, 100],		u: "%",							],
 	power				: [ (sN): "power",				(sT): sDEC,		u: "W",									],
 	powerSource			: [ (sN): "power source",		(sT): sENUM,		(sO): ["battery", "dc", "mains", "unknown"],				],
 	presence			: [ (sN): "presence",			(sT): sENUM,		(sO): ["not present", "present"],						],
 	rate				: [ (sN): "liquid flow rate",	(sT): sDEC,											],
 //	RGB					: [ (sN): "rgb",				(sT): sSTR,											],
-	rssi				: [ (sN): "signal strength",	(sT): sINT,	(sR): [0, 100],		u: "%",							],
-	saturation			: [ (sN): "saturation",			(sT): sINT,	(sR): [0, 100],		u: "%",							],
+	rssi				: [ (sN): "signal strength",	(sT): sINT,	(sR): [iZ, 100],		u: "%",							],
+	saturation			: [ (sN): "saturation",			(sT): sINT,	(sR): [iZ, 100],		u: "%",							],
 //	schedule			: [ (sN): "schedule",			(sT): "object",											],
 	securityKeypad		: [ (sN): "security keypad",	(sT): sENUM,		(sO): [sDISARMD, "armed home", "armed away", "unknown"],			],
 	sessionStatus		: [ (sN): "session status",		(sT): sENUM,		(sO): ["canceled", "paused", "running", "stopped"],			],
@@ -4818,12 +4818,12 @@ Map getChildAttributes(){
 	sound				: [ (sN): "sound",				(sT): sENUM,		(sO): [sDETECTED, "not detected"],					],
 	soundEffects		: [ (sN): "sound effects",		(sT): "object",											],
 	soundName			: [ (sN): "sound name",			(sT): sSTR,											],
-	soundPressureLevel	: [ (sN): "sound pressure level",		(sT): sINT,	(sR): [0, null],		u: "dB",						],
+	soundPressureLevel	: [ (sN): "sound pressure level",		(sT): sINT,	(sR): [iZ, null],		u: "dB",						],
 	speed				: [ (sN): "speed",				(sT): sENUM,		(sO): ["low", "medium-low", "medium", "medium-high", "high", sON, sOFF, "auto"],						],
 	status				: [ (sN): "status",				(sT): sENUM,		(sO): ["playing", "stopped"],						],
 	statusMessage		: [ (sN): "status message",		(sT): sSTR,								],
 //	status				: [ (sN): "status",				(sT): sSTR,											],
-	steps				: [ (sN): "steps",				(sT): sINT,		(sR): [0, null],									],
+	steps				: [ (sN): "steps",				(sT): sINT,		(sR): [iZ, null],									],
 	supportedFanSpeeds	: [ (sN): "supported fan speeds",	(sT): "object",											],
 	supportedInputs		: [ (sN): "supported inputs",	(sT): "object",											],
 	supportedThermostatFanModes		: [ (sN): "supported thermostat fan modes",	(sT): "object",											],
@@ -4836,18 +4836,18 @@ Map getChildAttributes(){
 	thermostatOperatingState	: [ (sN): "operating state",		(sT): sENUM,		(sO): ["cooling", "fan only", "heating", "idle", "pending cool", "pending heat", "vent economizer"],	],
 	thermostatSetpoint	: [ (sN): "setpoint",			(sT): sDEC,		(sR): [-127, 127],		u: '°?',						],
 	threeAxis			: [ (sN): "vector",				(sT): "vector3",											],
-	tilt				: [ (sN): "tilt",				(sT): sINT,		(sR): [0, 100],		u: "%",							],
-	timeRemaining		: [ (sN): "time remaining",		(sT): sINT,		(sR): [0, null],		u: sS,							],
+	tilt				: [ (sN): "tilt",				(sT): sINT,		(sR): [iZ, 100],		u: "%",							],
+	timeRemaining		: [ (sN): "time remaining",		(sT): sINT,		(sR): [iZ, null],		u: sS,							],
 	touch				: [ (sN): "touch",				(sT): sENUM,		(sO): ["touched"],								],
 	trackData			: [ (sN): "track data",			(sT): "object",											],
 	trackDescription	: [ (sN): "track description",		(sT): sSTR,											],
-	ultravioletIndex	: [ (sN): "UV index",			(sT): sINT,		(sR): [0, null],									],
+	ultravioletIndex	: [ (sN): "UV index",			(sT): sINT,		(sR): [iZ, null],									],
 // custom for Leak sensor
 	underHeat			: [ (sN): "under heat",			(sT): sENUM,		(sO): [sCLEAR, sDETECTED],						],
 	valve				: [ (sN): "valve",				(sT): sENUM,		(sO): [sCLOSED, sOPEN],							],
 //	variable			: [ (sN): "variable value",	(sT): sSTR,											],
 	voltage				: [ (sN): "voltage",			(sT): sDEC,		(sR): [null, null],	u: "V",							],
-	volume				: [ (sN): "volume",				(sT): sINT,		(sR): [0, 100],		u: "%",							],
+	volume				: [ (sN): "volume",				(sT): sINT,		(sR): [iZ, 100],		u: "%",							],
 	water				: [ (sN): "water",				(sT): sENUM,		(sO): ["dry", "wet"],							],
 	windowShade			: [ (sN): "window shade",		(sT): sENUM,		(sO): [sCLOSED, "closing", sOPEN, "opening", "partially open", "unknown"],	],
 	windowBlind			: [ (sN): "window blind",		(sT): sENUM,		(sO): [sCLOSED, "closing", sOPEN, "opening", "partially open", "unknown"],	],
@@ -4874,7 +4874,7 @@ Map getChildAttributes(){
 //don't confuse with fanspeed
 	speedUSC			: [ (sN): "speed (usc)",		(sT): sDEC,	(sR): [null, null],	u: "ft/s",						],
 	speedMetric			: [ (sN): "speed (metric)",		(sT): sDEC,	(sR): [null, null],	u: "m/s",						],
-	bearing				: [ (sN): "bearing",			(sT): sDEC,	(sR): [0, 360],		u: "°",							],
+	bearing				: [ (sN): "bearing",			(sT): sDEC,	(sR): [iZ, 360],		u: "°",							],
 	doubleTapped		: [ (sN): "double tapped button",	(sT): sINT,	(sR): [null, null],	(sM): true,	/*s: "numberOfButtons",	(sI): "buttonNumber"*/			],
 	held				: [ (sN): "held button",		(sT): sINT,	(sR): [null, null],	(sM): true,	/*s: "numberOfButtons",	(sI): "buttonNumber"*/			],
 	released			: [ (sN): "released button",	(sT): sINT,	(sR): [null, null],	(sM): true,	/*s: "numberOfButtons",	(sI): "buttonNumber"*/			],
@@ -5062,7 +5062,7 @@ Map getChildCommands(){
 	presetSix			: [ (sN): "Pan camera to preset #6",																				],
 	presetSeven			: [ (sN): "Pan camera to preset #7",																				],
 	presetEight			: [ (sN): "Pan camera to preset #8",																				],
-	presetCommand		: [ (sN): "Pan camera to preset...",		(sD): "Pan camera to preset #{0}",				(sP): [[(sN):"Preset #", (sT):sINT,(sR):[1,99]]],						],
+	presetCommand		: [ (sN): "Pan camera to preset...",		(sD): "Pan camera to preset #{0}",				(sP): [[(sN):"Preset #", (sT):sINT,(sR):[i1,99]]],						],
 
 	flashNative			: [ (sN): "Flash",																						],
 	pushMomentary		: [ (sN): "Push"																						]
@@ -5906,7 +5906,7 @@ Map fixHeGType(Boolean toHubV,String typ,v,String dtyp){
 				try{
 					tt1=wtoDateTime(res)
 				} catch(e){
-					error "datetime parse of hub variable failed",-2,e
+					error "datetime parse of hub variable failed",iN2,e
 				}
 				if(tt1!=null){
 					lres=tt1.getTime()
@@ -5979,6 +5979,8 @@ static void mb(String meth=sNL){
 }
 
 @Field static final Long lZ=0L
+@Field static final Integer iN1=-1
+@Field static final Integer iN2=-2
 @Field static final Integer iZ=0
 @Field static final Integer i1=1
 @Field static final Integer i2=2
