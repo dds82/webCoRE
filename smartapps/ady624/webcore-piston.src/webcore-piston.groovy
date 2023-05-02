@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update April 28, 2023 for Hubitat
+ * Last update April 30, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -481,6 +481,7 @@ static Boolean eric1(){ return false }
 @Field static final Integer i15=15
 @Field static final Integer i16=16
 @Field static final Integer i20=20
+@Field static final Integer i34=34
 @Field static final Integer i50=50
 @Field static final Integer i100=100
 @Field static final Integer i200=200
@@ -7529,10 +7530,16 @@ private Boolean evaluateComparison(Map r9,String comparison,Map lo,Map ro=null,M
 }
 
 private Boolean callComp(Map r9,String fn,Map lv,Map rv,Map rv2,Map tv,Map tv2){
-//Boolean lge=isEric(r9)
-//if(lge)myDetail r9,"$fn $lv $rv $rv2 $tv $tv2",i1
+	Boolean lge=isDbg(r9) && isEric(r9)
+	String s; s=sBLK
+	if(lge){
+		s= "callComp $fn $lv $rv $rv2 $tv $tv2"
+		myDetail r9,s,i1
+	}
+
 	Boolean a=(Boolean)"$fn"(r9,lv,rv,rv2,tv,tv2)
-//if(lge)myDetail r9,"$a ${myObj(lv?.v?.v)} ${myObj(rv?.v?.v)} $fn $lv $rv $rv2 $tv $tv2"
+
+	if(lge)myDetail r9,s+ " RESULT: $a ${myObj(lv?.v?.v)} ${myObj(rv?.v?.v)}"
 	return a
 }
 
@@ -7615,33 +7622,45 @@ private static Boolean matchDeviceInteraction(Map lv,Map r9){
 	return !((option==sP && !isPhysical) || (option==sS && isPhysical))
 }
 
-private List<Map> listPreviousStates(device,String attr,Long threshold,Boolean excludeLast){
+private List<Map> listPreviousStates(Map r9,device,String attr,Long threshold,Boolean excludeLast){
+	String mySt; mySt=sBLK
+	Boolean lge=isDbg(r9) && isEric(r9)
+	if(lge){
+		mySt="listPreviousStates "+sffwdng(r9)+"$attr "
+		String s1="threshold: $threshold excludeLast: $excludeLast"
+		myDetail r9,mySt+s1,i1
+	}
 	List<Map> result=[]
 	List events=((List)device.events([all: true,max: i100])).findAll{ it -> (String)it.getName()==attr}
-	//if we got any events let's go through them
-	//if we need to exclude last event we start at the second event as the first one is the event that triggered execution. The attribute's value has to be different from the current one to qualify for quiet
+	//if we need to exclude last event we start at the second event as the first one is the event that triggered execution.
+	//  The attribute's value has to be different from the current one to qualify for quiet
+	Boolean a
 	Integer sz=events.size()
+	if(lge)myDetail r9,mySt+"found $sz events",iN2
+	String s='startTime'
 	if(sz!=iZ){
 		Long thresholdTime=elapseT(threshold)
 		Long endTime; endTime=wnow()
 		Integer i
+		def curEvt
 		for(i=iZ; i<sz; i++){
-			def curEvt=events[i]
+			curEvt=events[i]
 			Long startTime=((Date)curEvt[sDATE]).getTime()
 			Long duration=endTime-startTime
-			if(duration>=l1 && (i>iZ || !excludeLast)){
-				Boolean a=result.push([(sVAL):curEvt[sVAL],startTime:startTime,(sDURATION):duration])
-			}
+			if(duration>=10L && (i>iZ || !excludeLast)) // lTHOUS
+				a=result.push([(sVAL):curEvt[sVAL],(s):startTime,(sDURATION):duration])
 			if(startTime<thresholdTime) break
 			endTime=startTime
 		}
-	}else{
+	}
+	if(result.size()==iZ){
 		def currentState=device.currentState(attr,true)
 		if(currentState){
 			Long startTime=((Date)currentState.getDate()).getTime()
-			Boolean a=result.push([(sVAL):currentState[sVAL],startTime:startTime,(sDURATION):elapseT(startTime)])
+			a=result.push([(sVAL):currentState[sVAL],(s):startTime,(sDURATION):elapseT(startTime)])
 		}
 	}
+	if(lge)myDetail r9,mySt+"result:$result"
 	return result
 }
 
@@ -7683,66 +7702,84 @@ private static Boolean okComp(Map compV,Map timeValue){
 
 @CompileStatic
 private Boolean valueWas(Map r9,Map comparisonValue,Map rightValue,Map rightValue2,Map timeValue,String func){
-	if(!okComp(comparisonValue,timeValue))return false
-	Map cv=mMv(comparisonValue)
-	String t=sMs(cv,sD)
-	def device=t?getDevice(r9,t):null
-	if(device==null)return false
-	String attr=sMa(cv)
-	Long threshold=longEvalExpr(r9,rtnMap1(timeValue))
+	Boolean res; res= null
+	Boolean lg=isDbg(r9)
+	if(okComp(comparisonValue,timeValue)){
+		Map cv=mMv(comparisonValue)
+		String t=sMs(cv,sD)
+		def device=t?getDevice(r9,t):null
+		if(device){
+			res= false
+			String attr=sMa(cv)
+			Long threshold=longEvalExpr(r9,rtnMap1(timeValue))
 
-	Map e=mMs(r9,sEVENT)
+			Map e=mMs(r9,sEVENT)
+			String nattr=fixAttr(attr)
+			Boolean thisEventWokeUs=(sMs(e,sDEV)==hashD(r9,device) && sMs(e,sNM)==nattr)
+			// todo need to check waking up?
 
-	String nattr=fixAttr(attr)
-
-	Boolean thisEventWokeUs=(sMs(e,sDEV)==hashD(r9,device) && sMs(e,sNM)==nattr)
-	List<Map> states=listPreviousStates(device,nattr,threshold,false) // thisEventWokeUs)
-	Boolean res
-	Long duration; duration=lZ
-	Integer i; i=i1
-	String comp_t=sMt(cv)
-	def v
-	for(Map stte in states){
-		v= stte[sVAL]
-		if(nattr==sTHREAX && nattr!=attr) v= gtThreeAxisVal(v,attr)
-		if(!(i==i1 && thisEventWokeUs)){
-			if(!callComp(r9,"comp_$func", [(sI):sMs(comparisonValue,sI),(sV):rtnMap(comp_t,cast(r9,v,comp_t))],
-					rightValue,rightValue2,timeValue,null))break
-			duration+= lMs(stte,sDURATION)
+			List<Map> states=listPreviousStates(r9,device,nattr,threshold,thisEventWokeUs)
+			Long duration; duration=lZ
+			String comp_t=sMt(cv)
+			def v
+			Boolean needFix= (nattr==sTHREAX && nattr!=attr)
+			for(Map stte in states){
+				v= stte[sVAL]
+				if(needFix) v= gtThreeAxisVal(v,attr)
+				if(!callComp(r9,"comp_$func", [(sI):sMs(comparisonValue,sI),(sV):rtnMap(comp_t,cast(r9,v,comp_t))],
+						rightValue,rightValue2,timeValue,null))break
+				duration+= lMs(stte,sDURATION)
+			}
+			Boolean fisg=sMs(timeValue,sF)==sG // 'l' or 'g'
+			String s; s='No'
+			if(duration>lZ){
+				res= fisg ? duration>=threshold:duration<threshold
+				s= 'Found'
+			}
+			if(lg)
+				debug s+" matching value, duration ${duration}ms for ${func.replace('is_','was_')} ${fisg ? sGTHE:sLTH} ${threshold}ms threshold = ${res}",r9
 		}
-		i+=i1
 	}
-	if(duration==lZ)return false
-	Boolean fisg=sMs(timeValue,sF)==sG // 'l' or 'g'
-	res=fisg? duration>=threshold:duration<threshold
-	if(isDbg(r9))
-		debug "Duration ${duration}ms for ${func.replace('is_','was_')} ${fisg ? sGTHE:sLTH} ${threshold}ms threshold = ${res}",r9
+	if(res==null){
+		res=false
+		error "valueWas: bad parameters $res",r9
+	}
 	return res
 }
 
 @CompileStatic
 private Boolean valueChanged(Map r9,Map comparisonValue,Map timeValue){
-	if(!okComp(comparisonValue,timeValue))return false
-	Map cv=mMv(comparisonValue)
-	String t=sMs(cv,sD)
-	def device=t?getDevice(r9,t):null
-	if(device==null)return false
-	String attr=sMa(cv)
-	Long threshold=longEvalExpr(r9,rtnMap1(timeValue))
+	Boolean res; res= null
+	if(okComp(comparisonValue,timeValue)){
+		Map cv=mMv(comparisonValue)
+		String t=sMs(cv,sD)
+		def device=t?getDevice(r9,t):null
+		if(device){
+			res= false
+			String attr=sMa(cv)
+			Long threshold=longEvalExpr(r9,rtnMap1(timeValue))
 
-	String nattr=fixAttr(attr)
+			String nattr=fixAttr(attr)
+			Boolean needFix= (nattr==sTHREAX && nattr!=attr)
 
-	List<Map> states=listPreviousStates(device,nattr,threshold,false)
-	if(states.size()==iZ)return false
-	def value,v
-	value=states[iZ][sVAL]
-	if(nattr==sTHREAX && nattr!=attr) value= gtThreeAxisVal(value,attr)
-	for(Map tstate in states){
-		v= tstate[sVAL]
-		if(nattr==sTHREAX && nattr!=attr) v= gtThreeAxisVal(v,attr)
-		if(v!=value)return true
+			List<Map> states=listPreviousStates(r9,device,nattr,threshold,false)
+			if(states.size()!=iZ){
+				def value,v
+				value=states[iZ][sVAL]
+				if(needFix) value= gtThreeAxisVal(value,attr)
+				for(Map tstate in states){
+					v= tstate[sVAL]
+					if(needFix) v= gtThreeAxisVal(v,attr)
+					if(v!=value){ res= true; break }
+				}
+			}
+		}
 	}
-	return false
+	if(res==null){
+		res=false
+		error "valueChanged: bad parameters $res",r9
+	}else if(isDbg(r9) && isEric(r9)) myDetail r9,"valueChanged: $res",iN2
+	return res
 }
 
 private static Boolean match(String str,String pattern){
@@ -11027,8 +11064,7 @@ private Map func_median(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i2))return rtnErr('median'+sVALUEN)
 	List<Map> data=prms.collect{ Map it -> evaluateExpression(r9,it,sDYN)}.sort{ Map it -> oMv(it) }
 	i=Math.floor(sz/i2).toInteger()
-	if(data)
-		return sz%2==iZ ? rtnMap(sMt(data[i]),( oMv(data[i-i1]) + oMv(data[i]) )/i2) : data[i]
+	if(data){ return sz%2==iZ ? rtnMap(sMt(data[i]),( oMv(data[i-i1]) + oMv(data[i]) )/i2) : data[i] }
 	rtnMap(sDYN,sBLK)
 }
 
@@ -12546,12 +12582,9 @@ private Map log(message,Map r9,Integer shift=iN2,Exception err=null,String cmd=s
 	if(cmd==sTIMER){
 		return [(sM):message.toString(),(sT):wnow(),(sS):shift,(sE):err]
 	}
-	String myMsg
-	myMsg=sNL
-	Exception merr
-	merr=err
-	Integer mshift
-	mshift=shift
+	String myMsg; myMsg=sNL
+	Exception merr; merr=err
+	Integer mshift; mshift=shift
 	if(message instanceof Map){
 		mshift=iMsS(message)
 		merr=(Exception)message.e
@@ -13203,8 +13236,7 @@ private static String gimg(String imgSrc){ return sGITP+imgSrc }
 
 @CompileStatic
 private static String imgTitle(String imgSrc,String titleStr,String color=sNL,Integer imgWidth=30,Integer imgHeight=iZ){
-	String imgStyle
-	imgStyle=sBLK
+	String imgStyle; imgStyle=sBLK
 	String myImgSrc=gimg(imgSrc)
 	imgStyle+=imgWidth>iZ ? 'width: '+imgWidth.toString()+'px !important;':sBLK
 	imgStyle+=imgHeight>iZ ? imgWidth!=iZ ? sSPC:sBLK+'height:'+imgHeight.toString()+'px !important;':sBLK
@@ -13234,7 +13266,7 @@ static String myObj(obj){
 
 /** Returns true if string is encoded device hash  */
 @CompileStatic
-private static Boolean isWcDev(String dev){ return (dev && dev.size()==34 && dev.startsWith(sCLN) && dev.endsWith(sCLN)) }
+private static Boolean isWcDev(String dev){ return (dev && dev.size()==i34 && dev.startsWith(sCLN) && dev.endsWith(sCLN)) }
 
 /** Converts v to either webCoRE or hubitat hub variable types and values */
 @CompileStatic
@@ -13601,19 +13633,20 @@ private void wremoveAllInUseGlobalVar(){
 	Boolean a=removeAllInUseGlobalVar()
 }
 
-// private List<Map> gtRooms(){
-//	Map room
-//	List<Map> rooms=[]
-//	List r=app.getRooms()
-//	for(rr in r){
-//		room=[:]
-//		room[sNM]=(String)r[sNM]
-//		room[sID]=(Long)r[sID]
-//		room['deviceIds']=(List)r['deviceIds']
-//		//room['devices']=(List)r['devices']
-//		rooms.push(room)
-//	}
-// }
+private List<Map> gtRooms(){
+	Map room
+	List<Map> rooms=[]
+	List r=(List)app.getRooms()
+	for(rr in r){
+		room=[:]
+		room[sNM]=(String)r[sNM]
+		room[sID]=(Long)r[sID]
+		room['deviceIds']=(List)r['deviceIds']
+		//room['devices']=(List)r['devices']
+		rooms.push(room)
+	}
+	rooms
+}
 
 private void wappUpdateLabel(String s){ app.updateLabel(s) }
 private void wappUpdateSetting(String s,Map m){ app.updateSetting(s,m) }
