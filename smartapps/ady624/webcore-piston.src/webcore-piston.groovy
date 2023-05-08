@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update April 30, 2023 for Hubitat
+ * Last update May 8 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -3617,7 +3617,9 @@ private Boolean executeStatement(Map r9,Map statement,Boolean asynch=false){
 
 	Boolean myPep=isPep(r9)
 	List<Map> r=liMs(statement,sR)
-	Boolean allowed=!r || r.size()==iZ || evaluateConditions(r9,statement,sR,async)
+	Boolean allowed; allowed=true
+	if(stateType!=sEVERY)
+		allowed=!r || r.size()==iZ || evaluateConditions(r9,statement,sR,async)
 	if(allowed || ffwd(r9)){
 		String evntName; evntName=sMs(mMs(r9,sEVENT),sNM)
 		Boolean perform,repeat,isIf,isEach
@@ -3701,7 +3703,10 @@ private Boolean executeStatement(Map r9,Map statement,Boolean asynch=false){
 					//only execute the every if i=-1 (for rapid timers with large restrictions i.e. every second, but only on Mondays)
 					Map es=mMs(mMs(r9,sEVENT),sSCH)
 					Boolean ownEvent=evntName==sTIME && es!=null && iMsS(es)==stmtNm && iMs(es,sI)==iN1
-					if(ownEvent)chgRun(r9,iZ)
+					if(ownEvent){
+						chgRun(r9,iZ)
+						allowed=!r || r.size()==iZ || evaluateConditions(r9,statement,sR,async)
+					}
 
 					//ensure every timer is scheduled
 					scheduleTimer(r9,statement,ownEvent ? lMt(es):lZ,myPep)
