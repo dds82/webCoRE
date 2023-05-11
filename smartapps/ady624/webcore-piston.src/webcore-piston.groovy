@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update May 8 2023 for Hubitat
+ * Last update May 11, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -6074,7 +6074,9 @@ private Long vcmd_httpRequest(Map r9,device,List prms){
 		}
 	}
 	if(!useQryS && reqCntntT==sAPPFORM && data && data instanceof Map){
-		data=data.collect{ k,v -> encodeURIComponent(k)+'='+encodeURIComponent(v) }.join(sAMP)
+		String sdata
+		sdata=((Map)data).collect{ k,v -> encodeURIComponent(k)+'='+encodeURIComponent(v) }.join(sAMP)
+		data=sdata
 	}
 
 	Boolean internal; internal= uri.startsWith('10.') || uri.startsWith('192.168.')
@@ -7797,9 +7799,19 @@ private static Boolean match(String str,String pattern){
 }
 
 //comparison low level functions
-private Boolean comp_is					(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ return strEvalExpr(r9,mMv(lv))==strEvalExpr(r9,mMv(rv)) || (mMv(lv)[sN] && scast(r9,mMv(lv)[sN])==scast(r9,oMvv(rv)))}
+private Boolean comp_is					(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){
+	Map l= mMv(lv) ?: [:]
+	Map r= mMv(rv) ?: [:]
+	return strEvalExpr(r9,l)==strEvalExpr(r9,r) || (l[sN] && scast(r9,l[sN])==scast(r9,oMv(r)))
+}
 private Boolean comp_is_not				(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ return !comp_is(r9,lv,rv,rv2,tv,tv2)}
-private Boolean comp_is_equal_to		(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ String lt=(String)lv?.v?.t; String rt=(String)rv?.v?.t; String dt= lt==sDEC || rt==sDEC ? sDEC:(lt==sINT || rt==sINT ? sINT:sDYN); return oMv(evaluateExpression(r9,mMv(lv),dt))==oMv(evaluateExpression(r9,mMv(rv),dt)) }
+private Boolean comp_is_equal_to		(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){
+	Map l= mMv(lv) ?: [:]
+	Map r= mMv(rv) ?: [:]
+	String lt=sMt(l); String rt=sMt(r)
+	String dt= lt==sDEC || rt==sDEC ? sDEC:(lt==sINT || rt==sINT ? sINT:sDYN)
+	return oMv(evaluateExpression(r9,l,dt))==oMv(evaluateExpression(r9,r,dt))
+}
 private Boolean comp_is_not_equal_to	(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ return !comp_is_equal_to(r9,lv,rv,rv2,tv,tv2)}
 private Boolean comp_is_different_than	(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ return comp_is_not_equal_to(r9,lv,rv,rv2,tv,tv2)}
 private Boolean comp_is_less_than		(Map r9,Map lv,Map rv=null,Map rv2=null,Map tv=null,Map tv2=null){ return dblEvalExpr(r9,mMv(lv))<dblEvalExpr(r9,mMv(rv)) }
