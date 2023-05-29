@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update April 28, 2023 for Hubitat
+ *  Last update May 27, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -2180,7 +2180,7 @@ async function onLoad(){
 	//loader.setText('Getting events (3/4)');
 	await getGraphData();
 	//loader.setText('Drawing chart (4/4)');
-	
+
 	chart=new google.visualization.Gauge(document.getElementById("timeline"));
 
 	update(() =>{
@@ -2237,7 +2237,7 @@ function drawChart(callback){
 	if(callback){
 		callbackEvent=google.visualization.events.addListener(chart, 'ready', callback);
 	}
-	
+
 	chart.draw(dataTable, options.graphOptions);
 }
 
@@ -2441,7 +2441,7 @@ def attributeBar(){
 
 					container << hubiForm_slider	((sTIT): "Bar Opacity",
 							(sNM): "attribute_"+sa+"_opacity",
-							(sDEFLT): 100, (sMIN): i1, (sMAX): 100, (sUNITS): "%")
+							(sDEFLT): i100, (sMIN): i1, (sMAX): i100, (sUNITS): "%")
 
 					container << hubiForm_line_size ((sTIT): "Bar Border",
 							(sNM): "attribute_"+sa+"_current_border",
@@ -2473,7 +2473,7 @@ def graphBar(){
 			inputGraphUpdateRate()
 
 			container << hubiForm_color ("Graph Background", "graph_background", sWHT, false)
-			container << hubiForm_slider ((sTIT): "Graph Bar Width (1%-100%)", (sNM): "graph_bar_percent", (sDEFLT): 90, (sMIN): i1, (sMAX): 100, (sUNITS): "%")
+			container << hubiForm_slider ((sTIT): "Graph Bar Width (1%-100%)", (sNM): "graph_bar_percent", (sDEFLT): i90, (sMIN): i1, (sMAX): i100, (sUNITS): "%")
 			container << hubiForm_text_input("Graph Max", "graph_max", sBLK, false)
 			container << hubiForm_text_input("Graph Min", "graph_min", sBLK, false)
 
@@ -2484,14 +2484,14 @@ def graphBar(){
 			container=[]
 			container << hubiForm_color ("Axis", "haxis", sBLACK, false)
 			container << hubiForm_font_size ((sTIT): "Axis", (sNM): "haxis", (sDEFLT): i9, (sMIN): i2, (sMAX): i20)
-			container << hubiForm_slider ((sTIT): "Number of Pixels for Axis", (sNM): "graph_h_buffer", (sDEFLT): 40, (sMIN): 10, (sMAX): 500, (sUNITS): " pixels")
+			container << hubiForm_slider ((sTIT): "Number of Pixels for Axis", (sNM): "graph_h_buffer", (sDEFLT): i40, (sMIN): i10, (sMAX): i500, (sUNITS): " pixels")
 			hubiForm_container(container, i1)
 		}
 		hubiForm_section("Device Names", i1, sBLK, sBLK){
 			container=[]
 			container << hubiForm_font_size ((sTIT): "Device Name", (sNM): "graph_axis", (sDEFLT): i9, (sMIN): i2, (sMAX): i20)
 			container << hubiForm_color ("Device Name","graph_axis", sBLACK, false)
-			container << hubiForm_slider ((sTIT): "Number of Pixels for Device Name Area", (sNM): "graph_v_buffer", (sDEFLT): 100, (sMIN): i10, (sMAX): 500, (sUNITS): " pixels")
+			container << hubiForm_slider ((sTIT): "Number of Pixels for Device Name Area", (sNM): "graph_v_buffer", (sDEFLT): i100, (sMIN): i10, (sMAX): i500, (sUNITS): " pixels")
 
 			hubiForm_container(container, i1)
 		}
@@ -2499,15 +2499,15 @@ def graphBar(){
 			container=[]
 			input( (sTYPE): sBOOL, (sNM): "graph_static_size",(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sDEFV): false, (sSUBOC): true)
 			if(gtSetB('graph_static_size')){
-				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): 800, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels")
-				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): 600, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels")
+				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): i800, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels")
+				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): i600, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels")
 			}
 
 			hubiForm_container(container, i1)
 		}
 		hubiForm_section("Annotations", i1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_font_size ((sTIT): "Annotation", (sNM): "annotation", (sDEFLT): 16, (sMIN): i2, (sMAX): 40)
+			container << hubiForm_font_size ((sTIT): "Annotation", (sNM): "annotation", (sDEFLT): i16, (sMIN): i2, (sMAX): i40)
 			container << hubiForm_switch	([(sTIT): "Show Annotation Outside (true) or Inside (false) of Bars", (sNM): "annotation_inside", (sDEFLT):false])
 			container << hubiForm_color	("Annotation", "annotation", sWHT, false)
 			container << hubiForm_color	("Annotation Aura", "annotation_aura", sBLACK, false)
@@ -2801,7 +2801,7 @@ async function onLoad(){
 	loader.setText('Getting events (3/4)');
 	await getGraphData();
 	loader.setText('Drawing chart (4/4)');
-	
+
 	if(options.graphType == 1){
 		chart=new google.visualization.BarChart(document.getElementById("timeline"));
 	} else{
@@ -3186,8 +3186,8 @@ def graphTimeline(){
 			container=[]
 			input( (sTYPE): sBOOL, (sNM): "graph_static_size",(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sDEFV): false, (sSUBOC): true)
 			if(gtSetB('graph_static_size')){
-				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): 800, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels", (sSUBONCHG): false)
-				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): 600, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels", (sSUBONCHG): false)
+				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): i800, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
+				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): i600, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
 			}
 
 			hubiForm_container(container, i1)
@@ -3604,7 +3604,7 @@ async function onLoad(){
 	loader.setText('Drawing chart (4/4)');
 
 	chart=new google.visualization.Timeline(document.getElementById("timeline"));
-	
+
 	//update data
 	update(() =>{
 		//destroy loader when we are done with it
@@ -3928,9 +3928,9 @@ def graphTimegraph(){
 			if(gtSetB('graph_percent_fill')){
 
 				container << hubiForm_slider ((sTIT): "Horizontal fill % of the graph", (sNM): "graph_h_fill",
-						(sDEFLT): 80, (sMIN): i1, (sMAX): 100, (sUNITS): "%", (sSUBONCHG): false)
+						(sDEFLT): 80, (sMIN): i1, (sMAX): i100, (sUNITS): "%", (sSUBONCHG): false)
 				container << hubiForm_slider ((sTIT): "Vertical fill % of the graph", (sNM): "graph_v_fill",
-						(sDEFLT): 80, (sMIN): i1, (sMAX): 100, (sUNITS): "%", (sSUBONCHG): false)
+						(sDEFLT): 80, (sMIN): i1, (sMAX): i100, (sUNITS): "%", (sSUBONCHG): false)
 
 			}
 			container << hubiForm_switch	([(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>",
@@ -3938,9 +3938,9 @@ def graphTimegraph(){
 			if(gtSetB('graph_static_size')){
 
 				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size",
-						(sDEFLT): 800, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels", (sSUBONCHG): false)
+						(sDEFLT): i800, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
 				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size",
-						(sDEFLT): 600, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels", (sSUBONCHG): false)
+						(sDEFLT): i600, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
 			}
 
 			hubiForm_container(container, i1)
@@ -4026,12 +4026,12 @@ def graphTimegraph(){
 				container << hubiForm_color	("Background", "overlay_background", sBLACK, false)
 				container << hubiForm_slider	((sTIT): "Background Opacity",
 						(sNM): "overlay_background_opacity",
-						(sDEFLT): 90,
+						(sDEFLT): i90,
 						(sMIN): iZ,
-						(sMAX): 100,
+						(sMAX): i100,
 						(sUNITS): "%",
 						(sSUBONCHG): false)
-				container << hubiForm_font_size ((sTIT): "Device", (sNM): 'overlay', (sDEFLT): 12, (sMIN): i2, (sMAX): 40)
+				container << hubiForm_font_size ((sTIT): "Device", (sNM): 'overlay', (sDEFLT): i12, (sMIN): i2, (sMAX): i40)
 				container << hubiForm_color	("Device Text", 'overlay_text', sWHT, false)
 
 				List<String> horizontalAlignmentEnum=["Left", "Middle", "Right"]
@@ -4047,10 +4047,10 @@ def graphTimegraph(){
 						(sDEFLT): "Top")
 
 			}else{
-				if(gtSetStr('overlay_background_color')!='#000000' || settings['overlay_background_opacity']!=90){
+				if(gtSetStr('overlay_background_color')!='#000000' || settings['overlay_background_opacity']!=i90){
 					app.updateSetting('overlay_background_color', [(sTYPE):'color', (sVAL):sBLACK])
 					app.updateSetting('overlay_background_color_transparent', [(sTYPE):'bool', (sVAL):'false'])
-					app.updateSetting("overlay_background_opacity", [(sTYPE):'number',(sVAL):90])
+					app.updateSetting("overlay_background_opacity", [(sTYPE):'number',(sVAL):i90])
 					app.updateSetting("overlay_background_font", [(sTYPE):'number',(sVAL): 12])
 					app.updateSetting("overlay_text_color", [(sTYPE):'color', (sVAL):sWHT])
 					app.updateSetting("overlay_text_color_transparent", [(sTYPE):'bool', (sVAL):'false'])
@@ -4101,15 +4101,15 @@ def graphTimegraph(){
 
 				container << hubiForm_slider ((sTIT): "Bar Graphs:: Relative Width for Bars",
 						(sNM): 'graph_bar_width',
-						(sDEFLT): 90,
+						(sDEFLT): i90,
 						(sMIN): iZ,
-						(sMAX): 100,
+						(sMAX): i100,
 						(sUNITS): "%",
 						(sSUBONCHG): false)
 				hubiForm_container(container, i1)
 			}
 		}else
-			app.updateSetting('graph_bar_width', 90)
+			app.updateSetting('graph_bar_width', i90)
 
 //	TODO
 		if(dataSources){
@@ -4183,9 +4183,9 @@ def graphTimegraph(){
 
 					container << hubiForm_slider ((sTIT): colorText+" Opacity",
 							(sNM): "var_${sa}_stroke_opacity",
-							(sDEFLT): 90,
+							(sDEFLT): i90,
 							(sMIN): iZ,
-							(sMAX): 100,
+							(sMAX): i100,
 							(sUNITS): "%",
 							(sSUBONCHG): false)
 
@@ -4204,9 +4204,9 @@ def graphTimegraph(){
 
 						container << hubiForm_slider ((sTIT): fillText+" Opacity",
 								(sNM): "var_${sa}_fill_opacity",
-								(sDEFLT): 90,
+								(sDEFLT): i90,
 								(sMIN): iZ,
-								(sMAX): 100,
+								(sMAX): i100,
 								(sUNITS): "%",
 								(sSUBONCHG): false)
 					}
@@ -4243,9 +4243,9 @@ def graphTimegraph(){
 
 								container << hubiForm_slider ((sTIT): "Point Fill Opacity",
 										(sNM): "var_${sa}_fill_opacity",
-										(sDEFLT): 90,
+										(sDEFLT): i90,
 										(sMIN): iZ,
-										(sMAX): 100,
+										(sMAX): i100,
 										(sUNITS): "%",
 										(sSUBONCHG): false)
 							}
@@ -4754,15 +4754,15 @@ function parseEvent(event){
 
 	//only accept relevent events
 	if(subscriptions.ids.includes(deviceId) && subscriptions.attributes[deviceId].includes(attribute)){
-	
+
 		let state = subscriptions.states?.[deviceId]?.[attribute]?.[value];
 
 		if (state != undefined) {
 			value = state;
 		}
-		
+
 		value = parseFloat(value);
-		
+
 		if (subscriptions.drop[deviceId][attribute].restrict_bad &&
 			 (isNaN(value) ||
 			  (value < subscriptions.drop[deviceId][attribute].min) ||
@@ -5595,8 +5595,8 @@ def graphHeatmap(){
 
 			input( (sTYPE): sBOOL, (sNM): "graph_static_size",(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sDEFV): false, (sSUBOC): true)
 			if(gtSetB('graph_static_size')){
-				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): 800, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels")
-				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): 600, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels")
+				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): i800, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels")
+				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): i600, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels")
 			}
 
 			hubiForm_container(container, i1)
@@ -5605,7 +5605,7 @@ def graphHeatmap(){
 			container=[]
 			container << hubiForm_switch([(sTIT): "Show values inside Heat Map?", (sNM): "show_annotations", (sDEFLT): false, (sSUBONCHG): true])
 			if(gtSetB('show_annotations')){
-				container << hubiForm_font_size	((sTIT): "Annotation", (sNM): "annotation", (sDEFLT): 16, (sMIN): i2, (sMAX): 40)
+				container << hubiForm_font_size	((sTIT): "Annotation", (sNM): "annotation", (sDEFLT): i16, (sMIN): i2, (sMAX): i40)
 				container << hubiForm_color		("Annotation", "annotation", sWHT, false)
 				container << hubiForm_color		("Annotation Aura", "annotation_aura", sBLACK, false)
 				container << hubiForm_slider	((sTIT): "Number Decimal Places", (sNM): "graph_decimals", (sDEFLT): i1, (sMIN): iZ, (sMAX): i4, (sUNITS): " decimal places")
@@ -5942,7 +5942,7 @@ async function onLoad(){
 	loader.setText('Getting events (3/4)');
 	await getGraphData();
 	loader.setText('Drawing chart (4/4)');
-	
+
 	chart=new google.visualization.BarChart(document.getElementById("timeline"));
 
 	update(() =>{
@@ -6312,8 +6312,8 @@ def graphLinegraph(){
 			container=[]
 			container << hubiForm_switch	((sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sNM): "graph_static_size", (sDEFLT): false, (sSUBONCHG): true)
 			if(gtSetB('graph_static_size')){
-				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): 800, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels", (sSUBONCHG): false)
-				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): 600, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels", (sSUBONCHG): false)
+				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): i800, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
+				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): i600, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
 			}
 
 			hubiForm_container(container, i1)
@@ -6441,7 +6441,7 @@ def graphLinegraph(){
 								(sNM): "attribute_${sid}_${attribute}_opacity",
 								(sDEFLT): 30,
 								(sMIN): iZ,
-								(sMAX): 100,
+								(sMAX): i100,
 								(sUNITS): "%",
 								(sSUBONCHG): false)
 					}
@@ -6945,7 +6945,7 @@ async function onLoad(){
 	await getGraphData();
 
 	loader.setText('Drawing chart (4/4)');
-	
+
 	chart=new ${drawType_linegraph}(document.getElementById("timeline"));
 
 	//create stack
@@ -7256,7 +7256,7 @@ def graphRangebar(){
 			input( (sTYPE): sENUM, (sNM): "graph_timespan",(sTIT): "<b>Select Time span to Graph (i.e How Often to Reset Range)</b>", (sMULTP): false, (sREQ): false, options: timespanEnum1, (sDEFV): s2, (sSUBOC): true)
 
 			container << hubiForm_color ("Graph Background", "graph_background", sWHT, false)
-			container << hubiForm_slider ((sTIT): "Graph Bar Width (1%-100%)", (sNM): "graph_bar_percent", (sDEFLT): 90, (sMIN): i1, (sMAX): 100, (sUNITS): "%")
+			container << hubiForm_slider ((sTIT): "Graph Bar Width (1%-100%)", (sNM): "graph_bar_percent", (sDEFLT): i90, (sMIN): i1, (sMAX): i100, (sUNITS): "%")
 			container << hubiForm_text_input("Graph Max", "graph_max", s100, false)
 			container << hubiForm_text_input("Graph Min", "graph_min", s0, false)
 
@@ -7266,14 +7266,14 @@ def graphRangebar(){
 			container=[]
 			container << hubiForm_color ("Axis", "haxis", sBLACK, false)
 			container << hubiForm_font_size ((sTIT): "Axis", (sNM): "haxis", (sDEFLT): i9, (sMIN): i2, (sMAX): i20)
-			container << hubiForm_slider ((sTIT): "Number of Pixels for Axis", (sNM): "graph_h_buffer", (sDEFLT): 40, (sMIN): i10, (sMAX): 500, (sUNITS): " pixels")
+			container << hubiForm_slider ((sTIT): "Number of Pixels for Axis", (sNM): "graph_h_buffer", (sDEFLT): i40, (sMIN): i10, (sMAX): i500, (sUNITS): " pixels")
 			hubiForm_container(container, i1)
 		}
 		hubiForm_section("Device Names", i1, sBLK, sBLK){
 			container=[]
 			container << hubiForm_font_size ((sTIT): "Device Name", (sNM): "graph_axis", (sDEFLT): i9, (sMIN): i2, (sMAX): i20)
 			container << hubiForm_color ("Device Name","graph_axis", sBLACK, false)
-			container << hubiForm_slider ((sTIT): "Number of Pixels for Device Name Area", (sNM): "graph_v_buffer", (sDEFLT): 100, (sMIN): i10, (sMAX): 500, (sUNITS): " pixels")
+			container << hubiForm_slider ((sTIT): "Number of Pixels for Device Name Area", (sNM): "graph_v_buffer", (sDEFLT): i100, (sMIN): i10, (sMAX): i500, (sUNITS): " pixels")
 
 			hubiForm_container(container, i1)
 		}
@@ -7281,15 +7281,15 @@ def graphRangebar(){
 			container=[]
 			input( (sTYPE): sBOOL, (sNM): "graph_static_size",(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sDEFV): false, (sSUBOC): true)
 			if(gtSetB('graph_static_size')){
-				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): 800, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels", (sSUBONCHG): false)
-				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): 600, (sMIN): 100, (sMAX): 3000, (sUNITS): " pixels", (sSUBONCHG): false)
+				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): i800, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
+				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): i600, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
 			}
 
 			hubiForm_container(container, i1)
 		}
 		hubiForm_section("Annotations", i1, sBLK, sBLK){
 			container=[]
-			container << hubiForm_font_size ((sTIT): "Annotation", (sNM): "annotation", (sDEFLT): 16, (sMIN): i2, (sMAX): 40)
+			container << hubiForm_font_size ((sTIT): "Annotation", (sNM): "annotation", (sDEFLT): i16, (sMIN): i2, (sMAX): i40)
 			container << hubiForm_switch	((sTIT): "Show Annotation Outside (true) or Inside (false) of Bars", (sNM): "annotation_inside", (sDEFLT): false)
 			container << hubiForm_color	("Annotation", "annotation", sBLACK, false)
 			container << hubiForm_color	("Annotation Aura", "annotation_aura", sWHT, false)
@@ -7979,8 +7979,8 @@ def tileRadar(){
 				settings['temp_units']=sFAHR
 				app.updateSetting(sBACKGRND, [(sTYPE): sENUM, (sVAL): sBLACK])
 				settings['background']='#000000'
-				app.updateSetting("background_opacity", [(sTYPE): sENUM, (sVAL): 90])
-				settings['background_opacity']=90
+				app.updateSetting("background_opacity", [(sTYPE): sENUM, (sVAL): i90])
+				settings['background_opacity']=i90
 			} */
 			input( (sTYPE): sENUM, (sNM): 'wind_units',(sTIT): "<b>Wind Speed Units</b>", (sREQ): false, (sMULTP): false, options: unitWind /*windEnum*/, (sDEFV): sMILESPH, (sSUBOC): false)
 			input( (sTYPE): sENUM, (sNM): 'temp_units',(sTIT): "<b>Temperature Units</b>", (sREQ): false, (sMULTP): false, options: tempEnum, (sDEFV): sFAHR, (sSUBOC): false)
@@ -7997,9 +7997,9 @@ def tileRadar(){
 
 			container << hubiForm_slider	((sTIT): "Background Opacity",
 					(sNM): "background_opacity",
-					(sDEFLT): 90,
+					(sDEFLT): i90,
 					(sMIN): iZ,
-					(sMAX): 100,
+					(sMAX): i100,
 					(sUNITS): "%",
 					(sSUBONCHG): false)
 			hubiForm_container(container, i1)
@@ -8152,9 +8152,9 @@ def tileWeather2(){
 					false)
 			container << hubiForm_slider	((sTIT): "Background Opacity",
 					(sNM): "background_opacity",
-					(sDEFLT): 90,
+					(sDEFLT): i90,
 					(sMIN): iZ,
-					(sMAX): 100,
+					(sMAX): i100,
 					(sUNITS): "%",
 					(sSUBONCHG): false)
 
@@ -8314,18 +8314,18 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Forecast Weather Icon',		(sVAR): "weather_icon", (sTYPE): "weather_icon", period:sCUR, (sVAL): sBLK,
 				(sICON): "alert-circle", icon_loc: sCENTER, icon_space: sBLK,
-				h: i6, w: 12, (sBLROW): i1, (sBLCOL): 13,
+				h: i6, w: i12, (sBLROW): i1, (sBLCOL): i13,
 				(sALIGNMENT): sCENTER, text: sBLK, (sDECIMALS): i1,
 				lpad: iZ, rpad: iZ,
 				(sUNIT): sNONE, decimal: sNO, unit_space: sBLK,
-				font: 40, font_weight: s100,
+				font: i40, font_weight: s100,
 				font_color: sDRKBLUE, font_opacity: s100, background_color: sLGHTGRN, background_opacity: s100,
 				font_auto_resize: sTRUE, (sJUSTIFICATION): sCENTER, font_adjustment: iZ, display: true,
 		],
 		[
 				(sTIT): 'Current Weather',		(sVAR): "description", (sTYPE): "weather_description", period:sCUR, (sVAL): iZ,
 				(sICON): sNONE, icon_loc: sNONE, icon_space: sBLK,
-				h: i4, w: 12, (sBLROW): i7, (sBLCOL): 13,
+				h: i4, w: i12, (sBLROW): i7, (sBLCOL): i13,
 				(sALIGNMENT): sCENTER, text: sBLK, (sDECIMALS): iZ,
 				lpad: iZ, rpad: iZ,
 				(sUNIT): sNONE, decimal: sNO, unit_space: sBLK,
@@ -8336,7 +8336,7 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Current Temperature',		(sVAR): "current_temperature", (sTYPE): sTEMP, period:sCUR,
 				(sICON): sNONE, icon_loc: sLEFT, icon_space: sBLK,
-				h: i4, w: 12, (sBLROW): i1, (sBLCOL): i1,
+				h: i4, w: i12, (sBLROW): i1, (sBLCOL): i1,
 				(sALIGNMENT): sCENTER, text: sBLK, (sDECIMALS): i1,
 				lpad: iZ, rpad: iZ,
 				(sUNIT): unitTemp, decimal: sYES, unit_space: sBLK,
@@ -8347,7 +8347,7 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Feels Like',				(sVAR): "feels_like", (sTYPE): "feels_like", period:sCUR,
 				(sICON): "home-thermometer-outline", icon_loc: sLEFT, icon_space: sSPC,
-				h: i2, w: 12, (sBLROW): i5, (sBLCOL): i1,
+				h: i2, w: i12, (sBLROW): i5, (sBLCOL): i1,
 				(sALIGNMENT): sCENTER, text: "Feels Like: ", (sDECIMALS): i1,
 				lpad: iZ, rpad: iZ,
 				(sUNIT): unitTemp, decimal: sYES, unit_space: sBLK,
@@ -8369,7 +8369,7 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Forecast Low',				(sVAR): "forecast_low", (sTYPE): "temperature_min", period:"daily.0",
 				(sICON): "arrow-down-thick", icon_loc: sLEFT,  icon_space: sBLK,
-				h: i4,  w: i6, (sBLROW): i7,  (sBLCOL):  i1,
+				h: i4,  w: i6, (sBLROW): i7,  (sBLCOL): i1,
 				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): i1,
 				lpad: iZ, rpad: iZ,
 				(sUNIT): unitTemp,   decimal: sYES, unit_space: sBLK,
@@ -8380,7 +8380,7 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Precipitation Title',		(sVAR): "precipitation_title", (sTYPE): "blank",  period:sNONE,
 				(sICON): "umbrella-outline", icon_loc: sLEFT,  icon_space: sSPC,
-				h: i2,  w: i8, (sBLROW): 11,  (sBLCOL):  i1,
+				h: i2,  w: i8, (sBLROW): 11,  (sBLCOL): i1,
 				(sALIGNMENT): sCENTER, text: "Precipitation",
 				lpad: iZ, rpad: iZ,  (sDECIMALS): i1,
 				(sUNIT): unitDepth,   decimal: sNO,  unit_space: sBLK,
@@ -8391,7 +8391,7 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Forecast Precipitation',	(sVAR): "forecast_precipitation", (sTYPE): "rain", period:"daily.0",
 				(sICON): "ruler", icon_loc: sLEFT,  icon_space: sSPC,
-				h: i2,  w: i8, (sBLROW): 15,  (sBLCOL):  i1,
+				h: i2,  w: i8, (sBLROW): 15,  (sBLCOL): i1,
 				(sALIGNMENT): sCENTER, text: sBLK,
 				lpad: iZ, rpad: iZ,  (sDECIMALS): i1,
 				(sUNIT): unitDepth,   decimal: sYES, unit_space: sBLK,
@@ -8403,7 +8403,7 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Forecast Percent Precipitation', (sVAR): "forecast_percent_precipitation", (sTYPE): "chance_precipitation", period:"daily.0",
 				(sICON): "cloud-question", icon_loc: sLEFT,  icon_space: sSPC,
-				h: i2,  w: i8, (sBLROW): 13,  (sBLCOL): i1,
+				h: i2,  w: i8, (sBLROW): i13,  (sBLCOL): i1,
 				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): i1,
 				lpad: iZ, rpad: iZ,
 				(sUNIT): unitPercent,   decimal: sYES, unit_space: sBLK,
@@ -8414,7 +8414,7 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Current Precipitation',		(sVAR): "current_precipitation", (sTYPE): "rain_past_hour", period:sCUR,
 				(sICON): "calendar-today", icon_loc: sLEFT,  icon_space: sSPC,
-				h: i2,  w: i8, (sBLROW): 17,  (sBLCOL):  i1,
+				h: i2,  w: i8, (sBLROW): 17,  (sBLCOL): i1,
 				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): i1,
 				lpad: iZ, rpad: iZ,
 				(sUNIT): unitDepth,   decimal: sYES,  unit_space: sBLK,
@@ -8425,7 +8425,7 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Wind Title',			(sVAR): "wind_title", (sTYPE): "blank",   period:sNONE,
 				(sICON): "weather-windy-variant", icon_loc: sLEFT,  icon_space: sSPC,
-				h: i2,  w: i8, (sBLROW): 11,  (sBLCOL):  i9,
+				h: i2,  w: i8, (sBLROW): 11,  (sBLCOL): i9,
 				(sALIGNMENT): sCENTER, text: "Wind",  (sDECIMALS): i1,
 				lpad: iZ, rpad: iZ,
 				(sUNIT): sNONE,   decimal: sNO, unit_space: sBLK,
@@ -8436,7 +8436,7 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Wind Speed',			(sVAR): "wind_speed", (sTYPE): "wind_speed",  period:sCUR,
 				(sICON): "tailwind", icon_loc: sLEFT,  icon_space: sSPC,
-				h: i2,  w: i8, (sBLROW): 13,  (sBLCOL):  i9,
+				h: i2,  w: i8, (sBLROW): i13,  (sBLCOL): i9,
 				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): i1,
 				lpad: iZ, rpad: iZ,
 				(sUNIT): unitWind,   decimal: sYES, unit_space: sSPC,
@@ -8447,7 +8447,7 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Wind Gust',				(sVAR): "wind_gust", (sTYPE): "wind_gust",  period:sCUR,
 				(sICON): "weather-windy", icon_loc: sLEFT,  icon_space: sSPC,
-				h: i2,  w: i8, (sBLROW): 15,  (sBLCOL):  i9,
+				h: i2,  w: i8, (sBLROW): 15,  (sBLCOL): i9,
 				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): i1,
 				lpad: iZ, rpad: iZ,
 				(sUNIT): unitWind,   decimal: sYES, unit_space: sSPC,
@@ -8458,7 +8458,7 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Wind Direction',		(sVAR): "wind_direction", (sTYPE): "wind_direction",  period:sCUR,
 				(sICON): "compass-outline", icon_loc: sLEFT,  icon_space: sSPC,
-				h: i2,  w: i8, (sBLROW): 17,  (sBLCOL):  i9,
+				h: i2,  w: i8, (sBLROW): 17,  (sBLCOL): i9,
 				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): i1,
 				lpad: iZ, rpad: iZ,
 				(sUNIT): unitDirection,   decimal: sNO, unit_space: sBLK,
@@ -8469,7 +8469,7 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Pressure Title',		(sVAR): "pressure_title", (sTYPE): "blank", period:sCUR,
 				(sICON): "gauge", icon_loc: sLEFT,  icon_space: sSPC,
-				h: i2,  w: i8, (sBLROW): 11,  (sBLCOL):  17,
+				h: i2,  w: i8, (sBLROW): 11,  (sBLCOL): 17,
 				(sALIGNMENT): sCENTER, text: "Pressure", (sDECIMALS): i1,
 				lpad: iZ, rpad: iZ,
 				(sUNIT): sNONE,   decimal: sYES, unit_space: sBLK,
@@ -8480,7 +8480,7 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Current Pressure',		(sVAR): "current_pressure", (sTYPE): "pressure", period:sCUR,
 				(sICON): "thermostat", icon_loc: sLEFT,  icon_space: sSPC,
-				h: i2,  w: i8, (sBLROW): 13,  (sBLCOL):  17,
+				h: i2,  w: i8, (sBLROW): i13,  (sBLCOL): 17,
 				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): i1,
 				lpad: iZ, rpad: iZ,
 				(sUNIT): unitPressure,   decimal: sYES,  unit_space: sSPC,
@@ -8491,7 +8491,7 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Humidity',				(sVAR): "current_humidity", (sTYPE): "humidity", period:sCUR,
 				(sICON): "water-percent", icon_loc: sLEFT,  icon_space: sSPC,
-				h: i2,  w: i4, (sBLROW): i20,  (sBLCOL):  i1,
+				h: i2,  w: i4, (sBLROW): i20,  (sBLCOL): i1,
 				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): i1,
 				lpad: iZ, rpad: iZ,
 				(sUNIT): unitPercent,   decimal: sYES, unit_space: sBLK,
@@ -8513,7 +8513,7 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Sunrise',				(sVAR): "sunrise", (sTYPE): "sunrise",  period:sCUR,
 				(sICON): "weather-sunset-up", icon_loc: sLEFT,  icon_space: sSPC,
-				h: i2,  w: i5, (sBLROW): i20,  (sBLCOL):  15,
+				h: i2,  w: i5, (sBLROW): i20,  (sBLCOL): 15,
 				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): i1,
 				lpad: iZ, rpad: iZ,
 				(sUNIT): unitTime,   decimal: sNO,  unit_space: sBLK,
@@ -8524,7 +8524,7 @@ def deviceWeather2(){
 		[
 				(sTIT): 'Sunset',				(sVAR): "sunset", (sTYPE): "sunset",  period:sCUR,
 				(sICON): "weather-sunset-down", icon_loc: sLEFT,  icon_space: sSPC,
-				h: i2,  w: i5, (sBLROW): i20,  (sBLCOL):  i20,
+				h: i2,  w: i5, (sBLROW): i20,  (sBLCOL): i20,
 				(sALIGNMENT): sCENTER, text: sBLK,  (sDECIMALS): i1,
 				lpad: iZ, rpad: iZ,
 				(sUNIT): unitTime,   decimal: sNO,  unit_space: sBLK,
@@ -8535,10 +8535,10 @@ def deviceWeather2(){
 ]
 
 @Field Map<String,Map> spanFLD= [
-		current: [(sTIT): "Current Measurements", num_time: iZ, time_units:  sBLK],
-		daily:   [(sTIT): "Daily Forecast", num_time: i7, time_units:  "day"],
+		current: [(sTIT): "Current Measurements", num_time: iZ, time_units: sBLK],
+		daily:   [(sTIT): "Daily Forecast", num_time: i7, time_units: "day"],
 		hourly:  [(sTIT): "Hourly Forecast", num_time: 48, time_units: "hour"],
-		blank:   [(sTIT): "Blank Tile", num_time: iZ, time_units:  sBLK],
+		blank:   [(sTIT): "Blank Tile", num_time: iZ, time_units: sBLK],
 		sensor:  [(sTIT): "Device Measurement", num_time: iZ, time_units: sBLK],
 ]
 
@@ -8563,10 +8563,10 @@ def mainWeather2(){
 			tmap += [(key): [:]+item]
 		}
 		span_typeFLD= tmap */
-/*		state.span_type=[ current: [(sTIT): "Current Measurements", num_time: iZ, time_units:  sBLK],
-							daily:   [(sTIT): "Daily Forecast", num_time: i7, time_units:  "day"],
+/*		state.span_type=[ current: [(sTIT): "Current Measurements", num_time: iZ, time_units: sBLK],
+							daily:   [(sTIT): "Daily Forecast", num_time: i7, time_units: "day"],
 							hourly:  [(sTIT): "Hourly Forecast", num_time: 48, time_units: "hour"],
-							blank:   [(sTIT): "Blank Tile", num_time: iZ, time_units:  sBLK],
+							blank:   [(sTIT): "Blank Tile", num_time: iZ, time_units: sBLK],
 							sensor:  [(sTIT): "Device Measurement", num_time: iZ, time_units: sBLK],
 		] */
 
@@ -8951,7 +8951,7 @@ Map getOptions_weather2(){
 			"tiles" :	(List)state.tile_settings,
 			"tile_type" : (Map)state.tile_type,
 			"new_tile_dialog" : state.newTileDialog,
-			"api_code" :  "${state.endpointSecret}",
+			"api_code" : "${state.endpointSecret}",
 			"url" :	"${state.localEndpointURL}",
 	]
 
@@ -9034,7 +9034,7 @@ def applyConversion(Map tile, ival){
 			case sFAHR:
 				switch (out_units){
 					case sCELS: val=(val - 32.0) * (5 / 9); break
-					case "kelvin":  val=((val - 32) * (5 / 9)) + 273.15; break
+					case "kelvin": val=((val - 32) * (5 / 9)) + 273.15; break
 					default: val=sUNS
 				}
 				break
@@ -9151,9 +9151,9 @@ def applyConversion(Map tile, ival){
 					case "SW": val=225; break
 					case "WSW": val=247.5; break
 					case "W":val=270; break
-					case "WNW":  val=292.5; break
-					case "NW":  val=315; break
-					case "NNW":  val=337.5; break
+					case "WNW": val=292.5; break
+					case "NW": val=315; break
+					case "NNW": val=337.5; break
 					default: val=sUNS
 				}
 				if(val != sUNS){
@@ -9509,7 +9509,7 @@ String getTileHTML(Map item, Boolean locked){
 
 		//Left Icon
 		if(item.icon_loc != sRIGHT){
-			item.icon_space=item.icon_space ?:  sBLK
+			item.icon_space=item.icon_space ?: sBLK
 			html+="""<span id="${var}_icon" class="mdi mdi-${item.icon}" style="font-size: ${iconScale*height}vh; color: ${font};">${item.icon_space}</span>"""
 		}
 		//Text
@@ -10484,20 +10484,20 @@ void initFields(){
 
 		selectionsF=[
 				[(sTIT): 'Weather Forecast Icon', (sVAR): "weather_icon", ow: "weather.0.description", iu: sNONE, (sICON): sNONE, icon_loc: sNONE, icon_space: sBLK, h: i4, w: i4, (sBLROW): i2, (sBLCOL): i1, (sALIGNMENT): sCENTER, lpad: iZ, rpad: iZ, (sUNIT): sNONE, decimal: sNO, font: i20, font_weight: s400, (sIMPERIAL): sNONE, (sMETRIC): sNONE],
-				[(sTIT): 'Forecast Description', (sVAR): "description", ow: "weather.0.description", iu: sNONE, (sICON): sNONE, icon_loc: sNONE, icon_space: sBLK, h: i2, w: i4, (sBLROW): i6, (sBLCOL): i1, (sALIGNMENT): sCENTER, lpad: iZ, rpad: iZ, (sUNIT): sNONE, decimal: sNO, font: 10, font_weight: s400, (sIMPERIAL): sNONE, (sMETRIC): sNONE],
+				[(sTIT): 'Forecast Description', (sVAR): "description", ow: "weather.0.description", iu: sNONE, (sICON): sNONE, icon_loc: sNONE, icon_space: sBLK, h: i2, w: i4, (sBLROW): i6, (sBLCOL): i1, (sALIGNMENT): sCENTER, lpad: iZ, rpad: iZ, (sUNIT): sNONE, decimal: sNO, font: i10, font_weight: s400, (sIMPERIAL): sNONE, (sMETRIC): sNONE],
 				[(sTIT): 'Forecast Temperature', (sVAR): "temperature", ow: "temp.day", iu: sFAHR, (sICON): sNONE, icon_loc: sNONE, icon_space: sBLK, h: i4, w: i2, (sBLROW): i8, (sBLCOL): i1, (sALIGNMENT): sRIGHT, lpad: iZ, rpad: iZ, (sUNIT): unitTemp, decimal: sYES, font: i20, font_weight: "900", (sIMPERIAL): sFAHR, (sMETRIC): sCELS],
 				[(sTIT): 'Forecast High', (sVAR): "high", ow: "temp.max", iu: sFAHR, (sICON): "mdi-arrow-up-thick", icon_loc: sRIGHT, icon_space: sBLK, h: i2, w: i2, (sBLROW): i8, (sBLCOL): i3, (sALIGNMENT): sLEFT, lpad: i3, rpad: iZ, (sUNIT): unitTemp, decimal: sYES, font: i7, font_weight: "700", (sIMPERIAL): sFAHR, (sMETRIC): sCELS],
-				[(sTIT): 'Forecast Low', (sVAR): "low", ow: "temp.min", iu: sFAHR, (sICON): "mdi-arrow-down-thick", icon_loc: sRIGHT, icon_space: sBLK, h: i2, w: i2, (sBLROW): 10, (sBLCOL): i3, (sALIGNMENT): sLEFT, lpad: i3, rpad: iZ, (sUNIT): unitTemp, decimal: sYES, font: i7, font_weight: "700", (sIMPERIAL): sFAHR, (sMETRIC): sCELS],
-				[(sTIT): 'Precipitation Forecast', (sVAR): "precipitation", ow: "rain", iu: "millimeters", (sICON): "mdi-umbrella-outline", icon_loc: sLEFT, icon_space: sSPC, h: i1, w: i2, (sBLROW): 12, (sBLCOL): i1, (sALIGNMENT): sRIGHT, lpad: iZ, rpad: i3, (sUNIT): unitPrecip, decimal: sYES, font: i4, font_weight: s400, (sIMPERIAL): "inches", (sMETRIC): "millimeters"],
-				[(sTIT): 'Precipitation Forecast Percent', (sVAR): "precipitation_percent", ow: "pop", iu: "percent_decimal", (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: i1, w: i2, (sBLROW): 12, (sBLCOL): i3, (sALIGNMENT): sLEFT, lpad: i3, rpad: iZ, (sUNIT): unitPercent, decimal: sYES, font: i4, font_weight: s400, (sIMPERIAL): "percent_numeric", (sMETRIC): "percent_numeric"],
-				[(sTIT): 'Sunrise', (sVAR): "sunrise", ow: "sunrise", iu: "time_seconds", (sICON): "mdi-weather-sunset-up", icon_loc: sLEFT, icon_space: sSPC, h: i1, w: i2, (sBLROW): 13, (sBLCOL): i1, (sALIGNMENT): sRIGHT, lpad: iZ, rpad: i3, (sUNIT): unitTime, decimal: sNO, font: i4, font_weight: s400, (sIMPERIAL): "time_twelve", (sMETRIC): "time_two_four"],
-				[(sTIT): 'Sunrise Temp', (sVAR): "sunrise_temp", ow: "temp.morn", iu: sFAHR, (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: i1, w: i1, (sBLROW): 13, (sBLCOL): i3, (sALIGNMENT): sLEFT, lpad: i3, rpad: iZ, (sUNIT): unitTemp, decimal: sYES, font: i4, font_weight: s400, (sIMPERIAL): sFAHR, (sMETRIC): sCELS],
+				[(sTIT): 'Forecast Low', (sVAR): "low", ow: "temp.min", iu: sFAHR, (sICON): "mdi-arrow-down-thick", icon_loc: sRIGHT, icon_space: sBLK, h: i2, w: i2, (sBLROW): i10, (sBLCOL): i3, (sALIGNMENT): sLEFT, lpad: i3, rpad: iZ, (sUNIT): unitTemp, decimal: sYES, font: i7, font_weight: "700", (sIMPERIAL): sFAHR, (sMETRIC): sCELS],
+				[(sTIT): 'Precipitation Forecast', (sVAR): "precipitation", ow: "rain", iu: "millimeters", (sICON): "mdi-umbrella-outline", icon_loc: sLEFT, icon_space: sSPC, h: i1, w: i2, (sBLROW): i12, (sBLCOL): i1, (sALIGNMENT): sRIGHT, lpad: iZ, rpad: i3, (sUNIT): unitPrecip, decimal: sYES, font: i4, font_weight: s400, (sIMPERIAL): "inches", (sMETRIC): "millimeters"],
+				[(sTIT): 'Precipitation Forecast Percent', (sVAR): "precipitation_percent", ow: "pop", iu: "percent_decimal", (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: i1, w: i2, (sBLROW): i12, (sBLCOL): i3, (sALIGNMENT): sLEFT, lpad: i3, rpad: iZ, (sUNIT): unitPercent, decimal: sYES, font: i4, font_weight: s400, (sIMPERIAL): "percent_numeric", (sMETRIC): "percent_numeric"],
+				[(sTIT): 'Sunrise', (sVAR): "sunrise", ow: "sunrise", iu: "time_seconds", (sICON): "mdi-weather-sunset-up", icon_loc: sLEFT, icon_space: sSPC, h: i1, w: i2, (sBLROW): i13, (sBLCOL): i1, (sALIGNMENT): sRIGHT, lpad: iZ, rpad: i3, (sUNIT): unitTime, decimal: sNO, font: i4, font_weight: s400, (sIMPERIAL): "time_twelve", (sMETRIC): "time_two_four"],
+				[(sTIT): 'Sunrise Temp', (sVAR): "sunrise_temp", ow: "temp.morn", iu: sFAHR, (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: i1, w: i1, (sBLROW): i13, (sBLCOL): i3, (sALIGNMENT): sLEFT, lpad: i3, rpad: iZ, (sUNIT): unitTemp, decimal: sYES, font: i4, font_weight: s400, (sIMPERIAL): sFAHR, (sMETRIC): sCELS],
 				[(sTIT): 'Sunset', (sVAR): "sunset", ow: "sunset", iu: "time_seconds", (sICON): "mdi-weather-sunset-down", icon_loc: sLEFT, icon_space: sSPC, h: i1, w: i2, (sBLROW): 14, (sBLCOL): i1, (sALIGNMENT): sRIGHT, lpad: iZ, rpad: i3, (sUNIT): unitTime, decimal: sNO, font: i4, font_weight: s400, (sIMPERIAL): "time_twelve", (sMETRIC): "time_two_four"],
 				[(sTIT): 'Sunset Temp', (sVAR): "sunset_temp", ow: "temp.eve", iu: sFAHR, (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: i1, w: i1, (sBLROW): 14, (sBLCOL): i3, (sALIGNMENT): sLEFT, lpad: i3, rpad: iZ, (sUNIT): unitTemp, decimal: sYES, font: i4, font_weight: s400, (sIMPERIAL): sFAHR, (sMETRIC): sCELS],
 				[(sTIT): 'Dewpoint', (sVAR): "dewpoint", ow: "dew_point", iu: sFAHR, (sICON): "mdi-waves", icon_loc: sLEFT, icon_space: sSPC, h: i1, w: i2, (sBLROW): 15, (sBLCOL): i1, (sALIGNMENT): sRIGHT, lpad: iZ, rpad: i3, (sUNIT): unitTemp, decimal: sYES, font: i4, font_weight: s400, (sIMPERIAL): sFAHR, (sMETRIC): sCELS],
 				[(sTIT): 'Dewpoint Description', (sVAR): "dewpoint_desc", ow: "dew_point", iu: sNONE, (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: i1, w: i2, (sBLROW): 15, (sBLCOL): i3, (sALIGNMENT): sLEFT, lpad: i3, rpad: iZ, (sUNIT): unitTemp, decimal: sNO, font: i4, font_weight: s400, (sIMPERIAL): sNONE, (sMETRIC): sNONE],
-				[(sTIT): 'Forecast Wind', (sVAR): "wind", ow: "wind_speed", iu: sMILESPH, (sICON): "mdi-tailwind", icon_loc: sLEFT, icon_space: sSPC, h: i1, w: i2, (sBLROW): 16, (sBLCOL): i1, (sALIGNMENT): sRIGHT, lpad: iZ, rpad: i3, (sUNIT): unitWind, decimal: sYES, font: i4, font_weight: s400, (sIMPERIAL): sMILESPH, (sMETRIC): sMETERSPS],
-				[(sTIT): 'Forecast Clouds', (sVAR): "clouds", ow: "clouds", iu: "percent_numeric", (sICON): "mdi-cloud-outline", icon_loc: sRIGHT, icon_space: sSPC, h: i1, w: i2, (sBLROW): 16, (sBLCOL): i3, (sALIGNMENT): sLEFT, lpad: i3, rpad: iZ, (sUNIT): unitPercent, decimal: sNO, font: i4, font_weight: s400, (sIMPERIAL): "percent_numeric", (sMETRIC): "percent_numeric"],
+				[(sTIT): 'Forecast Wind', (sVAR): "wind", ow: "wind_speed", iu: sMILESPH, (sICON): "mdi-tailwind", icon_loc: sLEFT, icon_space: sSPC, h: i1, w: i2, (sBLROW): i16, (sBLCOL): i1, (sALIGNMENT): sRIGHT, lpad: iZ, rpad: i3, (sUNIT): unitWind, decimal: sYES, font: i4, font_weight: s400, (sIMPERIAL): sMILESPH, (sMETRIC): sMETERSPS],
+				[(sTIT): 'Forecast Clouds', (sVAR): "clouds", ow: "clouds", iu: "percent_numeric", (sICON): "mdi-cloud-outline", icon_loc: sRIGHT, icon_space: sSPC, h: i1, w: i2, (sBLROW): i16, (sBLCOL): i3, (sALIGNMENT): sLEFT, lpad: i3, rpad: iZ, (sUNIT): unitPercent, decimal: sNO, font: i4, font_weight: s400, (sIMPERIAL): "percent_numeric", (sMETRIC): "percent_numeric"],
 				[(sTIT): 'Day and Date', (sVAR): "date", ow: "dt", iu: "time_seconds", (sICON): sNONE, icon_loc: sNONE, icon_space: sSPC, h: i2, w: i4, (sBLROW): 18, (sBLCOL): i1, (sALIGNMENT): sCENTER, lpad: iZ, rpad: iZ, (sUNIT): unitDate, decimal: sNO, font: i8, font_weight: "800", (sIMPERIAL): "day_date", (sMETRIC): "day_date"],
 		]
 		rowsF=19
@@ -10566,9 +10566,9 @@ def tileForecast(){
 						false)
 				container << hubiForm_slider	((sTIT): "Background Opacity",
 						(sNM): "background_opacity",
-						(sDEFLT): 90,
+						(sDEFLT): i90,
 						(sMIN): iZ,
-						(sMAX): 100,
+						(sMAX): i100,
 						(sUNITS): "%",
 						(sSUBONCHG): false)
 
@@ -10603,7 +10603,7 @@ def tileForecast(){
 						container << hubiForm_slider ((sTIT): "Text Weight (400=normal, 700= bold)",
 								(sNM): mvar+"_font_weight",
 								(sDEFLT): sMs(measurement,'font_weight').toInteger(),
-								(sMIN): 100,
+								(sMIN): i100,
 								(sMAX): 900,
 								(sUNITS): sBLK,
 								(sSUBONCHG): false)
@@ -13067,12 +13067,14 @@ String hubiForm_enum(Map map){
 	String defaultVal=sMs(map,sDEFLT)
 	Boolean submit_on_change=map.submit_on_change
 
-	if(settings[var] == null){
+	String s; s=gtSetStr(var)
+	if(!s){
 		app.updateSetting (var, [(sVAL):defaultVal, (sTYPE):sENUM])
 		settings[var]=defaultVal
+		s=defaultVal
 	}
 
-	String actualVal=settings[var] != null ? "${settings[var]}" : defaultVal
+	String actualVal=s
 	String submitOnChange=submit_on_change ? "submitOnChange" : sBLK
 
 	String html_
@@ -13173,11 +13175,12 @@ String hubiForm_text_input(String title, String ivar, String defaultVal, Boolean
 
 	String var=ivar.toString()
 
-	if(settings[var] == null){
+	String s; s= gtSetStr(var)
+	if(!s){
 		app.updateSetting(var, defaultVal)
 		settings[var]=defaultVal
+		s=defaultVal
 	}
-	//settings[var]=settings[var] != null ? settings[var] : defaultVal
 
 	String html_="""
 	<div class="form-group">
@@ -13187,7 +13190,7 @@ String hubiForm_text_input(String title, String ivar, String defaultVal, Boolean
 	<label for="settings[${var}]" class="control-label">${title}</label>
 	<input type="text" name="settings[${var}]"
 		class="mdl-textfield__input ${submitOnChange ? "submitOnChange" : ""} "
-		value="${settings[var]}" placeholder="Click to set" id="settings[${var}]">
+		value="${s}" placeholder="Click to set" id="settings[${var}]">
 	"""
 
 	return cleanHtml(html_)
@@ -13204,9 +13207,11 @@ String hubiForm_font_size(Map map){
 	String baseId=varname
 
 	String varFontSize="${varname}_font"
-	if(!settings[varFontSize]){
+	Integer varVal; varVal=gtSetI(varFontSize)
+	if(varVal==null || (min!=null && varVal<min) || (max!=null && varVal>max)){
 		app.updateSetting(varFontSize, default_)
 		settings[varFontSize]=default_
+		varVal=default_
 	}
 
 	String submitOnChange=submit_on_change ? "submitOnChange" : sBLK
@@ -13216,14 +13221,14 @@ String hubiForm_font_size(Map map){
 	<table style="width:100%">
 		<tr><td><label for="settings[${varFontSize}]" class="control-label"><b>${title} Font Size</b></td>
 			<td >
-				<span id="${baseId}_font_size_val" style="text-align:right; font-size:${settings[varFontSize]}px">Font Size: ${settings[varFontSize]}</span>
+				<span id="${baseId}_font_size_val" style="text-align:right; font-size:${varVal}px">Font Size: ${varVal}</span>
 			</td>
 				</label>
 		</tr>
 	</table>
 	<input type="range" min="$min" max="$max" name="settings[${varFontSize}]"
 					class="mdl-slider $submitOnChange "
-					value="${settings[varFontSize]}"
+					value="${varVal}"
 					id="settings[${varFontSize}]"
 					onchange="${baseId}_updateFontSize(this.value);">
 	<div class="form-group">
@@ -13257,7 +13262,14 @@ String hubiForm_fontvx_size(Map map){
 	icon=sNL
 
 	String varFontSize="${varname}_font"
-	Integer icon_size=settings[varFontSize] ? 10*(Integer)settings[varFontSize] : default_*10
+	Integer varVal; varVal=(Integer)settings[varFontSize]
+	if(varVal==null || (min!=null && varVal<min) || (max!=null && varVal>max)){
+		app.updateSetting(varFontSize, default_)
+		settings[varFontSize]=default_
+		varVal=default_
+	}
+
+	Integer icon_size= i10*varVal
 
 	String jq
 
@@ -13278,11 +13290,6 @@ String hubiForm_fontvx_size(Map map){
 		"""
 	}
 
-	if(!settings[varFontSize]){
-		app.updateSetting(varFontSize, default_)
-		settings[varFontSize]=default_
-	}
-
 	String submitOnChange=submit_on_change ? "submitOnChange" : sBLK
 
 	String html_
@@ -13290,14 +13297,14 @@ String hubiForm_fontvx_size(Map map){
 			"""
 	<label for="settings[${varFontSize}]" class="control-label" style= "vertical-align: bottom;">
 		<b>${title}</b>
-		<span id="${baseId}_font_size_val" style="float:right; font-size: ${settings[varFontSize]*0.5}em; ${weight}">
-			${icon == sNL ? settings[varFontSize] : icon}
+		<span id="${baseId}_font_size_val" style="float:right; font-size: ${varVal*0.5}em; ${weight}">
+			${icon == sNL ? varVal : icon}
 		</span>
 	</label>
 
 	<input type="range" min="$min" max="$max" name="settings[${varFontSize}]"
 					class="mdl-slider $submitOnChange "
-					value="${settings[varFontSize]}"
+					value="${varVal}"
 					id="settings[${varFontSize}]"
 					onchange="${baseId}_updateFontSize(this.value);">
 	<div class="form-group">
@@ -13330,9 +13337,11 @@ String hubiForm_line_size(Map map){
 	String baseId=varname
 
 	String varLineSize="${varname}_line_size"
-	if(!settings[varLineSize]){
+	Integer varVal; varVal=gtSetI(varLineSize)
+	if(varVal==null || (min!=null && varVal<min) || (max!=null && varVal>max)){
 		app.updateSetting(varLineSize, default_)
 		settings[varLineSize]=default_
+		varVal=default_
 	}
 
 	String submitOnChange=submit_on_change ? "submitOnChange" : sBLK
@@ -13343,7 +13352,7 @@ String hubiForm_line_size(Map map){
 		<tr><td><label for="settings[${varLineSize}]" class="control-label"><b>${title} Width</b></td>
 			<td border=1 style="text-align:right;">
 				<span id="${baseId}_line_size_text" name="testing" >
-						Width: ${settings[varLineSize]} <hr id='${baseId}_line_size_draw' style='background-color:#1A77C9; height:${settings[varLineSize]}px; border: 0;'>
+						Width: ${varVal} <hr id='${baseId}_line_size_draw' style='background-color:#1A77C9; height:${varVal}px; border: 0;'>
 				</span>
 		</td>
 				</label>
@@ -13351,7 +13360,7 @@ String hubiForm_line_size(Map map){
 	</table>
 	<input type="range" min="$min" max="$max" name="settings[${varLineSize}]"
 					class="mdl-slider ${submitOnChange}"
-					value="${settings[varLineSize]}"
+					value="${varVal}"
 					id="settings[${varLineSize}]"
 					onchange="${baseId}_updateLineInput(this.value);">
 	<div class="form-group">
@@ -13388,10 +13397,11 @@ String hubiForm_slider(Map map){
 	String varSize=varname
 	String baseId=varname
 
-	//settings[varSize]=settings[varSize] ? settings[varSize] : default_
-	if(!settings[varSize]){
+	Integer varVal; varVal=gtSetI(varSize)
+	if(varVal==null || (min!=null && varVal<min) || (max!=null && varVal>max)){
 		settings[varSize]=default_
 		app.updateSetting(varSize, default_)
+		varVal=default_
 	}
 
 	String submitOnChange=submit_on_change ? "submitOnChange" : sBLK
@@ -13402,13 +13412,13 @@ String hubiForm_slider(Map map){
 			<td>
 				<label for="settings[${varSize}]" class="control-label"><b>${title}</b>
 			</td>
-			<td border=1 style="text-align:right;"><span id="${baseId}_slider_val" name="testing" >${settings[varSize]}${units}</span></td>
+			<td border=1 style="text-align:right;"><span id="${baseId}_slider_val" name="testing" >${varVal}${units}</span></td>
 				</label>
 		</tr>
 	</table>
 	<input type="range" min="$min" max="$max" name="settings[${varSize}]"
 				class="mdl-slider $submitOnChange "
-				value="${settings[varSize]}"
+				value="${varVal}"
 				id="settings[${varSize}]"
 				onchange="${baseId}_updateTextInput(this.value);">
 	<div class="form-group">
@@ -13436,13 +13446,18 @@ String hubiForm_color(String title, String varname, String defaultColorValue, Bo
 	String notTransparentTitle="Transparent"
 	String transparentTitle="${title}: Transparent"
 
-	String curColor= settings[varnameColor] ?: defaultColorValue
-	//settings[varnameColor]= settings[varnameColor] ?: defaultColorValue
-	if(!settings[varnameColor]) app.updateSetting(varnameColor, defaultColorValue)
+	String curColor; curColor= settings[varnameColor]
+	if(!curColor){
+		app.updateSetting(varnameColor, defaultColorValue)
+		settings[varnameColor]= defaultColorValue
+		curColor= defaultColorValue
+	}
 
 	Boolean curTransparent= settings[varnameTransparent]!=null ? gtSetB(varnameTransparent) : defaultTransparentValue
-	//settings[varnameTransparent]=settings[varnameTransparent] ?: defaultTransparentValue
-	if(settings[varnameTransparent]!=curTransparent) app.updateSetting(varnameTransparent, curTransparent)
+	if(settings[varnameTransparent]!=curTransparent){
+		app.updateSetting(varnameTransparent, curTransparent)
+		settings[varnameTransparent]=curTransparent
+	}
 
 	Boolean isTransparent=curTransparent
 
@@ -13932,7 +13947,16 @@ Boolean hubiTools_check_list(List<Map> dataSources, List<Map> list_){
 @Field static final Integer i9=9
 @Field static final Integer i10=10
 @Field static final Integer i12=12
+@Field static final Integer i13=13
+@Field static final Integer i16=16
 @Field static final Integer i20=20
+@Field static final Integer i40=40
+@Field static final Integer i90=90
+@Field static final Integer i100=100
+@Field static final Integer i500=500
+@Field static final Integer i600=600
+@Field static final Integer i800=800
+@Field static final Integer i3000=3000
 
 @Field static final Long lZ=0L
 
