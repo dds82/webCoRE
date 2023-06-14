@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update May 21, 2023 for Hubitat
+ * Last update June 9, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -109,8 +109,14 @@ static Boolean eric1(){ return false }
 @Field static final String sINFO='info'
 @Field static final String sWARN='warn'
 @Field static final String sTRC='trace'
-@Field static final String sMEM='mem'
 @Field static final String sDBG='debug'
+
+@Field static final String sMETA='meta'
+@Field static final String sMEM='mem'
+@Field static final String sMEMORY='memory'
+@Field static final String sRUNS='runStats'
+@Field static final String sCURS='curStat'
+@Field static final String sALLDEVS='allDevices'
 
 @Field static final String sON='on'
 @Field static final String sOFF='off'
@@ -135,6 +141,8 @@ static Boolean eric1(){ return false }
 @Field static final String sALRMSYSALRT='alarmSystemAlert'
 @Field static final String sHSMSARM='hsmSetArm'
 @Field static final String sALRMSYSEVT='alarmSystemEvent'
+@Field static final String sALRMSYSRULE='alarmSystemRule'
+@Field static final String sALRMSYSRULES='alarmSystemRules'
 @Field static final String sHSMRULE='hsmRule'
 @Field static final String sHSMRULES='hsmRules'
 @Field static final String sPWRSRC='powerSource'
@@ -298,6 +306,7 @@ static Boolean eric1(){ return false }
 @Field static final String sPSTNZ='pistonZ'
 @Field static final String sTMP='temporary'
 @Field static final String sRTHIS='runTimeHis'
+@Field static final String sPTS='points'
 
 @Field static final String sLOCID='locationId'
 @Field static final String sUSELFUELS='useLocalFuelStreams'
@@ -307,6 +316,7 @@ static Boolean eric1(){ return false }
 @Field static final String sINSTID='instanceId'
 @Field static final String sENABLED='enabled'
 @Field static final String sALLLOC='allLocations'
+@Field static final String sOLDLOC='oldLocations'
 @Field static final String sNACCTSID='newAcctSid'
 
 @Field static final String sOLD='old'
@@ -1060,7 +1070,7 @@ Map get(Boolean minimal=false){ // minimal is backup
 	r9=getRunTimeData()
 	Map rVal
 	rVal=[
-		meta: [
+		(sMETA): [
 			(sID): sMs(r9,sID),
 			(sATHR): sMs(r9,sATHR),
 			(sNM): sMs(r9,sNM),
@@ -1084,7 +1094,7 @@ Map get(Boolean minimal=false){ // minimal is backup
 			(sLOGS): liMs(mst,sLOGS),
 			(sTRC): mMs(mst,sTRC),
 			(sLOCALV): mMs(mst,sVARS),
-			memory: mem(),
+			(sMEMORY): mem(),
 			(sLEXEC): lMs(mst,sLEXEC),
 			(sNSCH): lMs(mst,sNSCH),
 			(sSCHS): liMs(mst,sSCHS)
@@ -1112,7 +1122,7 @@ Map activity(lastLogTimestamp){
 		(sLOGS): lidx>iZ ? logs[iZ..lidx-i1]:[],
 		(sTRC): mMs(t0,sTRC),
 		(sLOCALV): mMs(t0,sVARS), // not reporting global or system variable changes
-		memory: sMs(t0,sMEM),
+		(sMEMORY): sMs(t0,sMEM),
 		(sLEXEC): lMs(t0,sLEXEC),
 		(sNSCH): lMs(t0,sNSCH),
 		(sSCHS): liMs(t0,sSCHS),
@@ -1377,6 +1387,15 @@ private Integer msetIds(Boolean shorten,Boolean inMem,Map node,Integer mId=iZ,Ma
 @Field static List<String> ListSLVLSIFLVL
 @Field static List<String> ListI
 
+@Field static final String sAVG='avg'
+@Field static final String sZC='zc'
+@Field static final String sSTR1='str'
+@Field static final String sOK='ok'
+@Field static final String sAUTO='auto'
+@Field static final String sSM='sm'
+@Field static final String sWD='wd'
+@Field static final String sWT='wt'
+
 private static void fill_ListAL(){
 	if(ListAL.size()==iZ){
 		// sP phys/avg (uses a, d, g, p, i, f?)
@@ -1391,7 +1410,7 @@ private static void fill_ListAL(){
 		ListC1=[      sV,sS,   sC,sE,sU]	//		g,a
 		ListC2=[      sV,sS,sX,sC,sE,sU]	//		d
 
-		ListAVANY=['avg',sANY]
+		ListAVANY=[sAVG,sANY]
 		ListDIDLR=[sDI,sDLR]
 		ListTIMEASYNC=[sTIME,sASYNCREP]
 		ListLSTSTSTHREAX=[sLSTACTIVITY,sSTS,sTHREAX]
@@ -1403,7 +1422,7 @@ private static void fill_ListAL(){
 		ListSTRDYN=[sSTR,sDYN]
 		ListEC=[sE,sC]
 		ListC3=[sD,sR,sCS,sFS,sTS,sE,sEI,sS,sK,sP,sV,sC]
-		ListC4=['wd',sRO2,sTO,sTO2]
+		ListC4=[sWD,sRO2,sTO,sTO2]
 		ListBC=[sB,sC]
 		ListBP=[sB,sP]
 		ListORAND=[sOR,sAND]
@@ -1426,7 +1445,6 @@ private void cleanCode(Map i,Boolean inMem){
 		return
 	}
 
-	String av='avg'
 	String ty=sMt(item)
 
 	// cruft when editing operands/parameters
@@ -1498,7 +1516,7 @@ private void cleanCode(Map i,Boolean inMem){
 	if(inMem){
 		// defaults
 		if(sMs(item,sF)==sL)a=item.remove(sF) // timeValue.f
-		if(sMs(item,'sm')=='auto')a=item.remove('sm') // subscription method
+		if(sMs(item,sSM)==sAUTO)a=item.remove(sSM) // subscription method
 		if(sMs(item,sCTP)==sI)a=item.remove(sCTP) // case traversal policy switch stmt
 		if(item[sN] && ty && sMa(item)==sD)a=item.remove(sA) // variable.a sS -> const  sD-> dynamic
 
@@ -1585,10 +1603,10 @@ private void cleanCode(Map i,Boolean inMem){
 	if(inMem){
 		// comments
 		if(item[sZ]!=null)a=item.remove(sZ)
-		if(item.zc!=null)a=item.remove('zc')
+		if(item[sZC]!=null)a=item.remove(sZC)
 		// UI operand operating keys
-		if(item.str!=null)a=item.remove('str')
-		if(item.ok!=null)a=item.remove('ok')
+		if(item[sSTR1]!=null)a=item.remove(sSTR1)
+		if(item[sOK]!=null)a=item.remove(sOK)
 		if(item[sL]!=null && item[sL] instanceof String)a=item.remove(sL)
 
 		// operands
@@ -2347,7 +2365,7 @@ private LinkedHashMap getParentCache(){
 				accountId: sMs(t0,'accountId'),
 				(sNACCTSID): bIs(t0,sNACCTSID),
 				(sLOCID): sMs(t0,sLOCID),
-				('oldLocations'): (List)t0['oldLocations'],
+				(sOLDLOC): (List)t0[sOLDLOC],
 				(sALLLOC): (List)t0[sALLLOC],
 				(sINCIDENTS): (List)t0[sINCIDENTS],
 				(sUSELFUELS): bIs(t0,sUSELFUELS)
@@ -2410,7 +2428,7 @@ private LinkedHashMap getRunTimeData(LinkedHashMap ir9=null,LinkedHashMap retSt=
 	r9[sLOGS]= logs.size()>iZ ? logs:[[(sT):timestamp]]
 	r9[sDBGLVL]=dbgLevel
 
-	r9[sTRC]=[(sT):timestamp,points:[:]] as LinkedHashMap
+	r9[sTRC]=[(sT):timestamp,(sPTS):[:]] as LinkedHashMap
 	r9[sSTATS]=[(sNSCH):lZ] as LinkedHashMap
 	r9[sNWCACHE]=[:]
 	r9[sSCHS]=[]
@@ -2531,7 +2549,7 @@ static Map fillPL(){
 @CompileStatic
 static String stripH(String str){
 	if(!str) return sBLK
-	Integer first; first= str.indexOf('<span')
+	Integer first; first= str.indexOf(sSPANS)
 	String res; res= str[iZ..(first>iZ ? first-i1 : str.length()-i1)]
 	first= str.indexOf('CancelAlert')
 	String res1; res1= res[iZ..(first>iZ ? first-i1 : res.length()-i1)]
@@ -2699,7 +2717,7 @@ void handleEvents(evt,Boolean queue=true,Boolean callMySelf=false){
 	Long t2=lMs(r9,sGENIN)
 	Long t3=lMs(r9,sPEND)-lMs(r9,sPSTART)
 	Long missing=t0-t1-t2
-	r9['curStat']=[(sI):t0.toInteger(),(sL):t1.toInteger(),(sR):t2.toInteger(),(sP):t3.toInteger(),(sS):stAccess.toInteger()] as LinkedHashMap
+	r9[sCURS]=[(sI):t0.toInteger(),(sL):t1.toInteger(),(sR):t2.toInteger(),(sP):t3.toInteger(),(sS):stAccess.toInteger()] as LinkedHashMap
 	if(lg>i1){
 		Long t4=le-startTime
 		Long t5=theend-le
@@ -2985,7 +3003,7 @@ private void sendLEvt(Map r9){
 
 private static void fill_cleanData(){
 	if(cleanData.size()==iZ)
-		cleanData= ['allDevices', sDID3OR5, sPCACHE, sMEM, sBREAK, sPWRSRC, 'oldLocations', sINCIDENTS, sSEMADEL, sVARS,
+		cleanData= [sALLDEVS, sDID3OR5, sPCACHE, sMEM, sBREAK, sPWRSRC, sOLDLOC, sINCIDENTS, sSEMADEL, sVARS,
 					sSTACCESS, sATHR, sBLD, sNWCACHE, 'mediaData', 'weather', sLOGS, sTRC, sSYSVARS, sLOCALV, sPREVEVT, sJSON, sRESP,
 					sCACHE, sSTORE, sSETTINGS, sLOCMODEID, 'coreVersion', 'hcoreVersion', sCNCLATNS, sCNDTNSTC, sPSTNSTC, sFFT, sRUN,
 					sRESUMED, sTERM, sINSTID, sWUP, sSTMTL, sARGS, 'nfl', sTEMP]
@@ -3362,7 +3380,7 @@ private void finalizeEvent(Map r9,Map iMsg,Boolean success=true){
 			updateCacheFld(r9,sRTHIS,hisList,s,false)
 		}
 		updateCacheFld(r9,sMEM,mem(),s,false)
-		updateCacheFld(r9,'runStats',[:]+mMs(r9,'curStat'),s,false)
+		updateCacheFld(r9,sRUNS,[:]+mMs(r9,sCURS),s,false)
 	}
 }
 
@@ -6913,11 +6931,11 @@ private Boolean evaluateConditions(Map r9,Map cndtns,String collection,Boolean a
 				Map cndtn; cndtn=cndtnsCOL[ladderIndex]
 				Long duration; duration=lZ
 				if(ladderIndex){
-					Map tv=mevaluateOperand(r9,mMs(cndtn,'wd'))
+					Map tv=mevaluateOperand(r9,mMs(cndtn,sWD))
 					duration=longEvalExpr(r9,rtnMap1(tv))
 				}
 				// wt: l- loose (ignore unexpected events), s- strict, n- negated (lack of requested event continues group)
-				String wt=sMs(cndtn,'wt')
+				String wt=sMs(cndtn,sWT)
 				if(ladderUpdated && duration!=lZ && (ladderUpdated+duration)<t){
 					//time has expired
 					value=(wt==sN)
@@ -6947,7 +6965,7 @@ private Boolean evaluateConditions(Map r9,Map cndtns,String collection,Boolean a
 						//delay decision, there are more steps to go through
 						value=null
 						cndtn=cndtnsCOL[ladderIndex]
-						Map tv=mevaluateOperand(r9,mMs(cndtn,'wd'))
+						Map tv=mevaluateOperand(r9,mMs(cndtn,sWD))
 						duration=longEvalExpr(r9,rtnMap1(tv))
 						if(lg)ms+=", Requesting timed"
 						requestWakeUp(r9,cndtns,cndtns,duration,sNL,true,sNL,ms)
@@ -8279,11 +8297,11 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 		String appStr= sAppId()
 		TRKINGFLD[appStr]= []
 		TRKINGFLD=TRKINGFLD
-		String sSM='sm' // subscription method, always, never, auto/''
+
 		assignSt(sALLOWR,false)
 		Integer lg=iMs(r9,sLOGNG)
 		String LID=sMs(r9,sLOCID)
-		List<String> oLIDS= (List<String>)r9.oldLocations
+		List<String> oLIDS= (List<String>)r9[sOLDLOC]
 		Map msg=timer "Finished subscribing",r9,iN1
 		if(doit){
 			wremoveAllInUseGlobalVar()
@@ -8372,6 +8390,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 			}
 		}
 		String sALLOWA='allowA'
+		String sAVALS='avals'
 		operandTraverser={ Map node,Map operand,Map value,String cmpTyp, Boolean isTrk ->
 			if(!operand)return
 			switch(sMt(operand)){
@@ -8389,7 +8408,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 
 						Boolean allowAval
 						allowAval= subsMap[subsId][sALLOWA]!=null ? bIs(subsMap[subsId],sALLOWA) : (Boolean)null
-						List<String> avals; avals= allowAval && subsMap[subsId].avals ? (List)subsMap[subsId].avals : []
+						List<String> avals; avals= allowAval && subsMap[subsId][sAVALS] ? (List)subsMap[subsId][sAVALS] : []
 						String msgVal; msgVal=sNL
 
 						if(ct==sTRIG || cmpTyp==sTRIG){
@@ -8410,7 +8429,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 								avals=[]
 							}
 						}else ct=ct?:cmpTyp
-						subsMap[subsId]= [(sD):deviceId, (sA):attr, (sT):ct, (sC): (List)subsMap[subsId][sC] + (cmpTyp ? [node] : []), (sALLOWA):allowAval, avals:avals]
+						subsMap[subsId]= [(sD):deviceId, (sA):attr, (sT):ct, (sC): (List)subsMap[subsId][sC] + (cmpTyp ? [node] : []), (sALLOWA):allowAval, (sAVALS):avals]
 
 						if(ct==sTRIG && isTrk){ addTrk(r9,deviceId,attr) }
 
@@ -8546,6 +8565,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 					comparison=Comparisons()[sTRIGGERS][co]
 					if(comparison!=null) isTrig=true
 				}
+				// sSM subscription method, always, never, auto/''
 				if(comparison!=null){
 					Boolean isTracking= isTrig && !(co in lNTRK)
 					if(isTrig){
@@ -8769,6 +8789,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 		}
 		if(doit&&lge)myDetail r9,"START devices: $devices",iN2
 		Integer logcnt; logcnt=iZ
+		String dh='deviceHandler'
 		for(subscription in subsMap){
 			Map sub=(Map)subscription.value
 			List<Map> subconds=liMs(sub,sC)
@@ -8825,13 +8846,13 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 					Integer n
 					n=ss.events
 					if(!(a in (LT1+nosub))){ // timers, tile, pistonResume events don't have hub subscription
-						List<String> avals=(List)sub.avals
+						List<String> avals=(List)sub[sAVALS]
 						if(allowA && avals.size()<i9){
 							for(String aval in avals){
 								String myattr=a+sDOT+aval
 								if(doit){
 									if(lg>iZ)info "Subscribing to $device.${myattr}...",r9
-									wsubscribe(device,myattr,'deviceHandler')
+									wsubscribe(device,myattr,dh)
 									skip=false
 								}
 								n+=i1
@@ -8839,7 +8860,7 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 						}else{
 							if(doit){
 								if(lg>iZ)info "Subscribing to $device.${a}...",r9
-								wsubscribe(device,a,'deviceHandler')
+								wsubscribe(device,a,dh)
 								skip=false
 							}
 							n+=i1
@@ -8906,13 +8927,14 @@ private void subscribeAll(Map r9,Boolean doit,Boolean inMem){
 			if(lg>i1)trace msg,r9
 
 			//subscribe(app,appHandler)
-			String t,t0
+			String t,t0,e
+			e='executeHandler'
 			t=sMs(r9,sID)
-			wsubscribe(gtLocation(),t,'executeHandler')
+			wsubscribe(gtLocation(),t,e)
 			if(lg>i2)debug "Subscribing to ${gtLname()}.pistonID...($t)",r9
 			t0=hashId(r9,r9[snId])
 			if(t0!=t){
-				wsubscribe(gtLocation(),t0,'executeHandler') //backwards
+				wsubscribe(gtLocation(),t0,e) //backwards
 				if(lg>i2)debug "Subscribing to ${gtLname()}.oldpistonID...($t0)",r9
 			}
 
@@ -8981,13 +9003,14 @@ private List<String> expandDeviceList(Map r9,List<String> devs,Boolean localVars
 private getDevice(Map r9,String idOrName){
 	if(idOrName in (List<String>)r9[sALLLOC])return gtLocation()
 	if(!idOrName)return null
-	r9[sDEVS]=r9[sDEVS] ?:[:]
-	Map dM=mMs(r9,sDEVS)
+	String d=sDEVS
+	r9[d]=r9[d] ?:[:]
+	Map dM=mMs(r9,d)
 	def t0=dM[idOrName]
 	def device
 	device=t0!=null ? t0:dM.find{ gtLbl(it.value)==idOrName }?.value
 	if(device==null){
-		String aD='allDevices'
+		String aD=sALLDEVS
 		if(r9[aD]==null){
 			Map msg=timer "Device missing from piston. Loading all from parent",r9
 			r9[aD]=wlistAvailableDevices(true)
@@ -8998,7 +9021,7 @@ private getDevice(Map r9,String idOrName){
 			if(deviceEnt!=null){
 				device=deviceEnt.value
 				r9[sUPDDEVS]=true
-				r9[sDEVS][(String)deviceEnt.key]=device
+				r9[d][(String)deviceEnt.key]=device
 			}
 		}
 		if(device==null){
@@ -9014,7 +9037,7 @@ private static void fill_FATTRS(){
 	if(LTHR.size()==iZ)
 		LTHR= [sORIENT,sAXISX,sAXISY,sAXISZ]
 	if(FATTRS.size()==iZ)
-		FATTRS= LTHR+[sALRMSSTATUS,sALRMSYSALRT,sALRMSYSEVT,'alarmSystemRule','alarmSystemRules']
+		FATTRS= LTHR+[sALRMSSTATUS,sALRMSYSALRT,sALRMSYSEVT,sALRMSYSRULE, sALRMSYSRULES]
 }
 
 private static String fixAttr(String attr){
@@ -9027,9 +9050,9 @@ private static String fixAttr(String attr){
 			return sHSMSARM
 		case sALRMSYSEVT:
 			return sHSMSARM
-		case 'alarmSystemRule':
+		case sALRMSYSRULE:
 			return sHSMRULE
-		case 'alarmSystemRules':
+		case sALRMSYSRULES:
 			return sHSMRULES
 		default:
 			return attr
@@ -9159,6 +9182,7 @@ static String gtAttrErr(device){
 	return "Error reading current value for ${device}:".toString()
 }
 
+@Field static final String sCNUMBER='NUMBER'
 /**
  * Return a Map of the attribute details, will return map with type String if no attribute is found
  */
@@ -9170,7 +9194,7 @@ private static Map devAttrT(Map r9,String attr,device){
 			// ask the device what is the type
 			def at=device.getSupportedAttributes().find{ (String)it.getName()==attr }
 			// enum,string,json_object -> string; number, date?, vector3?
-			if(at && at.getDataType()=='NUMBER') attribute=[(sT):sDEC]
+			if(at && at.getDataType()==sCNUMBER) attribute=[(sT):sDEC]
 		}
 	}
 	Map res= a1 ?: attribute
@@ -11122,7 +11146,7 @@ private List listIt(Map r9,List<Map> prms,String t,String typ){
 /** avg calculates the average of a series of numeric values			**/
 /** Usage: avg(values)								**/
 private Map func_avg(Map r9,List<Map> prms){
-	if(badParams(r9,prms,i1))return rtnErr('avg'+sVALUEN)
+	if(badParams(r9,prms,i1))return rtnErr(sAVG+sVALUEN)
 	Double s; s=dZ
 
 	String t= sMt(prms[iZ])
@@ -11134,7 +11158,7 @@ private Map func_avg(Map r9,List<Map> prms){
 		if(sz){
 			for(i=iZ;i<sz;i++){ s+=res[i] }
 			return rtnMapD(s/sz)
-		}else return rtnErr('avg'+sVALUEN)
+		}else return rtnErr(sAVG+sVALUEN)
 	}
 	for(Map prm in prms) s+=dblEvalExpr(r9,prm)
 	rtnMapD(s/sz)
@@ -11152,14 +11176,14 @@ private Map func_median(Map r9,List<Map> prms){
 		sz=res.size()
 		if(sz>i1){
 			i=Math.floor(sz/i2).toInteger()
-			return rtnMap(sDYN, sz%2==iZ ? (res[i-i1]+res[i])/i2 : res[i])
+			return rtnMap(sDYN, sz%i2==iZ ? (res[i-i1]+res[i])/i2 : res[i])
 		}else return rtnErr('median'+sVALUEN)
 	}
 
 	if(badParams(r9,prms,i2))return rtnErr('median'+sVALUEN)
 	List<Map> data=prms.collect{ Map it -> evaluateExpression(r9,it,sDYN)}.sort{ Map it -> oMv(it) }
 	i=Math.floor(sz/i2).toInteger()
-	if(data){ return sz%2==iZ ? rtnMap(sMt(data[i]),( oMv(data[i-i1]) + oMv(data[i]) )/i2) : data[i] }
+	if(data){ return sz%i2==iZ ? rtnMap(sMt(data[i]),( oMv(data[i-i1]) + oMv(data[i]) )/i2) : data[i] }
 	rtnMap(sDYN,sBLK)
 }
 
@@ -12028,7 +12052,7 @@ private static String srunTimeHis(Map r9){
 	String myId=sMs(r9,snId)
 	Map nc=theCacheVFLD[myId]
 	return 'Total run history: '+((List)nc[sRTHIS]).toString()+'<br>' +
-			'Last run details: '+((Map)nc['runStats']).toString()
+			'Last run details: '+((Map)nc[sRUNS]).toString()
 }
 
 /** UTILITIES									**/
@@ -12133,9 +12157,7 @@ private static com_cast(Map r9,ival,String dataType,String srcDt){
 			switch(srcDt){
 				case sSTR:
 					String s=((String)value).replaceAll(/[^-\d.-E]/,sBLK)
-					if(s.isDouble())
-						return s.toDouble()
-					if(s.isFloat())
+					if(s.isDouble() || s.isFloat())
 						return s.toDouble()
 					if(s.isLong())
 						return s.toLong().toDouble()
@@ -12192,9 +12214,7 @@ private static com_cast(Map r9,ival,String dataType,String srcDt){
 			switch(srcDt){
 				case sSTR:
 					String s=((String)value).replaceAll(/[^-\d.-E]/,sBLK)
-					if(s.isLong())
-						return s.toLong()
-					if(s.isInteger())
+					if(s.isLong() || s.isInteger())
 						return s.toLong()
 					if(s.isFloat())
 						return Math.floor(s.toDouble()).toLong()
@@ -12797,14 +12817,40 @@ private Map timer(String message,Map r9,Integer shift=iN2,err=null){ log(message
 @Field static final String sCLRGRN2	= '#43d843'
 @Field static final String sCLRORG	= 'orange'
 @Field static final String sLINEBR	= '<br>'
+@Field static final String sSPANS	= '<span'
+@Field static final String sSTYLE	= 'style='
+@Field static final String sCLR		= 'color: '
+@Field static final String sFSZ		= 'font-size: '
+@Field static final String sFWT		= 'font-weight: bold;'
+@Field static final String sIMPT	= 'px !important;'
 @CompileStatic
 static String span(String str,String clr=sNL,String sz=sNL,Boolean bld=false,Boolean br=false){
-	return str ? "<span ${(clr || sz || bld) ? "style='${clr ? "color: ${clr};":sBLK}${sz ? "font-size: ${sz};":sBLK}${bld ? "font-weight: bold;":sBLK}'":sBLK}>${str}</span>${br ? sLINEBR:sBLK}": sBLK
+	return str ? sSPANS+" ${(clr || sz || bld) ? sSTYLE+"'${clr ? sCLR+"${clr};":sBLK}${sz ? sFSZ+"${sz};":sBLK}${bld ? sFWT:sBLK}'":sBLK}>${str}</span>${br ? sLINEBR:sBLK}": sBLK
+}
+
+private static String sectionTitleStr(String title)	{ return '<h3>'+title+'</h3>' }
+private static String inputTitleStr(String title)	{ return '<u>'+title+'</u>' }
+//private static String pageTitleStr(String title)	{ return '<h1>'+title+'</h1>' }
+//private static String paraTitleStr(String title)	{ return '<b>'+title+'</b>' }
+
+@Field static final String sGITP='https://cdn.jsdelivr.net/gh/imnotbob/webCoRE@hubitat-patches/resources/icons/'
+private static String gimg(String imgSrc){ return sGITP+imgSrc }
+
+@CompileStatic
+private static String imgTitle(String imgSrc,String titleStr,String color=sNL,Integer imgWidth=30,Integer imgHeight=iZ){
+	String imgStyle; imgStyle=sBLK
+	String myImgSrc=gimg(imgSrc)
+	imgStyle+=imgWidth>iZ ? 'width: '+imgWidth.toString()+sIMPT:sBLK
+	imgStyle+=imgHeight>iZ ? imgWidth!=iZ ? sSPC:sBLK+'height:'+imgHeight.toString()+sIMPT:sBLK
+	String si="""<img style="${imgStyle}" src="${myImgSrc}"> ${titleStr}</img>""".toString()
+	if(color!=sNL) return """<div style="${sCLR}${color}; ${sFWT}">${si}</div>""".toString()
+	else return si
 }
 
 @CompileStatic
 private void tracePoint(Map r9,String oId,Long duration,value){
-	Map<String,Map> pt=(Map<String,Map>)mMs(r9,sTRC)?.points
+	Map<String,Map> trc=mMs(r9,sTRC)
+	Map<String,Map> pt= trc ? (Map<String,Map>)mMs(trc,sPTS) : null
 	if(oId!=sNL && pt!=null){
 		pt[oId]=[(sO):elapseT(lMt(mMs(r9,sTRC)))-duration,(sD):duration,(sV):value]
 	}else error "Invalid object ID $oId for trace point",r9
@@ -12837,32 +12883,37 @@ private void tracePoint(Map r9,String oId,Long duration,value){
 ]
 
 @Field static Map svSunTFLD
+@Field static final String sNEXTM='nextM'
+@Field static final String sTRISE= 'todayssunrise'
+@Field static final String sTSET= 'todayssunset'
+@Field static final String sSUNT= 'sunTimes'
 
 /* wrappers */
 private Map initSunrSunst(Map r9){
-	String ty='sunTimes'
+	String ty=sSUNT
 	Map t0; t0=svSunTFLD
 	Long t; t=wnow()
 	if(t0!=null){
-		if(t<lMs(t0,'nextM')){
+		if(t<lMs(t0,sNEXTM)){
 			r9[ty]=[:]+t0
 		}else{ t0=null; svSunTFLD=null; mb() }
 	}
 	if(t0==null){
 		Map sunTimes=app.getSunriseAndSunset()
-		if(sunTimes.sunrise==null){
+		if(sunTimes[sSUNRISE]==null){
 			warn 'Actual sunrise and sunset times are unavailable; please reset the location for your hub',r9
 			Long t1=getMidnightTime()
-			sunTimes.sunrise=new Date(Math.round(t1+7.0D*dMSECHR))
-			sunTimes.sunset=new Date(Math.round(t1+19.0D*dMSECHR))
+			sunTimes[sSUNRISE]=new Date(Math.round(t1+7.0D*dMSECHR))
+			sunTimes[sSUNSET]=new Date(Math.round(t1+19.0D*dMSECHR))
 			t=lZ
 		}
-		Long a=((Date)sunTimes.sunrise).getTime()
-		Long b=((Date)sunTimes.sunset).getTime()
+		Long a=((Date)sunTimes[sSUNRISE]).getTime()
+		Long b=((Date)sunTimes[sSUNSET]).getTime()
 		Long nmnght=getNextMidnightTime()
 		Long c,d,a1,b1
 		d=lZ
 
+		TimeZone mtz=mTZ()
 		Boolean good
 		good=true
 		try{
@@ -12870,6 +12921,25 @@ private Map initSunrSunst(Map r9){
 			b1=((Date)todaysSunset).getTime()
 			c=((Date)tomorrowsSunrise).getTime()
 			d=((Date)tomorrowsSunset).getTime()
+			if(!a1){
+				a1= getMidnightTime()
+			}
+			if(!b1){
+				Long n,mar21,sep21,mid01
+				n=wnow()
+				String currYear = new Date().format('yyyy', mtz)
+				mar21= Date.parse('yyyy-MM-dd', currYear + '-03-21').getTime()
+				sep21= Date.parse('yyyy-MM-dd', currYear + '-09-21').getTime()
+				mid01= wtimeToday('00:00',mtz).getTime() + 1000L
+				Long twelve59= wtimeToday('23:59',mtz).getTime() + 59000L
+				Boolean isBtwn= (n >= mar21 && n < sep21)
+				if(gtLlat().toDouble() > dZ){
+					b1= isBtwn ? twelve59 : mid01
+				}else{
+					b1= !isBtwn ? twelve59 : mid01
+				}
+			}
+
 		}catch(ignored){
 			good=false
 			Boolean agtr=a>nmnght
@@ -12881,25 +12951,24 @@ private Map initSunrSunst(Map r9){
 			c=agtr ? a:Math.round(a+dMSDAY+srSkew)
 			d=bgtr ? b:Math.round(b+dMSDAY+ssSkew)
 		}
-		TimeZone mtz=mTZ()
 		Long dstoffset=Math.round(
-				( mtz.getOffset(wtimeToday('03:00',mtz).getTime())
-						-mtz.getOffset(wtimeTodayAfter('23:59','03:00',mtz).getTime())
-				) *d1)
+			( mtz.getOffset(wtimeToday('03:00',mtz).getTime())
+					-mtz.getOffset(wtimeTodayAfter('23:59','03:00',mtz).getTime())
+			) *d1)
 		Long c1=Math.round(c-dMSDAY)-dstoffset
 		Long db1=Math.round(d-dMSDAY)-dstoffset
 		t0=[
 			(sSUNRISE): a,
 			(sSUNSET):b,
-			('todayssunrise'): a1,
+			(sTRISE): a1,
 			('calcsunrise'): (a>c1 ? a:c1),
-			('todayssunset'):b1,
+			(sTSET):b1,
 			('calcsunset'):(b>db1 ? b:db1),
 			('tomorrowssunrise'): c,
 			('tomorrowssunset'):d,
 			updated: t,
 			good: good,
-			('nextM'): nmnght
+			(sNEXTM): nmnght
 		]
 		if(!good) warn 'Please update HE firmware to improve time handling',r9
 		r9[ty]=t0
@@ -12914,8 +12983,8 @@ private Map initSunrSunst(Map r9){
 
 private Long getCalcSunriseTime(Map r9){ Map st=initSunrSunst(r9); return lMs(st,'calcsunrise') }
 private Long getCalcSunsetTime(Map r9){ Map st=initSunrSunst(r9); return lMs(st,'calcsunset') }
-private Long getSunriseTime(Map r9){ Map st=initSunrSunst(r9); return lMs(st,'todayssunrise') }
-private Long getSunsetTime(Map r9){ Map st=initSunrSunst(r9); return lMs(st,'todayssunset') }
+private Long getSunriseTime(Map r9){ Map st=initSunrSunst(r9); return lMs(st,sTRISE) }
+private Long getSunsetTime(Map r9){ Map st=initSunrSunst(r9); return lMs(st,sTSET) }
 private Long getNextSunriseTime(Map r9){ Map st=initSunrSunst(r9); return lMs(st,'tomorrowssunrise') }
 private Long getNextSunsetTime(Map r9){ Map st=initSunrSunst(r9); return lMs(st,'tomorrowssunset') }
 private Long getMidnightTime(){ return wtimeToday('00:00',mTZ()).getTime() }
@@ -12975,7 +13044,7 @@ private void getLocalVariables(Map r9,Map aS, Boolean frc=true){
 		Boolean hasival= ival!=null
 		Boolean isconst= hasival && sMa(var)==sS && !t.endsWith(sRB)
 		Boolean useival= hasival && (v==null || frc || isconst)
-		if(useival && v!=null){ // clean out any updated value
+		if(useival && v!=null){ // clean out any changed value
 			clearVariable(r9,tn)
 			if(lg)debug 'Reinitializing preset variable: '+tn,r9
 		}
@@ -13320,24 +13389,6 @@ private static Map getColorByName(String nm){
 private static Map getRandomColor(){
 	Integer random=Math.round(Math.random()*(getColors().size()-i1)).toInteger()
 	return getColors()[random]
-}
-
-private static String sectionTitleStr(String title)	{ return '<h3>'+title+'</h3>' }
-private static String inputTitleStr(String title)	{ return '<u>'+title+'</u>' }
-//private static String pageTitleStr(String title)	{ return '<h1>'+title+'</h1>' }
-//private static String paraTitleStr(String title)	{ return '<b>'+title+'</b>' }
-
-@Field static final String sGITP='https://cdn.jsdelivr.net/gh/imnotbob/webCoRE@hubitat-patches/resources/icons/'
-private static String gimg(String imgSrc){ return sGITP+imgSrc }
-
-@CompileStatic
-private static String imgTitle(String imgSrc,String titleStr,String color=sNL,Integer imgWidth=30,Integer imgHeight=iZ){
-	String imgStyle; imgStyle=sBLK
-	String myImgSrc=gimg(imgSrc)
-	imgStyle+=imgWidth>iZ ? 'width: '+imgWidth.toString()+'px !important;':sBLK
-	imgStyle+=imgHeight>iZ ? imgWidth!=iZ ? sSPC:sBLK+'height:'+imgHeight.toString()+'px !important;':sBLK
-	if(color!=sNL) return """<div style="color: ${color}; font-weight:bold;"><img style="${imgStyle}" src="${myImgSrc}"> ${titleStr}</img></div>""".toString()
-	else return """<img style="${imgStyle}" src="${myImgSrc}"> ${titleStr}</img>""".toString()
 }
 
 static String myObj(obj){
