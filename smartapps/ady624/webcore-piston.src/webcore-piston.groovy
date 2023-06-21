@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update June 9, 2023 for Hubitat
+ * Last update June 20, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -5839,7 +5839,7 @@ private Long vcmd_setVariable(Map r9,device,List prms){
 private Long vcmd_executePiston(Map r9,device,List prms){
 	String selfId=sMs(r9,sID)
 	String pistonId=sLi(prms,iZ)
-	List<String> arguments=(prms[i1] instanceof List ? (List<String>)prms[i1]:prms[i1].toString().tokenize(sCOMMA)).unique()
+	List<String> arguments= prms[i1] ? (prms[i1] instanceof List ? (List<String>)prms[i1]:prms[i1].toString().tokenize(sCOMMA)).unique() : []
 	Boolean wait; wait=prms.size()>i2 ? bcast(r9,prms[i2]):false
 	String desc="webCoRE: Piston ${gtAppN()} requested execution of piston $pistonId".toString()
 	Map data=[:]
