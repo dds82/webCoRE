@@ -15,14 +15,16 @@
  *
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
-*/
+ *
+ * Last update July 4, 2023 for Hubitat
+ */
 
 //file:noinspection SpellCheckingInspection
 //file:noinspection unused
 
 import java.text.SimpleDateFormat
 
-public static String version() { return "v0.2.103.20230125" }
+public static String version() { return "v0.2.103.20230704" }
 /*
  *	02/01/2018 >>> v0.2.102.20180201 - BETA M2 - Fixed SmartThings app crash, thanks to @JohnHoke
  *	10/11/2017 >>> v0.2.0fa.20171010 - BETA M2 - Various bug fixes and improvements - fixed the mid() and random() functions
@@ -70,7 +72,7 @@ metadata {
         attribute "horizontalAccuracyMetric", "Number"        
         attribute "verticalAccuracy", "Number"
         attribute "verticalAccuracyMetric", "Number"
-        attribute "speed", "Number"
+        attribute "speedUSC", "Number"
         attribute "speedMetric", "Number"
         attribute "bearing", "Number"
         command "asleep"
@@ -110,7 +112,7 @@ metadata {
         valueTile("distance", "device.distanceDisplay", width: 2, height: 1) {
 			state("default", label: '${currentValue}')
 		}
-        valueTile("speed", "device.speedDisplay", width: 2, height: 1) {
+        valueTile("speedUSC", "device.speedDisplay", width: 2, height: 1) {
 			state("default", label: '${currentValue}')
 		}
 		valueTile("altitude", "device.altitudeDisplay", width: 2, height: 1) {
@@ -130,7 +132,7 @@ metadata {
 		}
 
 		main("presence")
-		details(["display", "presence", "sleeping", "currentPlace", "distance", "altitude", "speed", "floor", "status", "lastGeofenceUpdate", "lastLocationUpdate"])
+		details(["display", "presence", "sleeping", "currentPlace", "distance", "altitude", "speedUSC", "floor", "status", "lastGeofenceUpdate", "lastLocationUpdate"])
 	}
     
     preferences {
@@ -221,7 +223,7 @@ def processEvent(Map event) {
     	doSendEvent("horizontalAccuracyMetric", loc.horizontalAccuracy)
     	doSendEvent("verticalAccuracy", loc.verticalAccuracy / 0.3048)
     	doSendEvent("verticalAccuracyMetric", loc.verticalAccuracy)
-    	doSendEvent("speed", (loc.speed ?: 0) / 0.3048)
+    	doSendEvent("speedUSC", (loc.speed ?: 0) / 0.3048)
         Float speed = (Float)loc.speed ?: 0
         Double bearing = (Double)loc.bearing ?: ((Double)loc.course ?: 0.0D)
         doSendEvent("speedMetric", speed)

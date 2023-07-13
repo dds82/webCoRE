@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not, see <http://www.gnu.org/licenses/>.
  *
- * Last update June 20, 2023 for Hubitat
+ * Last update July 8, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -31,8 +31,8 @@
 //file:noinspection GrMethodMayBeStatic
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230222_HE'
-@Field static final String sHVERSTR='v0.3.114.20230222_HE - June 20, 2023'
+@Field static final String sHVER='v0.3.114.20230708_HE'
+@Field static final String sHVERSTR='v0.3.114.20230708_HE - July 8, 2023'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -154,6 +154,7 @@ private static Boolean graphsOn(){ return true }
 @Field static final String sREQ='required'
 @Field static final String sNM='name'
 @Field static final String sVAL='value'
+@Field static final String sTYPE='type'
 @Field static final String sNOW='now'
 @Field static final String sVARIABLE='variable'
 @Field static final String sRGB='rgb'
@@ -181,9 +182,13 @@ private static Boolean graphsOn(){ return true }
 
 @Field static final String sLCLFS='localFuelStreams'
 
-/** m.string  */
+/** m.string */
 @CompileStatic
 private static String sMs(Map m,String v){ (String)m.get(v) }
+
+/** m.string  */
+@CompileStatic
+private static Map mMs(Map m,String s){ (Map)m.get(s) }
 
 /******************************************************************************/
 /*** CONFIGURATION PAGES													***/
@@ -378,9 +383,9 @@ private pageEngineBlock(){
 			String c='Tap to display'
 			String b='complete'
 			section('Debug'){
-				href sPDPC,(sTIT):'Dump base result Cache',description:sBLK, (sDESC): c, state: b
-				href sPDPDEV,(sTIT):'Dump devices result',description:sBLK, (sDESC): c, state: b
-				href "pageDumpDashC",(sTIT):'Dump dashload Cache',description:sBLK, (sDESC): c, state: b
+				href sPDPC,(sTIT):'Dump base result Cache', (sDESC): c, state: b
+				href sPDPDEV,(sTIT):'Dump devices result', (sDESC): c, state: b
+				href "pageDumpDashC",(sTIT):'Dump dashload Cache', (sDESC): c, state: b
 				href "pageRebuildCache", (sTIT): "Clean up and rebuild IDE data cache", (sDESC): "Tap to clean up and rebuild your data cache", state: b
 			}
 		}
@@ -551,8 +556,8 @@ def pageSettings(){
 			String a='Tap to clear'
 			String c='Tap to display'
 			section("Display operational data"){
-				href "pageDumpGlob",(sTIT):'Dump global variables in use',description:sBLK, (sDESC): c, state: b
-				href sPDPEXC,(sTIT):'Dump piston Execution Count',description:sBLK, (sDESC): c, state: b
+				href "pageDumpGlob",(sTIT):'Dump global variables in use', (sDESC): c, state: b
+				href sPDPEXC,(sTIT):'Dump piston Execution Count', (sDESC): c, state: b
 			}
 			section("Piston Cleanups"){
 				href "pageLogCleanups", (sTIT): "Clear all piston logs, trace, stats, optimization caches, reset all piston logs, stats settings to default", (sDESC): a, state: b
@@ -627,9 +632,9 @@ def graphDuplicationPage(){
 					String nm="${grfData.label}"+' (Dup)' //app_name.value+' (Dup)'
 					app_name.value= nm
 					grfData.settings['app_name']= app_name
-					grfData.settings["duplicateFlag"] = [type: sBOOL, value: true]
-					// grfData?.settings["actionPause"] = [type: sBOOL, value: true]
-					grfData.settings["duplicateSrcId"] = [type: "text", value: grfId]
+					grfData.settings["duplicateFlag"] = [(sTYPE): sBOOL, (sVAL): true]
+					// grfData?.settings["actionPause"] = [(sTYPE): sBOOL, (sVAL): true]
+					grfData.settings["duplicateSrcId"] = [(sTYPE): sTXT, (sVAL): grfId]
 					def a=addChildApp("ady624", handleFuelS(), nm, [settings: grfData.settings])
 					paragraph "Graph Duplicated..." + "<br>Return to Graph Page and look for the App with '(Dup)' in the name..."
 					state.graphDuplicated = true
@@ -639,7 +644,7 @@ def graphDuplicationPage(){
 	}
 }
 
-@Field volatile static Map<String, Map> childDupMapFLD        = [:]
+@Field volatile static Map<String, Map> childDupMapFLD = [:]
 
 public Map getChildDupeData(String type, String childId){
 	String myId=sAppId()
@@ -654,7 +659,7 @@ public void clearDuplicationItems(){
 
 public void childAppDuplicationFinished(String type, String childId){
 	doLog(sTRC,"childAppDuplicationFinished($type, $childId)")
-//    Map data = [:]
+//	Map data = [:]
 	String myId=sAppId()
 	if(childDupMapFLD[myId] && childDupMapFLD[myId][type] && childDupMapFLD[myId][type][childId]){
 		childDupMapFLD[myId][type].remove(childId)
@@ -690,9 +695,9 @@ private pageSectionAcctId(Boolean ins=false){
 		}
 
 		if(acctHash && ins && setA==(Boolean)null){
-			app.updateSetting('properSID', [type: sBOOL, (sVAL): true])
-			app.updateSetting('setACCT', [type: sBOOL, (sVAL): true])
-			app.updateSetting('acctID', [type: sTXT, (sVAL): acctHash])
+			app.updateSetting('properSID', [(sTYPE): sBOOL, (sVAL): true])
+			app.updateSetting('setACCT', [(sTYPE): sBOOL, (sVAL): true])
+			app.updateSetting('acctID', [(sTYPE): sTXT, (sVAL): acctHash])
 			setA=true
 			acct=acctHash
 		}
@@ -716,9 +721,9 @@ private pageSectionAcctId(Boolean ins=false){
 					}
 					input "acctUpdate", sBOOL, (sTIT): "Update to hub account hash?", (sDESC): "Tap to change", defaultValue: false, submitOnChange: true, (sREQ): false
 					if(gtSetB('acctUpdate')){
-						app.updateSetting('properSID', [type: sBOOL, (sVAL): true])
-						app.updateSetting('setACCT', [type: sBOOL, (sVAL): true])
-						app.updateSetting('acctID', [type: sTXT, (sVAL): acctHash])
+						app.updateSetting('properSID', [(sTYPE): sBOOL, (sVAL): true])
+						app.updateSetting('setACCT', [(sTYPE): sBOOL, (sVAL): true])
+						app.updateSetting('acctID', [(sTYPE): sTXT, (sVAL): acctHash])
 						setA=true
 						acct=acctHash
 					}
@@ -758,7 +763,7 @@ private pageSectionAcctId(Boolean ins=false){
 		}
 
 		if(setA && acct){
-			app.updateSetting('properSID', [type: sBOOL, (sVAL): true])
+			app.updateSetting('properSID', [(sTYPE): sBOOL, (sVAL): true])
 			paragraph "<br>"
 			paragraph "All hubs in same location may have a common location identifier. This could be Boston, Vacation, or Home1, etc..."
 			if(!noteshown && !ins){
@@ -861,7 +866,6 @@ def pageCleanups(){
 
 	releaseTheLock(t)
 	if(fnd){
-		clearGlobalPistonCache(t)
 		clearBaseResult(t)
 	}
 
@@ -937,7 +941,7 @@ def pageDumpGlob(){
 			}
 		}
 		if(!glbs.containsKey(k)) k+= nf
-		else k+= " (${(String)glbs[k].t})"
+		else k+= " (${sMs(mMs(glbs,k),sT)})"
 		newMap[k]= []+newLst
 	}
 	newMap = newMap.sort { (String)it.key }
@@ -1118,6 +1122,7 @@ void clearChldCaches(Boolean all=false, Boolean clrLogs=false, Boolean uber=fals
 				String schld=chld.id.toString()
 				cldClearFLD[wName][schld]=t1
 			}
+			if(uber)clearGlobalPistonCache('uber')
 		}else{
 			//Long recTime=3660000L // 61 min in ms (regular piston cache cleanup)
 			Long recTime; recTime=86460000L // 24hrs + 1 min in ms (regular piston cache cleanup)
@@ -1182,7 +1187,7 @@ private void initialize(){
 		Boolean t0=sprp!=null ?: true
 		assignAS(pS,t0)
 		assignSt(pS,t0)
-		app.updateSetting(pS, [type: sBOOL, (sVAL): t0])
+		app.updateSetting(pS, [(sTYPE): sBOOL, (sVAL): t0])
 		initTokens()
 		acctlocFLD[wName]=null
 		locFLD[wName]=sNL
@@ -1600,8 +1605,8 @@ private Map<String,Object> api_get_base_result(){
 	Map<String,Object> result= [
 		(sNM): gtLname()+ ' \\ ' +myN,
 		instance: [
-			account: [(sID): accountSid(), t: gtSt('lSIDchanged')  ],
-			pistons:  presult(wName,true),
+			account: [(sID): accountSid(), t: gtSt('lSIDchanged') ],
+			pistons: presult(wName,true),
 			(sID): instanceId,
 			locationId: locationId,
 			(sNM): myN,
@@ -1647,7 +1652,7 @@ private Map<String,Object> api_get_base_result(){
 private Map<String,Map> getFuelStreamUrls(String iid){
 	if(!useLocalFuelStreams()){
 		String region=((String)state.endpointCloud).contains('graph-eu') ? 'eu' : 'us'
-		String baseUrl='https://api-' + region + '-' + iid[32] + '.webcore.co:9287/fuelStreams'
+		String baseUrl='https://api-' + region + '-' + iid[i32] + '.webcore.co:9287/fuelStreams'
 		Map headers=[ 'Auth-Token' : iid ]
 
 		return [
@@ -1726,7 +1731,7 @@ private api_intf_dashboard_load(){
 		msg+=' security ok'
 		result=api_get_base_result()
 
-		if(sMs(p,'dashboard')=="1"){
+		if(sMs(p,'dashboard')=='1'){
 			startDashboard()
 		}else{
 			if((String)state.dashboard!=sINACT) stopDashboard()
@@ -1792,11 +1797,11 @@ private api_intf_dashboard_load(){
 
 private api_intf_dashboard_devices(){
 	Map result; result=[:]
-	String s='dashbaord_devices '
+	String s='dashboard_devices '
 	Map p=(Map)params
 	if(verifySecurityToken(p)){
 		String soffset= "${p.offset}".toString()
-		Integer offset= soffset.isInteger() ? soffset.toInteger() : 0
+		Integer offset= soffset.isInteger() ? soffset.toInteger() : iZ
 		if(eric())debug s+soffset
 		result=listAvailableDevices(false, true, offset) +
 				[ (sDEVVER): (String)gtAS(sDEVVER) ]
@@ -2004,7 +2009,7 @@ private void checkResultSize(Map result, Boolean requireDb=false, String caller=
 			Map rd= (Map)result[sDATA]
 			if(rd){
 				rd.logs=[]
-				rd.trace=[:]
+				rd[sTRC]=[:]
 				rd.localVars=[:]
 				rd.state=[:]
 				rd.schedules=[]
@@ -2133,9 +2138,9 @@ private api_intf_dashboard_piston_set_start(){
 	Map p=(Map)params
 	if(verifySecurityToken(p)){
 		String chunkstr="${p?.chunks}".toString()
-		Integer chunks=chunkstr.isInteger() ? chunkstr.toInteger() : 0
+		Integer chunks=chunkstr.isInteger() ? chunkstr.toInteger() : iZ
 		String wName=sAppId()
-		if((chunks > 0) && (chunks < 100)){
+		if((chunks > iZ) && (chunks < i100)){
 			clearHashMap(wName)
 			pPistonChunksFLD[wName]=[(sID): p?.id, count: chunks]
 			pPistonChunksFLD=pPistonChunksFLD
@@ -2157,7 +2162,7 @@ private api_intf_dashboard_piston_set_chunk(){
 		String data=(String)p?.data
 		mb()
 		LinkedHashMap<String,Object>chunks=pPistonChunksFLD[wName]
-		if(chunks && (Integer)chunks.count && (chunk >= 0) && (chunk < (Integer)chunks.count)){
+		if(chunks && (Integer)chunks.count && (chunk >= iZ) && (chunk < (Integer)chunks.count)){
 			chunks["chunk:$chunk".toString()]=data
 			pPistonChunksFLD[wName]=chunks
 			mb()
@@ -2384,7 +2389,7 @@ private api_intf_variable_set(){
 	if(verifySecurityToken(p)){
 		String pid=sMs(p,'id')
 		String name; name=sMs(p,'name')
-		LinkedHashMap value=p.value ? (LinkedHashMap) new JsonSlurper().parseText(new String((sMs(p,'value')).decodeBase64(), sUTF8)) : null
+		LinkedHashMap value=p.value ? (LinkedHashMap) new JsonSlurper().parseText(new String((sMs(p,sVAL)).decodeBase64(), sUTF8)) : null
 		trace meth+"pid: $pid name: $name value: $value"
 		Map<String,Map> globalVars
 		Map<String,Object> localVars
@@ -2403,7 +2408,7 @@ private api_intf_variable_set(){
 					}
 					else trace meth1
 					chgd=true
-					//result=[(sNM): name, (sVAL): null, type: null]
+					//result=[(sNM): name, (sVAL): null, (sTYPE): null]
 				}else if(value && value[sN]){
 					vln=((String)value[sN]).substring(2)
 					if(name=='null') name=sNL
@@ -2421,18 +2426,18 @@ private api_intf_variable_set(){
 						}
 						// add a variable
 						def vl; vl=value.v
-						if((String)value.t==sTIME){
+						if(sMs(value,sT)==sTIME){
 							Long aa=vl.toLong()
 							// the browers is in local zone but internally HE is utc
 							Integer mmtvl=mTZ().rawOffset
 							if(eric()) debug "att is adjustment is $mmtvl"
 							vl=vl - mmtvl
 						}
-						Map ta=fixHeGType(true, (String)value.t, vl, sNL)
+						Map ta=fixHeGType(true, sMs(value,sT), vl, sNL)
 						for(it in ta){
 							String typ=(String)it.key
 							vl=it.value
-							meth1=meth+"CREATE HE global $vln ${value.t} ${typ} ${vl} "
+							meth1=meth+"CREATE HE global $vln ${sMs(value,sT)} ${typ} ${vl} "
 							try{
 								chgd=createGlobalVar(vln, vl, typ)
 							}catch(ignored){
@@ -2449,7 +2454,7 @@ private api_intf_variable_set(){
 							def vl; vl=value.v
 							if(vl){
 								if(eric())debug "vl is ${myObj(vl)}"
-								if((String)value.t==sTIME){
+								if(sMs(value,sT)==sTIME){
 									Long aa="${vl}".toLong()
 									if(eric())debug "aa is $aa"
 									// the browser is in local zone but internally HE is utc
@@ -2461,7 +2466,7 @@ private api_intf_variable_set(){
 									}
 									if(eric()) debug "found time $vl"
 								}
-								Map ta=fixHeGType(true, (String)value.t, vl, (String)hg.type)
+								Map ta=fixHeGType(true, sMs(value,sT), vl, (String)hg.type)
 								String typ
 								for(it in ta){
 									typ=(String)it.key
@@ -2482,7 +2487,7 @@ private api_intf_variable_set(){
 				if(name && !value){
 					//deleting a variable
 					globalVars.remove(name)
-					result=[(sNM): name, (sVAL): null, type: null]
+					result=[(sNM): name, (sVAL): null, (sTYPE): null]
 					chgd=true
 				}else if(value && value[sN]){
 					if(!name || name!=vln ){
@@ -2492,8 +2497,8 @@ private api_intf_variable_set(){
 					}
 					//update a variable
 					if(name){
-						globalVars[name]=[(sT): (String)value.t, (sV): value.v]
-						result=[(sNM): name, (sVAL): value.v, type: (String)value.t]
+						globalVars[name]=[(sT): sMs(value,sT), (sV): value[sV]]
+						result=[(sNM): name, (sVAL): value[sV], (sTYPE): sMs(value,sT)]
 						chgd=true
 					}
 				}
@@ -2564,7 +2569,7 @@ def findCreateFuel(Map req){
 	// LTS can return multple streams
 	if(req[sC] == 'LTS'){
 		def lts = gtLTS()
-		String[] s= ((String)req[sN]).split('_')
+		String[] s= sMs(req,sN).split('_')
 		String sensorId= s[iZ]
 		String attribute= s[i1]
 		if(lts!=null && (Boolean)lts.isStorage(sensorId, attribute)){
@@ -2578,8 +2583,8 @@ def findCreateFuel(Map req){
 		for (sa in l){
 			String sl=(String)sa.label
 			Integer ndx=sl.indexOf(' - ' )
-			if(ndx >= 0){
-				String lbl=sl.substring(ndx + 3)
+			if(ndx >= iZ){
+				String lbl=sl.substring(ndx + i3)
 				if(lbl==streamName){
 					result=sa
 					break
@@ -2593,7 +2598,7 @@ def findCreateFuel(Map req){
 				(String)it.name==n && ((String)it.label)?.contains(' - ') && ((String)it.label)?.contains('||') }.collect{
 					((String)it.label).split(' - ')[0].toInteger() }.max()
 			//def t0=wgetChildApps().findAll{ (String)it.name==n }.collect{ ((String)it.label).split(' - ')[0].toInteger()}.max()
-			Integer id=(t0 ?: 0) + 1
+			Integer id=(t0 ?: iZ) + i1
 			try{
 				result=addChildApp('ady624', n, "$id - $streamName")
 				result.createStream([(sID): id, (sNM): req[sN], canister: req[sC] ?: sBLK])
@@ -2808,7 +2813,7 @@ private api_intf_dashboard_piston_activity(){
 			Map t0=(Map)piston.activity(p.log)
 			String jsonData= JsonOutput.toJson(t0)
 			String rl=generateMD5_A(jsonData)
-			String tok=(String)params.token
+			String tok=sMs(p,'token')
 			Long t=wnow()
 			if(!lastPActivityFLD[wName] || !lastPActivityTOKFLD[wName] || !lastPActivityPIDFLD[wName] || !tlastPActivityFLD[wName]){
 				clearLastPActivity(wName,sess)
@@ -2914,7 +2919,7 @@ private api_execute(){
 		result.result='ERROR'
 		error "Piston not found for dashboard or web Request to execute a piston from IP $remoteAddr $pistonIdOrName"
 	}
-	result[sTMSTMP]=(new Date()).time
+	result[sTMSTMP]=wnow()
 	wrender( [ (sCONTENTT): sAPPJAVA, (sDATA): JsonOutput.toJson(result) ] )
 }
 
@@ -2936,11 +2941,11 @@ private api_global(){
 	String varName=sMs(p,'varName')
 	if(varName && (Boolean)varName.startsWith(sAT) ){
 		if((Boolean)varName.startsWith(sAT2)){
-			String vn=varName.substring(2)
+			String vn=varName.substring(i2)
 			def hg=getGlobalVar(vn)
 			if(hg){ // could return these as webcore types....this uses what is in HE
 				result.val=hg.value
-				result.type=hg.type
+				result[sTYPE]=hg.type
 				result[sNM]=vn
 				result.desc='HE Hub variable'
 				err=false
@@ -2949,8 +2954,8 @@ private api_global(){
 			def am=gtAS(sVARS)
 			Map<String,Map> vars= am? (Map<String,Map>)am : [:]
 			if(vars[varName]){
-				result.val=vars[varName].v
-				result.type=vars[varName].t
+				result.val=vars[varName][sV]
+				result[sTYPE]=vars[varName][sT]
 				result[sNM]=varName
 				result.desc='webCoRE global variable'
 				err=false
@@ -2963,7 +2968,7 @@ private api_global(){
 		error "variable not found for web Request to get variable from IP $remoteAddr $varName"
 	}
 	Integer st= err ? 400 : 200
-	result[sTMSTMP]=(new Date()).time
+	result[sTMSTMP]=wnow()
 	wrender( [ (sCONTENTT): sAPPJAVA, (sDATA): JsonOutput.toJson(result), (sSTS): st ] )
 }
 
@@ -3015,7 +3020,7 @@ void recoveryHandler(){
 @CompileStatic
 void finishRecovery(){
 	registerInstance(false)
-	Long recTime=300000L  // 5 min in ms
+	Long recTime=300000L	// 5 min in ms
 	//String n=handlePistn()
 	Long lnow=wnow()
 	Long threshold= lnow-recTime
@@ -3032,16 +3037,16 @@ void finishRecovery(){
 	Integer i
 	i= fPs.size()
 	if(i){
-		i=0
+		i=iZ
 		Long delay=Math.round(2000.0D * Math.random()) // 2 sec
 		for (Map piston in fPs){
-			String pid=(String)piston[sID]
+			String pid=sMs(piston,sID)
 			Map meta= (Map)piston[sMETA] // gtMeta(null, wName,myId)
 			Long t=(Long)meta[n]
 			if(t < threshold){
-				if(i!=0) wpauseExecution(delay)
+				if(i!=iZ) wpauseExecution(delay)
 				i++
-				String nm= (String)piston[sNM]
+				String nm= sMs(piston,sNM)
 				sendExecuteEvt(pid,'recovery',"Recovery event","Recovery event for piston ${nm}",null)
 				warn "Piston ${nm} was sent a recovery signal because it was ${lnow - t}ms late"
 			}
@@ -3055,7 +3060,7 @@ void finishRecovery(){
 /******************************************************************************/
 
 private void cleanUp(){
-    try{
+	try{
 		for (item in ((Map<String,Object>)state).findAll{ (it.key.startsWith('sph') || it.key.contains('-') ) }){
 			state.remove(item.key)
 		}
@@ -3095,7 +3100,7 @@ private getStorageApp(Boolean install=false){
 // Hubitat does not use storage app for settings for performance reasons;  Someone could have created it elsewhere in UI
 		if(storageApp.getStorageSettings()!=null){ //migrate settings off of storage app
 			storageApp.getStorageSettings().findAll { it.key.startsWith('dev:') }.each {
-				app.updateSetting(it.key, [type: 'capability', (sVAL): it.value.collect { it.id }])
+				app.updateSetting(it.key, [(sTYPE): 'capability', (sVAL): it.value.collect { it.id }])
 			}
 		}
 		app.deleteChildApp(storageApp.id)
@@ -3136,11 +3141,11 @@ private getStorageApp(Boolean install=false){
 		storageApp.initData(settings.collect{ it.key.startsWith('dev:') ? it : null }, settings.contacts)
 		for (item in settings.collect{ it.key.startsWith('dev:') ? it : null }){
 			if(item && item.key){
-				//app.updateSetting(item.key, [type: sTXT, (sVAL): null])
+				//app.updateSetting(item.key, [(sTYPE): sTXT, (sVAL): null])
 				app.clearSetting("${item.key}".toString())
 			}
 		}
-		//app.updateSetting('contacts', [type: sTXT, (sVAL): null])
+		//app.updateSetting('contacts', [(sTYPE): sTXT, (sVAL): null])
 		app.clearSetting('contacts')
 	}catch(all){
 	}
@@ -3253,7 +3258,7 @@ private String getDashboardRegistrationUrl(){
 	return "https://api.${domain()}/dashboard/".toString()
 }
 
-Map listAvailableDevices(Boolean raw=false, Boolean batch=true, Integer offset=0){
+Map listAvailableDevices(Boolean raw=false, Boolean batch=true, Integer offset=iZ){
 	Long time=wnow()
 	def storageApp //=getStorageApp()
 	Map result; result=[:]
@@ -3310,6 +3315,12 @@ Map listAvailableDevices(Boolean raw=false, Boolean batch=true, Integer offset=0
 	return result
 }
 
+// additional device attributes that do not trigger
+@Field static final String sDLRSTS='$status'
+@Field static final String sLSTACTIVITY='lastActivityWC'
+@Field static final String sROOMID='roomIdWC'
+@Field static final String sROOMNM='roomNameWC'
+
 Map getDevDetails(dev, Boolean addtransform=false){
 	Map<String,Map> overrides=commandOverrides()
 	String dnm=dev.getDisplayName()
@@ -3335,8 +3346,8 @@ Map getDevDetails(dev, Boolean addtransform=false){
 				Integer i
 				for(i=iZ; i<prms.size();i++){
 					Map myD; myD=[:]
-					if(ok && prms[i] && prms[i].type){
-						String nm1; nm1=(String)prms[i].name
+					if(ok && prms[i] && prms[i][sTYPE]){
+						String nm1; nm1= sMs(prms[i],sNM)
 						if(nm1){
 							if(nm1[iN1]=='*'){
 								nm1=nm1[iZ..iN2]
@@ -3344,8 +3355,8 @@ Map getDevDetails(dev, Boolean addtransform=false){
 							}
 							myD[sN]= nm1
 						}
-						if(prms[i].type) myD[sT]= ((String)prms[i].type).toUpperCase()
-						if(prms[i].description) myD[sH]=prms[i].description
+						if(prms[i][sTYPE]) myD[sT]= sMs(prms[i],sTYPE).toUpperCase()
+						if(prms[i][sDESC]) myD[sH]=prms[i][sDESC]
 						if(prms[i].constraints) myD[sC]=prms[i].constraints
 						b=myL.push([:]+myD)
 					}else ok=false
@@ -3380,7 +3391,7 @@ Map getDevDetails(dev, Boolean addtransform=false){
 			cmd.cm=true // custom
 			if((List)cmd[sP]){
 				List typs; typs=[]
-				Integer i; i=0
+				Integer i; i=iZ
 				for(item in (List)cmd[sP]){
 					Boolean bad; bad=false
 					if(item instanceof String){
@@ -3406,7 +3417,10 @@ Map getDevDetails(dev, Boolean addtransform=false){
 	List attrs= ((List)dev.getSupportedAttributes()).unique{ (String)it.name }.collect{
 		[ (sN): (String)it.name, (sT): it.getDataType(), (sO): it.getValues() ]
 	}
-	attrs.push([(sN):'lastActivityWC',(sT):sDTIME,(sO):null])
+	//attrs.push([(sN):sDLRSTS,(sT):sSTR,(sO):null])
+	attrs.push([(sN):sLSTACTIVITY,(sT):sDTIME,(sO):null])
+	attrs.push([(sN):sROOMID,(sT):sINT,(sO):null])
+	attrs.push([(sN):sROOMNM,(sT):sSTR,(sO):null])
 	Map res=[
 		(sN): dnm,
 		cn: dev.getCapabilities()*.name,
@@ -3449,7 +3463,7 @@ Map getDevDetails(dev, Boolean addtransform=false){
 
 private String transformCommand(command, Map<String,Map> overrides, String dvn){
 	String nm=(String)command.getName()
-	def override=overrides.find{ (String)it.value.c==nm }
+	Map.Entry override=overrides.find{ (String)it.value.c==nm }
 //	Map override=overrides[(String)command.getName()]
 	if(override){
 		String mcommand=(String)override.value.r
@@ -3526,7 +3540,7 @@ private void initTokens(){
 
 @CompileStatic
 private Boolean verifySecurityToken(Map params){
-	String tokenId=(String)params.token
+	String tokenId=sMs(params,'token')
 	//trace "verifySecurityToken ${tokenId}"
 	LinkedHashMap<String,Long> tokens=(LinkedHashMap<String,Long>)gtSt(sSECTOKENS)
 	if(!tokens || !tokenId) return false
@@ -3540,7 +3554,7 @@ private Boolean verifySecurityToken(Map params){
 	if(modified){
 		assignAS(sSECTOKENS,tokens)
 	}
-	Long token=(Long)tokens[tokenId]
+	Long token=tokens[tokenId]
 	Long lnow=wnow()
 	if(token && token < lnow){
 		if(tokens) error "Dashboard: Authentication failed due to an invalid token"
@@ -3563,7 +3577,7 @@ private String createSecurityToken(){
 		case "three months": mexpiry=7776000L; break
 		case "never": mexpiry=3110400000L; break //never means 100 years, okay?
 	}
-	tokens[token]=(Long)Math.round(wnow() + (mexpiry * 1000.0D))
+	tokens[token]=Math.round(wnow() + (mexpiry * 1000.0D))
 	assignAS(sSECTOKENS,tokens)
 	return token
 }
@@ -3626,7 +3640,7 @@ private String locationSid(){
 		else{
 			Boolean stprp= (Boolean)gtSt('properSID')
 			Boolean useNew=stprp!=null ?: true
-			t= (useNew ? gtHubUID()+gtLname() : location.id.toString()) + sML
+			t= (useNew ? gtHubUID()+gtLname() : ((Long)location.id).toString()) + sML
 		}
 		//if(eric()) debug "instance location: $t"
 		t= hashId(t)
@@ -3684,7 +3698,7 @@ private void registerInstance(Boolean force=true){
 
 			Long lastRegTry; lastRegTry=lastRegTryFLD[wName]
 			lastRegTry=lastRegTry ?: 0L
-			if(lastRegTry!=0 && (lnow - lastRegTry < 1800000L)) return // 30 min in ms
+			if(lastRegTry!=0L && (lnow - lastRegTry < 1800000L)) return // 30 min in ms
 		}
 		if((String)state.accessToken) updateEndpoint()
 		lastRegTryFLD[wName]=lnow
@@ -3709,7 +3723,7 @@ private void registerInstance(Boolean force=true){
 		pistons=null
 
 		Map params=[
-			uri: "https://api-${region}-${instanceId[32]}.webcore.co:9247".toString(),
+			uri: "https://api-${region}-${instanceId[i32]}.webcore.co:9247".toString(),
 			path: '/instance/register',
 			headers: ['ST' : instanceId],
 			body: [
@@ -3739,7 +3753,7 @@ void myDone(resp, data){
 	String endpoint=(String)state.endpointCloud
 	String region=endpoint.contains('graph-eu') ? 'eu' : 'us'
 	String instanceId=getInstanceSid()
-	if(eric())debug "register resp: ${resp?.status} using api-${region}-${instanceId[32]}.webcore.co:9247"
+	if(eric())debug "register resp: ${resp?.status} using api-${region}-${instanceId[i32]}.webcore.co:9247"
 	if(resp?.status==200){
 		String wName=sAppId()
 		lastRegFLD[wName]=wnow()
@@ -3792,21 +3806,6 @@ static String getWikiUrl(){
 private String mem(Boolean showBytes=true){
 	Integer bytes=state.toString().length()
 	return Math.round(100.0D * (bytes/ 100000.0D)) + "%${showBytes ? " ($bytes bytes)" : sBLK}"
-}
-
-@Field volatile static Map<String,Map<String,Long>> p_executionFLD=[:]
-
-@CompileStatic
-void pCallupdateRunTimeData(Map data){
-	if(!data || !data[sID]) return
-	String id=(String)data[sID]
-	String wName=sAppId()
-	if(p_executionFLD[wName]==null){ p_executionFLD[wName]=(Map)[:]; p_executionFLD=p_executionFLD }
-	Long cnt; cnt=p_executionFLD[wName][id]!=null ? (Long)p_executionFLD[wName][id] : 0L
-	cnt +=1L
-	p_executionFLD[wName][id]=cnt
-	p_executionFLD=p_executionFLD
-	updateRunTimeData(data,wName,id)
 }
 
 private gtLTS(){ wgetChildAppByLabel("webCoRE Long Term Storage") }
@@ -3925,6 +3924,21 @@ static String string2gzip(String s){
 @Field static final String sNSCH='nextSchedule'
 @Field static final String sPIS='piston'
 
+@Field volatile static Map<String,Map<String,Long>> p_executionFLD=[:]
+
+@CompileStatic
+void pCallupdateRunTimeData(Map data){
+	if(!data || !data[sID]) return
+	String id=(String)data[sID]
+	String wName=sAppId()
+	if(p_executionFLD[wName]==null){ p_executionFLD[wName]=(Map)[:]; p_executionFLD=p_executionFLD }
+	Long cnt; cnt=p_executionFLD[wName][id]!=null ? (Long)p_executionFLD[wName][id] : 0L
+	cnt +=1L
+	p_executionFLD[wName][id]=cnt
+	p_executionFLD=p_executionFLD
+	updateRunTimeData(data,wName,id)
+}
+
 @CompileStatic
 void updateRunTimeData(Map data, String wNi=sNL, String idi=sNL){
 	if(!data || !data[sID]) return
@@ -3937,10 +3951,14 @@ void updateRunTimeData(Map data, String wNi=sNL, String idi=sNL){
 		Boolean mdfd; mdfd=false
 		for(var in (Map<String,Map>)data[sGVCACHE]){
 			String k=(String)var.key
-			if(k!=sNL && k.startsWith(sAT) && vars[k] && var.value.v!=vars[k].v ){
-				Boolean a=variableEvents.push([(sNM): k, oldValue: vars[k].v, (sVAL): var.value.v, type: var.value.t])
-				vars[k].v=var.value.v
-				mdfd=true
+			if(k!=sNL && k.startsWith(sAT) && vars[k]){
+				def val=var.value[sV]
+				def oval=vars[k][sV]
+				if(val!=oval){
+					Boolean a=variableEvents.push([(sNM): k, oldValue: oval, (sVAL): val, (sTYPE): var.value.t])
+					vars[k][sV]=val
+					mdfd=true
+				}
 			}
 		}
 		if(mdfd)assignAS(sVARS,vars)
@@ -4175,7 +4193,7 @@ def webCoREHandler(event){
 				releaseTheLock(t)
 				clearGlobalPistonCache("variable event")
 // notify my child instances
-				if(vV!=null) sendVariableEvent([(sNM): vN, (sVAL): vV, type: vType], true)
+				if(vV!=null) sendVariableEvent([(sNM): vN, (sVAL): vV, (sTYPE): vType], true)
 			}else releaseTheLock(t) // no change
 		}else warn "no variable name $data"
 		return
@@ -4491,27 +4509,27 @@ private Map log(message, Integer shift=iN2, err=null, String cmd=sNL){
 		// anything else - nothing happens
 		Integer maxLevel=4
 		Integer level=state.debugLevel ? state.debugLevel : 0
-		Integer levelDelta=0
+		Integer levelDelta=iZ
 		prefix="║"
 		String pad="░"
 		switch (shift){
-			case 0:
-				level=0
+			case iZ:
+				level=iZ
 				prefix=sBLK
 				break
-			case 1:
-				level += 1
+			case i1:
+				level += i1
 				prefix="╚"
 				pad="═"
 				break
 			case -1:
-				levelDelta=-(level > 0 ? 1 : 0)
+				levelDelta=-(level > iZ ? i1 : iZ)
 				pad="═"
 				prefix="╔"
 			break
 		}
 
-		if(level > 0){
+		if(level > iZ){
 			prefix=prefix.padLeft(level, "║").padRight(maxLevel, pad)
 		}
 
@@ -4730,11 +4748,11 @@ Map getChildAttributes(){
 	Map defv=[(sN):sA]
 	for(it in result){
 		Map t0; t0=[:]
-		String hasI=it.value.i
+		//String hasI=it.value.i
 		Boolean hasP=it.value.p
 		String hasT=it.value.t
 		Boolean hasM=it.value.m
-		if(hasI) t0=t0 + [(sI):hasI]
+		//if(hasI) t0=t0 + [(sI):hasI]
 		if(hasP!=null) t0=t0 + [(sP):hasP] //physical
 		if(hasT) t0=t0 + [(sT):hasT] // type
 		if(hasM!=null) t0=t0 + [(sM):hasM] // momentary
@@ -4750,10 +4768,7 @@ Map getChildAttributes(){
 	airQualityIndex		: [ (sN): "air quality index",	(sT): sINT,	(sR): [iZ, 500],		u: "AQI",				],
 	alarm				: [ (sN): "alarm",				(sT): sENUM,		(sO): ["both", sOFF, "siren", "strobe"],	],
 	amperage			: [ (sN): "amperage",			(sT): sDEC,	(sR): [iZ, null],		u: "A",					],
-	axisX				: [ (sN): "X axis",				(sT): sINT,	(sR): [-1024, 1024],	/*(sS): "threeAxis",*/			],
-	axisY				: [ (sN): "Y axis",				(sT): sINT,	(sR): [-1024, 1024],	/*(sS): "threeAxis",*/			],
-	axisZ				: [ (sN): "Z axis",				(sT): sINT,	(sR): [-1024, 1024],	/*(sS): "threeAxis",*/			],
-	battery				: [ (sN): "battery",			(sT): sINT,	(sR): [iZ, 100],		u: "%",							],
+	battery				: [ (sN): "battery",			(sT): sINT,	(sR): [iZ, i100],		u: "%",							],
 	camera				: [ (sN): "camera",				(sT): sENUM,		(sO): [sON, sOFF, "restarting", "unavailable"],				],
 	carbonDioxide		: [ (sN): "carbon dioxide",		(sT): sDEC,	(sR): [iZ, null],									],
 	carbonMonoxide		: [ (sN): "carbon monoxide",	(sT): sENUM,		(sO): [sCLEAR, sDETECTED, "tested"],					],
@@ -4778,18 +4793,17 @@ Map getChildAttributes(){
 	heatingSetpoint		: [ (sN): "heating setpoint",	(sT): sDEC,	(sR): [-127, 127],		u: '°?',						],
 	hex					: [ (sN): "hexadecimal code",	(sT): "hexcolor",											],
 	hue					: [ (sN): "hue",				(sT): sINT,	(sR): [iZ, 360],		u: "°",							],
-	humidity			: [ (sN): "relative humidity",	(sT): sINT,	(sR): [iZ, 100],		u: "%",							],
+	humidity			: [ (sN): "relative humidity",	(sT): sINT,	(sR): [iZ, i100],		u: "%",							],
 	illuminance			: [ (sN): "illuminance",		(sT): sINT,	(sR): [iZ, null],		u: "lux",						],
 	image				: [ (sN): "image",				(sT): "image",											],
 	indicatorStatus		: [ (sN): "indicator status",	(sT): sENUM,		(sO): ["never", "when off", "when on"],					],
-//	infraredLevel		: [ (sN): "infrared level",		(sT): sINT,	(sR): [iZ, 100],		u: "%",							],
-	lastActivityWC		: [ (sN): "last activity",		(sT): sDTIME,											],
+//	infraredLevel		: [ (sN): "infrared level",		(sT): sINT,	(sR): [iZ, i100],		u: "%",							],
 //	lastCodeName		: [ (sN): "last lock code",		(sT): sSTR,											],
-	level				: [ (sN): sLVL,					(sT): sINT,	(sR): [iZ, 100],		u: "%",							],
-	levelPreset			: [ (sN): "preset level",		(sT): sINT,	(sR): [i1, 100],		u: "%",							],
+	level				: [ (sN): sLVL,					(sT): sINT,	(sR): [iZ, i100],		u: "%",							],
+	levelPreset			: [ (sN): "preset level",		(sT): sINT,	(sR): [i1, i100],		u: "%",							],
 	lightEffects		: [ (sN): "light effects",		(sT): "object",											],
 // (sS): is subdevices
-	lock				: [ (sN): "lock",				(sT): sENUM,		(sO): ["locked", "unknown", "unlocked", "unlocked with timeout"],	(sC): "lock",		(sP):true,		(sS):"numberOfCodes,numCodes", (sI):"usedCode", sd: "user code"		],
+	lock				: [ (sN): "lock",				(sT): sENUM,		(sO): ["locked", "unknown", "unlocked", "unlocked with timeout"],	/*(sC): "lock",*/	(sP):true,		/*(sS):"numberOfCodes,numCodes", (sI):"usedCode", sd: "user code"*/		],
 	lockCodes			: [ (sN): "lock codes",			(sT): "object",											],
 	lqi					: [ (sN): "link quality",		(sT): sINT,	(sR): [iZ, 255],									],
 //	maxCodes			: [ (sN): "Max Lock codes",		(sT): sINT,											],
@@ -4797,17 +4811,16 @@ Map getChildAttributes(){
 	motion				: [ (sN): "motion",				(sT): sENUM,		(sO): [sACT, sINACT],						],
 	mute				: [ (sN): "mute",				(sT): sENUM,		(sO): ["muted", "unmuted"],						],
 	naturalGas			: [ (sN): "natural gas",		(sT): sENUM,		(sO): [sCLEAR, sDETECTED, "tested"],					],
-	orientation			: [ (sN): "orientation",		(sT): sENUM,		(sO): ["rear side up", "down side up", "left side up", "front side up", "up side up", "right side up"],	],
 	pH					: [ (sN): "pH level",			(sT): sDEC,	(sR): [iZ, 14],									],
 	phraseSpoken		: [ (sN): "phrase",				(sT): sSTR,											],
-	position			: [ (sN): "position",			(sT): sINT,	(sR): [iZ, 100],		u: "%",							],
+	position			: [ (sN): "position",			(sT): sINT,	(sR): [iZ, i100],		u: "%",							],
 	power				: [ (sN): "power",				(sT): sDEC,		u: "W",									],
 	powerSource			: [ (sN): "power source",		(sT): sENUM,		(sO): ["battery", "dc", "mains", "unknown"],				],
 	presence			: [ (sN): "presence",			(sT): sENUM,		(sO): ["not present", "present"],						],
 	rate				: [ (sN): "liquid flow rate",	(sT): sDEC,											],
 //	RGB					: [ (sN): "rgb",				(sT): sSTR,											],
-	rssi				: [ (sN): "signal strength",	(sT): sINT,	(sR): [iZ, 100],		u: "%",							],
-	saturation			: [ (sN): "saturation",			(sT): sINT,	(sR): [iZ, 100],		u: "%",							],
+	rssi				: [ (sN): "signal strength",	(sT): sINT,	(sR): [iZ, i100],		u: "%",							],
+	saturation			: [ (sN): "saturation",			(sT): sINT,	(sR): [iZ, i100],		u: "%",							],
 //	schedule			: [ (sN): "schedule",			(sT): "object",											],
 	securityKeypad		: [ (sN): "security keypad",	(sT): sENUM,		(sO): [sDISARMD, "armed home", "armed away", "unknown"],			],
 	sessionStatus		: [ (sN): "session status",		(sT): sENUM,		(sO): ["canceled", "paused", "running", "stopped"],			],
@@ -4836,21 +4849,35 @@ Map getChildAttributes(){
 	thermostatOperatingState	: [ (sN): "operating state",		(sT): sENUM,		(sO): ["cooling", "fan only", "heating", "idle", "pending cool", "pending heat", "vent economizer"],	],
 	thermostatSetpoint	: [ (sN): "setpoint",			(sT): sDEC,		(sR): [-127, 127],		u: '°?',						],
 	threeAxis			: [ (sN): "vector",				(sT): "vector3",											],
-	tilt				: [ (sN): "tilt",				(sT): sINT,		(sR): [iZ, 100],		u: "%",							],
+	tilt				: [ (sN): "tilt",				(sT): sINT,		(sR): [iZ, i100],		u: "%",							],
 	timeRemaining		: [ (sN): "time remaining",		(sT): sINT,		(sR): [iZ, null],		u: sS,							],
 	touch				: [ (sN): "touch",				(sT): sENUM,		(sO): ["touched"],								],
 	trackData			: [ (sN): "track data",			(sT): "object",											],
 	trackDescription	: [ (sN): "track description",		(sT): sSTR,											],
 	ultravioletIndex	: [ (sN): "UV index",			(sT): sINT,		(sR): [iZ, null],									],
-// custom for Leak sensor
-	underHeat			: [ (sN): "under heat",			(sT): sENUM,		(sO): [sCLEAR, sDETECTED],						],
 	valve				: [ (sN): "valve",				(sT): sENUM,		(sO): [sCLOSED, sOPEN],							],
 //	variable			: [ (sN): "variable value",	(sT): sSTR,											],
 	voltage				: [ (sN): "voltage",			(sT): sDEC,		(sR): [null, null],	u: "V",							],
-	volume				: [ (sN): "volume",				(sT): sINT,		(sR): [iZ, 100],		u: "%",							],
+	volume				: [ (sN): "volume",				(sT): sINT,		(sR): [iZ, i100],		u: "%",							],
 	water				: [ (sN): "water",				(sT): sENUM,		(sO): ["dry", "wet"],							],
 	windowShade			: [ (sN): "window shade",		(sT): sENUM,		(sO): [sCLOSED, "closing", sOPEN, "opening", "partially open", "unknown"],	],
 	windowBlind			: [ (sN): "window blind",		(sT): sENUM,		(sO): [sCLOSED, "closing", sOPEN, "opening", "partially open", "unknown"],	],
+// buttons
+	doubleTapped		: [ (sN): "double tapped button",	(sT): sINT,	(sR): [null, null],	(sM): true,	/*s: "numberOfButtons",	(sI): "buttonNumber"*/			],
+	held				: [ (sN): "held button",		(sT): sINT,	(sR): [null, null],	(sM): true,	/*s: "numberOfButtons",	(sI): "buttonNumber"*/			],
+	released			: [ (sN): "released button",	(sT): sINT,	(sR): [null, null],	(sM): true,	/*s: "numberOfButtons",	(sI): "buttonNumber"*/			],
+	pushed				: [ (sN): "pushed button",		(sT): sINT,	(sR): [null, null],	(sM): true,	/*s: "numberOfButtons",	(sI): "buttonNumber"*/			],
+
+// pseudo attributes (first 5 builtin to IDE)
+	axisX				: [ (sN): "X axis",				(sT): sINT,	(sR): [-1024, 1024],	/*(sS): "threeAxis",*/			],
+	axisY				: [ (sN): "Y axis",				(sT): sINT,	(sR): [-1024, 1024],	/*(sS): "threeAxis",*/			],
+	axisZ				: [ (sN): "Z axis",				(sT): sINT,	(sR): [-1024, 1024],	/*(sS): "threeAxis",*/			],
+	orientation			: [ (sN): "orientation",		(sT): sENUM,		(sO): ["rear side up", "down side up", "left side up", "front side up", "up side up", "right side up"],	/*(sS): "threeAxis",*/ ],
+//	(sDLRSTS)			: [ (sN): "device status",		(sT): sENUM,		(sO): ["ACTIVE", "INACTIVE"], ],
+	(sLSTACTIVITY)		: [ (sN): "last activity",		(sT): sDTIME,											],
+	(sROOMID)			: [ (sN): "room id",			(sT): sINT,											],
+	(sROOMNM)			: [ (sN): "room name",			(sT): sSTR,											],
+
 //webCoRE Presence Sensor
 	altitude			: [ (sN): "altitude (usc)",		(sT): sDEC,	(sR): [null, null],	u: "ft",						],
 	altitudeMetric		: [ (sN): "altitude (metric)",	(sT): sDEC,	(sR): [null, null],	u: sM,							],
@@ -4875,10 +4902,9 @@ Map getChildAttributes(){
 	speedUSC			: [ (sN): "speed (usc)",		(sT): sDEC,	(sR): [null, null],	u: "ft/s",						],
 	speedMetric			: [ (sN): "speed (metric)",		(sT): sDEC,	(sR): [null, null],	u: "m/s",						],
 	bearing				: [ (sN): "bearing",			(sT): sDEC,	(sR): [iZ, 360],		u: "°",							],
-	doubleTapped		: [ (sN): "double tapped button",	(sT): sINT,	(sR): [null, null],	(sM): true,	/*s: "numberOfButtons",	(sI): "buttonNumber"*/			],
-	held				: [ (sN): "held button",		(sT): sINT,	(sR): [null, null],	(sM): true,	/*s: "numberOfButtons",	(sI): "buttonNumber"*/			],
-	released			: [ (sN): "released button",	(sT): sINT,	(sR): [null, null],	(sM): true,	/*s: "numberOfButtons",	(sI): "buttonNumber"*/			],
-	pushed				: [ (sN): "pushed button",		(sT): sINT,	(sR): [null, null],	(sM): true,	/*s: "numberOfButtons",	(sI): "buttonNumber"*/			]
+
+// custom for Leak sensor
+	underHeat			: [ (sN): "under heat",			(sT): sENUM,		(sO): [sCLEAR, sDETECTED],						]
 ]
 
 /*private Map attributes(){
@@ -4902,12 +4928,12 @@ Map getChildCommands(){
 	String hasA,hasV
 	for(it in result){
 		t0=[:]
-		hasA=it.value.a
-		hasV=it.value.v
+		hasA=(String)it.value[sA]
+		hasV=(String) it.value[sV]
 		if(hasA) t0=t0 + [(sA):hasA]
 		if(hasV) t0=t0 + [(sV):hasV]
 		if(t0==[:]) t0=defv
-		cleanResult[it.key.toString()]=t0
+		cleanResult[it.key]=t0
 	}
 	return cleanResult
 }
@@ -5080,12 +5106,12 @@ static Map getChildVirtCommands(){
 	Boolean hasA,hasO
 	for(it in result){
 		t0=[:]
-		hasA=it.value.a
-		hasO=it.value.o
+		hasA=it.value[sA]
+		hasO=it.value[sO]
 		if(hasA!=null) t0=t0 + [(sA):hasA]
 		if(hasO!=null) t0=t0 + [(sO):hasO]
 		if(t0==[:]) t0=defv
-		cleanResult[it.key.toString()]=t0
+		cleanResult[it.key]=t0
 	}
 	return cleanResult
 }
@@ -5098,7 +5124,7 @@ static Map getChildVirtCommands(){
 	//i=icon   (UI) fontawesome
 	//is= iconstyle (UI)  s- solid (default); r- regular, l- light  not used: b - brand, d- duotone V5 - letter; V6 is full word
 	//p=parameters (UI)
-		//t=type (UI parameters)
+	//t=type (UI parameters)
 	//r= require command (UI)
 @Field static final String sBVB='{v}'
 private static Map<String,Map> virtualCommands(){
@@ -5137,9 +5163,9 @@ private static Map<String,Map> virtualCommands(){
 		setLocationMode			: [ (sN): "Set location mode...",		(sA): true,	(sI): sBLK,						(sD): "Set location mode to {0}",											(sP): [[(sN):"Mode", (sT):"mode"]],																														],
 		sendEmail				: [ (sN): "Send email...",				(sA): true,	(sI): "envelope",				(sD): "Send email with subject \"{1}\" to {0}",							(sP): [[(sN):"Recipient", (sT):"email"],[(sN):"Subject", (sT):sSTR],[(sN):"Message body", (sT):sSTR]],																							],
 		wolRequest				: [ (sN): "Wake a LAN device",			(sA): true,	(sI): sBLK,						(sD): "Wake LAN device at address {0}{1}",									(sP): [[(sN):"MAC address", (sT):sSTR],[(sN):"Secure code", (sT):sSTR,(sD):" with secure code {v}"]],	],
-		adjustLevel				: [ (sN): "Adjust level...",	(sR): ["setLevel"],	(sI): sTOGON,				(sD): "Adjust level by {0}%{1}",											(sP): [[(sN):"Adjustment", (sT):sINT,(sR):[-100,100]], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],																],
-		adjustInfraredLevel		: [ (sN): "Adjust infrared level...",	(sR): ["setInfraredLevel"],	(sI): sTOGON,	(sD): "Adjust infrared level by {0}%{1}",								(sP): [[(sN):"Adjustment", (sT):sINT,(sR):[-100,100]], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],																],
-		adjustSaturation		: [ (sN): "Adjust saturation...",	(sR): ["setSaturation"],	(sI): sTOGON,		(sD): "Adjust saturation by {0}%{1}",										(sP): [[(sN):"Adjustment", (sT):sINT,(sR):[-100,100]], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],																],
+		adjustLevel				: [ (sN): "Adjust level...",	(sR): ["setLevel"],	(sI): sTOGON,				(sD): "Adjust level by {0}%{1}",											(sP): [[(sN):"Adjustment", (sT):sINT,(sR):[-i100,i100]], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],																],
+		adjustInfraredLevel		: [ (sN): "Adjust infrared level...",	(sR): ["setInfraredLevel"],	(sI): sTOGON,	(sD): "Adjust infrared level by {0}%{1}",								(sP): [[(sN):"Adjustment", (sT):sINT,(sR):[-i100,i100]], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],																],
+		adjustSaturation		: [ (sN): "Adjust saturation...",	(sR): ["setSaturation"],	(sI): sTOGON,		(sD): "Adjust saturation by {0}%{1}",										(sP): [[(sN):"Adjustment", (sT):sINT,(sR):[-i100,i100]], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],																],
 		adjustHue				: [ (sN): "Adjust hue...",	(sR): ["setHue"],		(sI): sTOGON,					(sD): "Adjust hue by {0}°{1}",												(sP): [[(sN):"Adjustment", (sT):sINT,(sR):[-360,360]], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],																],
 		adjustColorTemperature	: [ (sN): "Adjust color temperature...",	(sR): ["setColorTemperature"],	(sI): sTOGON,				(sD): "Adjust color temperature by {0}°K%{1}",		(sP): [[(sN):"Adjustment", (sT):sINT,(sR):[-29000,29000]], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],																],
 		fadeLevel				: [ (sN): "Fade level...",	(sR): ["setLevel"],		(sI): sTOGON,				(sD): "Fade level{0} to {1}% in {2}{3}",									(sP): [[(sN):"Starting level", (sT):sLVL,(sD):" from {v}%"],[(sN):"Final level", (sT):sLVL],[(sN):sDURATION, (sT):sDUR], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],																],
@@ -5149,12 +5175,12 @@ private static Map<String,Map> virtualCommands(){
 		fadeColorTemperature	: [ (sN): "Fade color temperature...",		(sR): ["setColorTemperature"],		(sI): sTOGON,				(sD): "Fade color temperature{0} to {1}°K in {2}{3}",									(sP): [[(sN):"Starting color temperature", (sT):"colorTemperature",(sD):" from {v}°K"],[(sN):"Final color temperature", (sT):"colorTemperature"],[(sN):sDURATION, (sT):sDUR], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],																],
 //		flash					: [ (sN): "Flash...",	(sR): [sON, sOFF],		(sI): sTOGON,				(sD): "Flash on {0} / off {1} for {2} times{3}",							(sP): [[(sN):"On duration", (sT):sDUR],[(sN):"Off duration", (sT):sDUR],[(sN):sNUMFLASH, (sT):sINT], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],																],
 		flashLevel				: [ (sN): "Flash (level)...",	(sR): ["setLevel"],	(sI): sTOGON,		(sD): "Flash {0}% {1} / {2}% {3} for {4} times{5}",						(sP): [[(sN):"Level 1", (sT):sLVL],[(sN):"Duration 1", (sT):sDUR],[(sN):"Level 2", (sT):sLVL],[(sN):"Duration 2", (sT):sDUR],[(sN):sNUMFLASH, (sT):sINT], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],																],
-		flashColor				: [ (sN): "Flash (color)...",	(sR): ["setColor"],	(sI): sTOGON,		(sD): "Flash {0} {1} / {2} {3} for {4} times{5}",							(sP): [[(sN):"Color 1", (sT):sCOLOR],[(sN):"Duration 1", (sT):sDUR],[(sN):"Color 2", (sT):sCOLOR],[(sN):"Duration 2", (sT):sDUR],[(sN):sNUMFLASH, (sT):sINT], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],																],
-		lifxScene				: [ (sN): "LIFX - Activate scene...",              (sA): true,                        (sD): "Activate LIFX Scene '{0}'{1}",                                                                              (sP): [[(sN): "Scene", (sT):"lifxScene"],[(sN): sDURATION, (sT):sDUR, (sD):" for {v}"]],                                   ],
-		lifxState				: [ (sN): "LIFX - Set State...",                   (sA): true,                        (sD): "Set LIFX lights matching {0} to {1}{2}{3}{4}{5}",                                   (sP): [[(sN): "Selector", (sT):"lifxSelector"],[(sN): "Switch (power)", (sT):sENUM,(sO):[sON,sOFF],(sD):" switch '{v}'"],[(sN): sCCOLOR, (sT):sCOLOR,(sD):" color '{v}'"],[(sN): "Level (brightness)", (sT):sLVL,(sD):" level {v}%"],[(sN): "Infrared level", (sT):"infraredLevel",(sD):" infrared {v}%"],[(sN): sDURATION, (sT):sDUR,(sD):" in {v}"]], ],
-		lifxToggle				: [ (sN): "LIFX - Toggle...",		(sA): true,                (sD): "Toggle LIFX lights matching {0}{1}",                                                                (sP): [[(sN): "Selector", (sT):"lifxSelector"],[(sN): sDURATION, (sT):sDUR,(sD):" in {v}"]], ],
-		lifxBreathe				: [ (sN): "LIFX - Breathe...",		(sA): true,                (sD): "Breathe LIFX lights matching {0} to color {1}{2}{3}{4}{5}{6}{7}",   (sP): [[(sN): "Selector", (sT):"lifxSelector"],[(sN): sCCOLOR, (sT):sCOLOR],[(sN): "From color", (sT):sCOLOR,(sD):" from color '{v}'"],[(sN): "Period", (sT):sDUR, (sD):" with a period of {v}"],[(sN): "Cycles", (sT):sINT, (sD):" for {v} cycles"],[(sN):"Peak", (sT):sLVL,(sD):" with a peak at {v}% of the period"],[(sN):"Power on", (sT):sBOOLN,(sD):" and power on at start"],[(sN):"Persist", (sT):sBOOLN,(sD):" and persist"] ], ],
-		lifxPulse				: [ (sN): "LIFX - Pulse...",		(sA): true,                (sD): "Pulse LIFX lights matching {0} to color {1}{2}{3}{4}{5}{6}",                (sP): [[(sN): "Selector", (sT):"lifxSelector"],[(sN): sCCOLOR, (sT):sCOLOR],[(sN): "From color", (sT):sCOLOR,(sD):" from color '{v}'"],[(sN): "Period", (sT):sDUR, (sD):" with a period of {v}"],[(sN): "Cycles", (sT):sINT, (sD):" for {v} cycles"],[(sN):"Power on", (sT):sBOOLN,(sD):" and power on at start"],[(sN):"Persist", (sT):sBOOLN,(sD):" and persist"] ], ],
+		flashColor				: [ (sN): "Flash (color)...",	(sR): ["setColor"],	(sI): sTOGON,		(sD): "Flash {0} {1} / {2} {3} for {4} times{5}",						(sP): [[(sN):"Color 1", (sT):sCOLOR],[(sN):"Duration 1", (sT):sDUR],[(sN):"Color 2", (sT):sCOLOR],[(sN):"Duration 2", (sT):sDUR],[(sN):sNUMFLASH, (sT):sINT], [(sN):sONLYIFSWIS, (sT):sENUM,(sO):[sON,sOFF], (sD):sIFALREADY]],																],
+		lifxScene				: [ (sN): "LIFX - Activate scene...",		(sA): true,			(sD): "Activate LIFX Scene '{0}'{1}",									(sP): [[(sN): "Scene", (sT):"lifxScene"],[(sN): sDURATION, (sT):sDUR, (sD):" for {v}"]],			],
+		lifxState				: [ (sN): "LIFX - Set State...",			(sA): true,			(sD): "Set LIFX lights matching {0} to {1}{2}{3}{4}{5}",				(sP): [[(sN): "Selector", (sT):"lifxSelector"],[(sN): "Switch (power)", (sT):sENUM,(sO):[sON,sOFF],(sD):" switch '{v}'"],[(sN): sCCOLOR, (sT):sCOLOR,(sD):" color '{v}'"],[(sN): "Level (brightness)", (sT):sLVL,(sD):" level {v}%"],[(sN): "Infrared level", (sT):"infraredLevel",(sD):" infrared {v}%"],[(sN): sDURATION, (sT):sDUR,(sD):" in {v}"]], ],
+		lifxToggle				: [ (sN): "LIFX - Toggle...",		(sA): true,					(sD): "Toggle LIFX lights matching {0}{1}",				(sP): [[(sN): "Selector", (sT):"lifxSelector"],[(sN): sDURATION, (sT):sDUR,(sD):" in {v}"]], ],
+		lifxBreathe				: [ (sN): "LIFX - Breathe...",		(sA): true,					(sD): "Breathe LIFX lights matching {0} to color {1}{2}{3}{4}{5}{6}{7}",	(sP): [[(sN): "Selector", (sT):"lifxSelector"],[(sN): sCCOLOR, (sT):sCOLOR],[(sN): "From color", (sT):sCOLOR,(sD):" from color '{v}'"],[(sN): "Period", (sT):sDUR, (sD):" with a period of {v}"],[(sN): "Cycles", (sT):sINT, (sD):" for {v} cycles"],[(sN):"Peak", (sT):sLVL,(sD):" with a peak at {v}% of the period"],[(sN):"Power on", (sT):sBOOLN,(sD):" and power on at start"],[(sN):"Persist", (sT):sBOOLN,(sD):" and persist"] ], ],
+		lifxPulse				: [ (sN): "LIFX - Pulse...",		(sA): true,					(sD): "Pulse LIFX lights matching {0} to color {1}{2}{3}{4}{5}{6}",			(sP): [[(sN): "Selector", (sT):"lifxSelector"],[(sN): sCCOLOR, (sT):sCOLOR],[(sN): "From color", (sT):sCOLOR,(sD):" from color '{v}'"],[(sN): "Period", (sT):sDUR, (sD):" with a period of {v}"],[(sN): "Cycles", (sT):sINT, (sD):" for {v} cycles"],[(sN):"Power on", (sT):sBOOLN,(sD):" and power on at start"],[(sN):"Persist", (sT):sBOOLN,(sD):" and persist"] ], ],
 
 		writeToFuelStream		: [ (sN): "Append to fuel stream...",		(sA): true,			(sD): "Append data point '{2}' to fuel stream {0}{1}{3}",	(sP): [[(sN): "Canister", (sT):sTXT, (sD):"{v} \\ "], [(sN):"Fuel stream name", (sT):sTXT], [(sN): "Data", (sT):sDYN], [(sN): "Data source", (sT):sTXT, (sD):" from source '{v}'"]],			],
 		iftttMaker				: [ (sN): "Send an IFTTT Maker event...",	(sA): true,			(sD): "Send the {0} IFTTT Maker event{1}{2}{3}",			(sP): [[(sN):"Event", (sT):sTXT], [(sN):"Value 1", (sT):sSTR, (sD):", passing value1 = '{v}'"], [(sN):"Value 2", (sT):sSTR, (sD):", passing value2 = '{v}'"], [(sN):"Value 3", (sT):sSTR, (sD):", passing value3 = '{v}'"]],				],
@@ -5198,32 +5224,34 @@ private static Map<String,Map> virtualCommands(){
 	return a
 }
 
+@Field static final String sCONDITIONS='conditions'
+@Field static final String sTRIGGERS='triggers'
 
 Map getChildComparisons(){
 	Map<String,Map<String,Map>> result=comparisonsFLD
 	Map<String,Map<String,Map>> cleanResult=[:]
-	cleanResult.conditions=[:]
+	cleanResult[sCONDITIONS]=[:] as Map<String,Map>
 	Map defv=[(sN):sA]
 	Map t0
-	def hasP,hasT
-	for(it in result.conditions){
+	Integer hasP,hasT
+	for(it in result[sCONDITIONS]){
 		t0=[:]
-		hasP=it.value.p
-		hasT=it.value.t
-		if(hasP!=null) t0=t0+[(sP):hasP.toInteger()]
-		if(hasT!=null) t0=t0+[(sT):hasT.toInteger()]
+		hasP=(Integer)it.value[sP]
+		hasT=(Integer)it.value[sT]
+		if(hasP!=null) t0=t0+[(sP):hasP]
+		if(hasT!=null) t0=t0+[(sT):hasT]
 		if(t0==[:]) t0=defv
-		cleanResult.conditions[it.key.toString()]=t0
+		cleanResult[sCONDITIONS][it.key]=t0
 	}
-	cleanResult.triggers=[:]
-	for(it in result.triggers){
+	cleanResult[sTRIGGERS]=[:] as Map<String,Map>
+	for(it in result[sTRIGGERS]){
 		t0=[:]
-		hasP=it.value.p
-		hasT=it.value.t
-		if(hasP!=null) t0=t0+[(sP):hasP.toInteger()]
-		if(hasT!=null) t0=t0+[(sT):hasT.toInteger()]
+		hasP=(Integer)it.value[sP]
+		hasT=(Integer)it.value[sT]
+		if(hasP!=null) t0=t0+[(sP):hasP]
+		if(hasT!=null) t0=t0+[(sT):hasT]
 		if(t0==[:]) t0=defv
-		cleanResult.triggers[it.key.toString()]=t0
+		cleanResult[sTRIGGERS][it.key]=t0
 	}
 	return cleanResult
 }
@@ -5442,6 +5470,11 @@ Map getChildComparisons(){
 	json			: [ (sT): sDYN						],
 	urlencode		: [ (sT): sSTR,	(sD): "urlEncode"				],
 	encodeuricomponent	: [ (sT): sSTR,	(sD): "encodeURIComponent"			],
+//	roomid (roomname) sT: sINT
+//	roomname (roomid) sT: sSTR
+//	deviceinroom (roomid or name, device) sT: sBOOLN
+//	roomexists (roomid or name) sT: sBOOLN
+//  devicesinroom(roomid or name)  sT: sDEV
 ]
 
 /*private Map functions(){
@@ -5582,7 +5615,7 @@ import hubitat.helper.RMUtils
 private Map getRuleOptions(){
 	Map result=[:]
 	['4.1', '5.0'].each { String ver ->
-		def rules=RMUtils.getRuleList(ver ?: sNL)
+		List<Map> rules= (List<Map>)RMUtils.getRuleList(ver ?: sNL)
 		rules.each{rule->
 			rule.each{pair->
 				result[hashId(pair.key)]=pair.value
@@ -5643,77 +5676,77 @@ private Map<String,Map> virtualDevices(){
 }
 
 @Field final List theColorsFLD=[
-		[(sNM): "Alice Blue", (sRGB): "#F0F8FF", (sH): 208, (sS): 100, (sL): 97], [(sNM): "Antique White", (sRGB): "#FAEBD7", (sH): 34, (sS): 78, (sL): 91],
-		[(sNM): "Aqua", (sRGB): "#00FFFF", (sH): 180, (sS): 100, (sL): 50], [(sNM): "Aquamarine", (sRGB): "#7FFFD4", (sH): 160, (sS): 100, (sL): 75],
-		[(sNM): "Azure", (sRGB): "#F0FFFF", (sH): 180, (sS): 100, (sL): 97], [(sNM): "Beige", (sRGB): "#F5F5DC", (sH): 60, (sS): 56, (sL): 91],
-		[(sNM): "Bisque", (sRGB): "#FFE4C4", (sH): 33, (sS): 100, (sL): 88], [(sNM): "Blanched Almond", (sRGB): "#FFEBCD", (sH): 36, (sS): 100, (sL): 90],
-		[(sNM): "Blue", (sRGB): "#0000FF", (sH): 240, (sS): 100, (sL): 50], [(sNM): "Blue Violet", (sRGB): "#8A2BE2", (sH): 271, (sS): 76, (sL): 53],
+		[(sNM): "Alice Blue", (sRGB): "#F0F8FF", (sH): 208, (sS): i100, (sL): 97], [(sNM): "Antique White", (sRGB): "#FAEBD7", (sH): 34, (sS): 78, (sL): 91],
+		[(sNM): "Aqua", (sRGB): "#00FFFF", (sH): 180, (sS): i100, (sL): 50], [(sNM): "Aquamarine", (sRGB): "#7FFFD4", (sH): 160, (sS): i100, (sL): 75],
+		[(sNM): "Azure", (sRGB): "#F0FFFF", (sH): 180, (sS): i100, (sL): 97], [(sNM): "Beige", (sRGB): "#F5F5DC", (sH): 60, (sS): 56, (sL): 91],
+		[(sNM): "Bisque", (sRGB): "#FFE4C4", (sH): 33, (sS): i100, (sL): 88], [(sNM): "Blanched Almond", (sRGB): "#FFEBCD", (sH): 36, (sS): i100, (sL): 90],
+		[(sNM): "Blue", (sRGB): "#0000FF", (sH): 240, (sS): i100, (sL): 50], [(sNM): "Blue Violet", (sRGB): "#8A2BE2", (sH): 271, (sS): 76, (sL): 53],
 		[(sNM): "Brown", (sRGB): "#A52A2A", (sH): iZ, (sS): 59, (sL): 41], [(sNM): "Burly Wood", (sRGB): "#DEB887", (sH): 34, (sS): 57, (sL): 70],
-		[(sNM): "Cadet Blue", (sRGB): "#5F9EA0", (sH): 182, (sS): 25, (sL): 50], [(sNM): "Chartreuse", (sRGB): "#7FFF00", (sH): 90, (sS): 100, (sL): 50],
+		[(sNM): "Cadet Blue", (sRGB): "#5F9EA0", (sH): 182, (sS): 25, (sL): 50], [(sNM): "Chartreuse", (sRGB): "#7FFF00", (sH): 90, (sS): i100, (sL): 50],
 		[(sNM): "Chocolate", (sRGB): "#D2691E", (sH): 25, (sS): 75, (sL): 47], [(sNM): "Cool White", (sRGB): "#F3F6F7", (sH): 187, (sS): 19, (sL): 96],
-		[(sNM): "Coral", (sRGB): "#FF7F50", (sH): 16, (sS): 100, (sL): 66], [(sNM): "Corn Flower Blue", (sRGB): "#6495ED", (sH): 219, (sS): 79, (sL): 66],
-		[(sNM): "Corn Silk", (sRGB): "#FFF8DC", (sH): 48, (sS): 100, (sL): 93], [(sNM): "Crimson", (sRGB): "#DC143C", (sH): 348, (sS): 83, (sL): 58],
-		[(sNM): "Cyan", (sRGB): "#00FFFF", (sH): 180, (sS): 100, (sL): 50], [(sNM): "Dark Blue", (sRGB): "#00008B", (sH): 240, (sS): 100, (sL): 27],
-		[(sNM): "Dark Cyan", (sRGB): "#008B8B", (sH): 180, (sS): 100, (sL): 27], [(sNM): "Dark Golden Rod", (sRGB): "#B8860B", (sH): 43, (sS): 89, (sL): 38],
-		[(sNM): "Dark Gray", (sRGB): "#A9A9A9", (sH): iZ, (sS): iZ, (sL): 66], [(sNM): "Dark Green", (sRGB): "#006400", (sH): 120, (sS): 100, (sL): 20],
-		[(sNM): "Dark Khaki", (sRGB): "#BDB76B", (sH): 56, (sS): 38, (sL): 58], [(sNM): "Dark Magenta", (sRGB): "#8B008B", (sH): 300, (sS): 100, (sL): 27],
-		[(sNM): "Dark Olive Green", (sRGB): "#556B2F", (sH): 82, (sS): 39, (sL): 30], [(sNM): "Dark Orange", (sRGB): "#FF8C00", (sH): 33, (sS): 100, (sL): 50],
-		[(sNM): "Dark Orchid", (sRGB): "#9932CC", (sH): 280, (sS): 61, (sL): 50], [(sNM): "Dark Red", (sRGB): "#8B0000", (sH): iZ, (sS): 100, (sL): 27],
+		[(sNM): "Coral", (sRGB): "#FF7F50", (sH): 16, (sS): i100, (sL): 66], [(sNM): "Corn Flower Blue", (sRGB): "#6495ED", (sH): 219, (sS): 79, (sL): 66],
+		[(sNM): "Corn Silk", (sRGB): "#FFF8DC", (sH): 48, (sS): i100, (sL): 93], [(sNM): "Crimson", (sRGB): "#DC143C", (sH): 348, (sS): 83, (sL): 58],
+		[(sNM): "Cyan", (sRGB): "#00FFFF", (sH): 180, (sS): i100, (sL): 50], [(sNM): "Dark Blue", (sRGB): "#00008B", (sH): 240, (sS): i100, (sL): 27],
+		[(sNM): "Dark Cyan", (sRGB): "#008B8B", (sH): 180, (sS): i100, (sL): 27], [(sNM): "Dark Golden Rod", (sRGB): "#B8860B", (sH): 43, (sS): 89, (sL): 38],
+		[(sNM): "Dark Gray", (sRGB): "#A9A9A9", (sH): iZ, (sS): iZ, (sL): 66], [(sNM): "Dark Green", (sRGB): "#006400", (sH): 120, (sS): i100, (sL): 20],
+		[(sNM): "Dark Khaki", (sRGB): "#BDB76B", (sH): 56, (sS): 38, (sL): 58], [(sNM): "Dark Magenta", (sRGB): "#8B008B", (sH): 300, (sS): i100, (sL): 27],
+		[(sNM): "Dark Olive Green", (sRGB): "#556B2F", (sH): 82, (sS): 39, (sL): 30], [(sNM): "Dark Orange", (sRGB): "#FF8C00", (sH): 33, (sS): i100, (sL): 50],
+		[(sNM): "Dark Orchid", (sRGB): "#9932CC", (sH): 280, (sS): 61, (sL): 50], [(sNM): "Dark Red", (sRGB): "#8B0000", (sH): iZ, (sS): i100, (sL): 27],
 		[(sNM): "Dark Salmon", (sRGB): "#E9967A", (sH): 15, (sS): 72, (sL): 70], [(sNM): "Dark Sea Green", (sRGB): "#8FBC8F", (sH): 120, (sS): 25, (sL): 65],
 		[(sNM): "Dark Slate Blue", (sRGB): "#483D8B", (sH): 248, (sS): 39, (sL): 39], [(sNM): "Dark Slate Gray", (sRGB): "#2F4F4F", (sH): 180, (sS): 25, (sL): 25],
-		[(sNM): "Dark Turquoise", (sRGB): "#00CED1", (sH): 181, (sS): 100, (sL): 41], [(sNM): "Dark Violet", (sRGB): "#9400D3", (sH): 282, (sS): 100, (sL): 41],
-		[(sNM): "Daylight White", (sRGB): "#CEF4FD", (sH): 191, (sS): 9, (sL): 90], [(sNM): "Deep Pink", (sRGB): "#FF1493", (sH): 328, (sS): 100, (sL): 54],
-		[(sNM): "Deep Sky Blue", (sRGB): "#00BFFF", (sH): 195, (sS): 100, (sL): 50], [(sNM): "Dim Gray", (sRGB): "#696969", (sH): iZ, (sS): iZ, (sL): 41],
-		[(sNM): "Dodger Blue", (sRGB): "#1E90FF", (sH): 210, (sS): 100, (sL): 56], [(sNM): "Fire Brick", (sRGB): "#B22222", (sH): iZ, (sS): 68, (sL): 42],
-		[(sNM): "Floral White", (sRGB): "#FFFAF0", (sH): 40, (sS): 100, (sL): 97], [(sNM): "Forest Green", (sRGB): "#228B22", (sH): 120, (sS): 61, (sL): 34],
-		[(sNM): "Fuchsia", (sRGB): "#FF00FF", (sH): 300, (sS): 100, (sL): 50], [(sNM): "Gainsboro", (sRGB): "#DCDCDC", (sH): iZ, (sS): iZ, (sL): 86],
-		[(sNM): "Ghost White", (sRGB): "#F8F8FF", (sH): 240, (sS): 100, (sL): 99], [(sNM): "Gold", (sRGB): "#FFD700", (sH): 51, (sS): 100, (sL): 50],
+		[(sNM): "Dark Turquoise", (sRGB): "#00CED1", (sH): 181, (sS): i100, (sL): 41], [(sNM): "Dark Violet", (sRGB): "#9400D3", (sH): 282, (sS): i100, (sL): 41],
+		[(sNM): "Daylight White", (sRGB): "#CEF4FD", (sH): 191, (sS): 9, (sL): 90], [(sNM): "Deep Pink", (sRGB): "#FF1493", (sH): 328, (sS): i100, (sL): 54],
+		[(sNM): "Deep Sky Blue", (sRGB): "#00BFFF", (sH): 195, (sS): i100, (sL): 50], [(sNM): "Dim Gray", (sRGB): "#696969", (sH): iZ, (sS): iZ, (sL): 41],
+		[(sNM): "Dodger Blue", (sRGB): "#1E90FF", (sH): 210, (sS): i100, (sL): 56], [(sNM): "Fire Brick", (sRGB): "#B22222", (sH): iZ, (sS): 68, (sL): 42],
+		[(sNM): "Floral White", (sRGB): "#FFFAF0", (sH): 40, (sS): i100, (sL): 97], [(sNM): "Forest Green", (sRGB): "#228B22", (sH): 120, (sS): 61, (sL): 34],
+		[(sNM): "Fuchsia", (sRGB): "#FF00FF", (sH): 300, (sS): i100, (sL): 50], [(sNM): "Gainsboro", (sRGB): "#DCDCDC", (sH): iZ, (sS): iZ, (sL): 86],
+		[(sNM): "Ghost White", (sRGB): "#F8F8FF", (sH): 240, (sS): i100, (sL): 99], [(sNM): "Gold", (sRGB): "#FFD700", (sH): 51, (sS): i100, (sL): 50],
 		[(sNM): "Golden Rod", (sRGB): "#DAA520", (sH): 43, (sS): 74, (sL): 49], [(sNM): "Gray", (sRGB): "#808080", (sH): iZ, (sS): iZ, (sL): 50],
-		[(sNM): "Green", (sRGB): "#008000", (sH): 120, (sS): 100, (sL): 25], [(sNM): "Green Yellow", (sRGB): "#ADFF2F", (sH): 84, (sS): 100, (sL): 59],
-		[(sNM): "Honeydew", (sRGB): "#F0FFF0", (sH): 120, (sS): 100, (sL): 97], [(sNM): "Hot Pink", (sRGB): "#FF69B4", (sH): 330, (sS): 100, (sL): 71],
-		[(sNM): "Indian Red", (sRGB): "#CD5C5C", (sH): iZ, (sS): 53, (sL): 58], [(sNM): "Indigo", (sRGB): "#4B0082", (sH): 275, (sS): 100, (sL): 25],
-		[(sNM): "Ivory", (sRGB): "#FFFFF0", (sH): 60, (sS): 100, (sL): 97], [(sNM): "Khaki", (sRGB): "#F0E68C", (sH): 54, (sS): 77, (sL): 75],
-		[(sNM): "Lavender", (sRGB): "#E6E6FA", (sH): 240, (sS): 67, (sL): 94], [(sNM): "Lavender Blush", (sRGB): "#FFF0F5", (sH): 340, (sS): 100, (sL): 97],
-		[(sNM): "Lawn Green", (sRGB): "#7CFC00", (sH): 90, (sS): 100, (sL): 49], [(sNM): "Lemon Chiffon", (sRGB): "#FFFACD", (sH): 54, (sS): 100, (sL): 90],
+		[(sNM): "Green", (sRGB): "#008000", (sH): 120, (sS): i100, (sL): 25], [(sNM): "Green Yellow", (sRGB): "#ADFF2F", (sH): 84, (sS): i100, (sL): 59],
+		[(sNM): "Honeydew", (sRGB): "#F0FFF0", (sH): 120, (sS): i100, (sL): 97], [(sNM): "Hot Pink", (sRGB): "#FF69B4", (sH): 330, (sS): i100, (sL): 71],
+		[(sNM): "Indian Red", (sRGB): "#CD5C5C", (sH): iZ, (sS): 53, (sL): 58], [(sNM): "Indigo", (sRGB): "#4B0082", (sH): 275, (sS): i100, (sL): 25],
+		[(sNM): "Ivory", (sRGB): "#FFFFF0", (sH): 60, (sS): i100, (sL): 97], [(sNM): "Khaki", (sRGB): "#F0E68C", (sH): 54, (sS): 77, (sL): 75],
+		[(sNM): "Lavender", (sRGB): "#E6E6FA", (sH): 240, (sS): 67, (sL): 94], [(sNM): "Lavender Blush", (sRGB): "#FFF0F5", (sH): 340, (sS): i100, (sL): 97],
+		[(sNM): "Lawn Green", (sRGB): "#7CFC00", (sH): 90, (sS): i100, (sL): 49], [(sNM): "Lemon Chiffon", (sRGB): "#FFFACD", (sH): 54, (sS): i100, (sL): 90],
 		[(sNM): "Light Blue", (sRGB): "#ADD8E6", (sH): 195, (sS): 53, (sL): 79], [(sNM): "Light Coral", (sRGB): "#F08080", (sH): iZ, (sS): 79, (sL): 72],
-		[(sNM): "Light Cyan", (sRGB): "#E0FFFF", (sH): 180, (sS): 100, (sL): 94], [(sNM): "Light Golden Rod Yellow", (sRGB): "#FAFAD2", (sH): 60, (sS): 80, (sL): 90],
+		[(sNM): "Light Cyan", (sRGB): "#E0FFFF", (sH): 180, (sS): i100, (sL): 94], [(sNM): "Light Golden Rod Yellow", (sRGB): "#FAFAD2", (sH): 60, (sS): 80, (sL): 90],
 		[(sNM): "Light Gray", (sRGB): "#D3D3D3", (sH): iZ, (sS): iZ, (sL): 83], [(sNM): "Light Green", (sRGB): "#90EE90", (sH): 120, (sS): 73, (sL): 75],
-		[(sNM): "Light Pink", (sRGB): "#FFB6C1", (sH): 351, (sS): 100, (sL): 86], [(sNM): "Light Salmon", (sRGB): "#FFA07A", (sH): 17, (sS): 100, (sL): 74],
+		[(sNM): "Light Pink", (sRGB): "#FFB6C1", (sH): 351, (sS): i100, (sL): 86], [(sNM): "Light Salmon", (sRGB): "#FFA07A", (sH): 17, (sS): i100, (sL): 74],
 		[(sNM): "Light Sea Green", (sRGB): "#20B2AA", (sH): 177, (sS): 70, (sL): 41], [(sNM): "Light Sky Blue", (sRGB): "#87CEFA", (sH): 203, (sS): 92, (sL): 75],
 		[(sNM): "Light Slate Gray", (sRGB): "#778899", (sH): 210, (sS): 14, (sL): 53], [(sNM): "Light Steel Blue", (sRGB): "#B0C4DE", (sH): 214, (sS): 41, (sL): 78],
-		[(sNM): "Light Yellow", (sRGB): "#FFFFE0", (sH): 60, (sS): 100, (sL): 94], [(sNM): "Lime", (sRGB): "#00FF00", (sH): 120, (sS): 100, (sL): 50],
+		[(sNM): "Light Yellow", (sRGB): "#FFFFE0", (sH): 60, (sS): i100, (sL): 94], [(sNM): "Lime", (sRGB): "#00FF00", (sH): 120, (sS): i100, (sL): 50],
 		[(sNM): "Lime Green", (sRGB): "#32CD32", (sH): 120, (sS): 61, (sL): 50], [(sNM): "Linen", (sRGB): "#FAF0E6", (sH): 30, (sS): 67, (sL): 94],
-		[(sNM): "Maroon", (sRGB): "#800000", (sH): iZ, (sS): 100, (sL): 25], [(sNM): "Medium Aquamarine", (sRGB): "#66CDAA", (sH): 160, (sS): 51, (sL): 60],
-		[(sNM): "Medium Blue", (sRGB): "#0000CD", (sH): 240, (sS): 100, (sL): 40], [(sNM): "Medium Orchid", (sRGB): "#BA55D3", (sH): 288, (sS): 59, (sL): 58],
+		[(sNM): "Maroon", (sRGB): "#800000", (sH): iZ, (sS): i100, (sL): 25], [(sNM): "Medium Aquamarine", (sRGB): "#66CDAA", (sH): 160, (sS): 51, (sL): 60],
+		[(sNM): "Medium Blue", (sRGB): "#0000CD", (sH): 240, (sS): i100, (sL): 40], [(sNM): "Medium Orchid", (sRGB): "#BA55D3", (sH): 288, (sS): 59, (sL): 58],
 		[(sNM): "Medium Purple", (sRGB): "#9370DB", (sH): 260, (sS): 60, (sL): 65], [(sNM): "Medium Sea Green", (sRGB): "#3CB371", (sH): 147, (sS): 50, (sL): 47],
-		[(sNM): "Medium Slate Blue", (sRGB): "#7B68EE", (sH): 249, (sS): 80, (sL): 67], [(sNM): "Medium Spring Green", (sRGB): "#00FA9A", (sH): 157, (sS): 100, (sL): 49],
+		[(sNM): "Medium Slate Blue", (sRGB): "#7B68EE", (sH): 249, (sS): 80, (sL): 67], [(sNM): "Medium Spring Green", (sRGB): "#00FA9A", (sH): 157, (sS): i100, (sL): 49],
 		[(sNM): "Medium Turquoise", (sRGB): "#48D1CC", (sH): 178, (sS): 60, (sL): 55], [(sNM): "Medium Violet Red", (sRGB): "#C71585", (sH): 322, (sS): 81, (sL): 43],
-		[(sNM): "Midnight Blue", (sRGB): "#191970", (sH): 240, (sS): 64, (sL): 27], [(sNM): "Mint Cream", (sRGB): "#F5FFFA", (sH): 150, (sS): 100, (sL): 98],
-		[(sNM): "Misty Rose", (sRGB): "#FFE4E1", (sH): 6, (sS): 100, (sL): 94], [(sNM): "Moccasin", (sRGB): "#FFE4B5", (sH): 38, (sS): 100, (sL): 85],
-		[(sNM): "Navajo White", (sRGB): "#FFDEAD", (sH): 36, (sS): 100, (sL): 84], [(sNM): "Navy", (sRGB): "#000080", (sH): 240, (sS): 100, (sL): 25],
-		[(sNM): "Old Lace", (sRGB): "#FDF5E6", (sH): 39, (sS): 85, (sL): 95], [(sNM): "Olive", (sRGB): "#808000", (sH): 60, (sS): 100, (sL): 25],
-		[(sNM): "Olive Drab", (sRGB): "#6B8E23", (sH): 80, (sS): 60, (sL): 35], [(sNM): "Orange", (sRGB): "#FFA500", (sH): 39, (sS): 100, (sL): 50],
-		[(sNM): "Orange Red", (sRGB): "#FF4500", (sH): 16, (sS): 100, (sL): 50], [(sNM): "Orchid", (sRGB): "#DA70D6", (sH): 302, (sS): 59, (sL): 65],
+		[(sNM): "Midnight Blue", (sRGB): "#191970", (sH): 240, (sS): 64, (sL): 27], [(sNM): "Mint Cream", (sRGB): "#F5FFFA", (sH): 150, (sS): i100, (sL): 98],
+		[(sNM): "Misty Rose", (sRGB): "#FFE4E1", (sH): 6, (sS): i100, (sL): 94], [(sNM): "Moccasin", (sRGB): "#FFE4B5", (sH): 38, (sS): i100, (sL): 85],
+		[(sNM): "Navajo White", (sRGB): "#FFDEAD", (sH): 36, (sS): i100, (sL): 84], [(sNM): "Navy", (sRGB): "#000080", (sH): 240, (sS): i100, (sL): 25],
+		[(sNM): "Old Lace", (sRGB): "#FDF5E6", (sH): 39, (sS): 85, (sL): 95], [(sNM): "Olive", (sRGB): "#808000", (sH): 60, (sS): i100, (sL): 25],
+		[(sNM): "Olive Drab", (sRGB): "#6B8E23", (sH): 80, (sS): 60, (sL): 35], [(sNM): "Orange", (sRGB): "#FFA500", (sH): 39, (sS): i100, (sL): 50],
+		[(sNM): "Orange Red", (sRGB): "#FF4500", (sH): 16, (sS): i100, (sL): 50], [(sNM): "Orchid", (sRGB): "#DA70D6", (sH): 302, (sS): 59, (sL): 65],
 		[(sNM): "Pale Golden Rod", (sRGB): "#EEE8AA", (sH): 55, (sS): 67, (sL): 80], [(sNM): "Pale Green", (sRGB): "#98FB98", (sH): 120, (sS): 93, (sL): 79],
 		[(sNM): "Pale Turquoise", (sRGB): "#AFEEEE", (sH): 180, (sS): 65, (sL): 81], [(sNM): "Pale Violet Red", (sRGB): "#DB7093", (sH): 340, (sS): 60, (sL): 65],
-		[(sNM): "Papaya Whip", (sRGB): "#FFEFD5", (sH): 37, (sS): 100, (sL): 92], [(sNM): "Peach Puff", (sRGB): "#FFDAB9", (sH): 28, (sS): 100, (sL): 86],
-		[(sNM): "Peru", (sRGB): "#CD853F", (sH): 30, (sS): 59, (sL): 53], [(sNM): "Pink", (sRGB): "#FFC0CB", (sH): 350, (sS): 100, (sL): 88],
+		[(sNM): "Papaya Whip", (sRGB): "#FFEFD5", (sH): 37, (sS): i100, (sL): 92], [(sNM): "Peach Puff", (sRGB): "#FFDAB9", (sH): 28, (sS): i100, (sL): 86],
+		[(sNM): "Peru", (sRGB): "#CD853F", (sH): 30, (sS): 59, (sL): 53], [(sNM): "Pink", (sRGB): "#FFC0CB", (sH): 350, (sS): i100, (sL): 88],
 		[(sNM): "Plum", (sRGB): "#DDA0DD", (sH): 300, (sS): 47, (sL): 75], [(sNM): "Powder Blue", (sRGB): "#B0E0E6", (sH): 187, (sS): 52, (sL): 80],
-		[(sNM): "Purple", (sRGB): "#800080", (sH): 300, (sS): 100, (sL): 25], [(sNM): "Red", (sRGB): "#FF0000", (sH): iZ, (sS): 100, (sL): 50],
+		[(sNM): "Purple", (sRGB): "#800080", (sH): 300, (sS): i100, (sL): 25], [(sNM): "Red", (sRGB): "#FF0000", (sH): iZ, (sS): i100, (sL): 50],
 		[(sNM): "Rosy Brown", (sRGB): "#BC8F8F", (sH): iZ, (sS): 25, (sL): 65], [(sNM): "Royal Blue", (sRGB): "#4169E1", (sH): 225, (sS): 73, (sL): 57],
 		[(sNM): "Saddle Brown", (sRGB): "#8B4513", (sH): 25, (sS): 76, (sL): 31], [(sNM): "Salmon", (sRGB): "#FA8072", (sH): 6, (sS): 93, (sL): 71],
 		[(sNM): "Sandy Brown", (sRGB): "#F4A460", (sH): 28, (sS): 87, (sL): 67], [(sNM): "Sea Green", (sRGB): "#2E8B57", (sH): 146, (sS): 50, (sL): 36],
-		[(sNM): "Sea Shell", (sRGB): "#FFF5EE", (sH): 25, (sS): 100, (sL): 97], [(sNM): "Sienna", (sRGB): "#A0522D", (sH): 19, (sS): 56, (sL): 40],
+		[(sNM): "Sea Shell", (sRGB): "#FFF5EE", (sH): 25, (sS): i100, (sL): 97], [(sNM): "Sienna", (sRGB): "#A0522D", (sH): 19, (sS): 56, (sL): 40],
 		[(sNM): "Silver", (sRGB): "#C0C0C0", (sH): iZ, (sS): iZ, (sL): 75], [(sNM): "Sky Blue", (sRGB): "#87CEEB", (sH): 197, (sS): 71, (sL): 73],
 		[(sNM): "Slate Blue", (sRGB): "#6A5ACD", (sH): 248, (sS): 53, (sL): 58], [(sNM): "Slate Gray", (sRGB): "#708090", (sH): 210, (sS): 13, (sL): 50],
-		[(sNM): "Snow", (sRGB): "#FFFAFA", (sH): iZ, (sS): 100, (sL): 99], [(sNM): "Soft White", (sRGB): "#B6DA7C", (sH): 83, (sS): 44, (sL): 67],
-		[(sNM): "Spring Green", (sRGB): "#00FF7F", (sH): 150, (sS): 100, (sL): 50], [(sNM): "Steel Blue", (sRGB): "#4682B4", (sH): 207, (sS): 44, (sL): 49],
-		[(sNM): "Tan", (sRGB): "#D2B48C", (sH): 34, (sS): 44, (sL): 69], [(sNM): "Teal", (sRGB): "#008080", (sH): 180, (sS): 100, (sL): 25],
-		[(sNM): "Thistle", (sRGB): "#D8BFD8", (sH): 300, (sS): 24, (sL): 80], [(sNM): "Tomato", (sRGB): "#FF6347", (sH): 9, (sS): 100, (sL): 64],
+		[(sNM): "Snow", (sRGB): "#FFFAFA", (sH): iZ, (sS): i100, (sL): 99], [(sNM): "Soft White", (sRGB): "#B6DA7C", (sH): 83, (sS): 44, (sL): 67],
+		[(sNM): "Spring Green", (sRGB): "#00FF7F", (sH): 150, (sS): i100, (sL): 50], [(sNM): "Steel Blue", (sRGB): "#4682B4", (sH): 207, (sS): 44, (sL): 49],
+		[(sNM): "Tan", (sRGB): "#D2B48C", (sH): 34, (sS): 44, (sL): 69], [(sNM): "Teal", (sRGB): "#008080", (sH): 180, (sS): i100, (sL): 25],
+		[(sNM): "Thistle", (sRGB): "#D8BFD8", (sH): 300, (sS): 24, (sL): 80], [(sNM): "Tomato", (sRGB): "#FF6347", (sH): 9, (sS): i100, (sL): 64],
 		[(sNM): "Turquoise", (sRGB): "#40E0D0", (sH): 174, (sS): 72, (sL): 56], [(sNM): "Violet", (sRGB): "#EE82EE", (sH): 300, (sS): 76, (sL): 72],
 		[(sNM): "Warm White", (sRGB): "#DAF17E", (sH): 72, (sS): 20, (sL): 72], [(sNM): "Wheat", (sRGB): "#F5DEB3", (sH): 39, (sS): 77, (sL): 83],
-		[(sNM): "White", (sRGB): "#FFFFFF", (sH): iZ, (sS): iZ, (sL): 100], [(sNM): "White Smoke", (sRGB): "#F5F5F5", (sH): iZ, (sS): iZ, (sL): 96],
-		[(sNM): "Yellow", (sRGB): "#FFFF00", (sH): 60, (sS): 100, (sL): 50], [(sNM): "Yellow Green", (sRGB): "#9ACD32", (sH): 80, (sS): 61, (sL): 50]
+		[(sNM): "White", (sRGB): "#FFFFFF", (sH): iZ, (sS): iZ, (sL): i100], [(sNM): "White Smoke", (sRGB): "#F5F5F5", (sH): iZ, (sS): iZ, (sL): 96],
+		[(sNM): "Yellow", (sRGB): "#FFFF00", (sH): 60, (sS): i100, (sL): 50], [(sNM): "Yellow Green", (sRGB): "#9ACD32", (sH): 80, (sS): 61, (sL): 50]
 ]
 
 List getColors(){
@@ -5924,12 +5957,12 @@ Map fixHeGType(Boolean toHubV,String typ,v,String dtyp){
 
 @CompileStatic
 private static String generateMD5_A(String s){
-	MessageDigest.getInstance('MD5').digest(s.bytes).encodeHex().toString()
+	MessageDigest.getInstance(sMD5).digest(s.bytes).encodeHex().toString()
 }
 
 @CompileStatic
 private static String md5(String md5){
-	MessageDigest md= MessageDigest.getInstance('MD5')
+	MessageDigest md= MessageDigest.getInstance(sMD5)
 	byte[] array=md.digest(md5.getBytes())
 	String result; result=sBLK
 	Integer l=array.size()
@@ -5952,6 +5985,9 @@ private String hashPID(id){
 	return hashId(id)
 }
 
+@Field static final String sCR='core.'
+@Field static final String sMD5='MD5'
+
 private String hashId(id){
 	//enabled hash caching for faster processing
 	String result
@@ -5961,7 +5997,7 @@ private String hashId(id){
 	if(theHashMapVFLD[wName]==null){ theHashMapVFLD[wName]= [:]; theHashMapVFLD=theHashMapVFLD }
 	result=sMs(theHashMapVFLD[wName],myId)
 	if(result==sNL){
-		result=sCLN+md5('core.' + myId)+sCLN
+		result=sCLN+md5(sCR + myId)+sCLN
 		theHashMapVFLD[wName][myId]=result
 		theHashMapVFLD=theHashMapVFLD
 		mb()
@@ -5987,6 +6023,8 @@ static void mb(String meth=sNL){
 @Field static final Integer i3=3
 @Field static final Integer i5=5
 @Field static final Integer i6=6
+@Field static final Integer i32=32
+@Field static final Integer i100=100
 
 @Field static final String sSPCSB7='      │'
 @Field static final String sSPCSB6='     │'
