@@ -19,7 +19,7 @@
  *  on an "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied. See the License
  *  for the specific language governing permissions and limitations under the License.
  *
- *  Last update July 15, 2023 for Hubitat
+ *  Last update July 20, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -117,6 +117,17 @@ definition(
 @Field static final String sMULTP='multiple'
 @Field static final String sSUBOC='submitOnChange'
 @Field static final String sDEFV='defaultValue'
+@Field static final String sSENSOR='sensor'
+@Field static final String sCSENSOR='Sensor'
+@Field static final String sFUELSTRM='fuelstream'
+@Field static final String sCFUELSTRM='Fuel Stream'
+@Field static final String sPOLL='poll'
+@Field static final String sGRPHSTATICSZ='graph_static_size'
+@Field static final String sGRPHUPDRATE='graph_update_rate'
+@Field static final String s100PCT='100%'
+@Field static final String s80PCT='80%'
+
+@Field static final Long lMSDAY=86400000L
 
 preferences{
 	page(name: "mainPage", install: true, uninstall: true)
@@ -230,12 +241,12 @@ def updated(){
 
 	Map fs=state.fuelStream
 	String typ
-	typ= fs ? 'fuelstream' : gtSetStr(sGRAPHT)
-	if(typ && typ!='fuelstream' && (!gtSetStr('app_name') || typ==sLONGTS)){
+	typ= fs ? sFUELSTRM : gtSetStr(sGRAPHT)
+	if(typ && typ!=sFUELSTRM && (!gtSetStr('app_name') || typ==sLONGTS)){
 		app.updateSetting('app_name', 'webCoRE '+tDesc()) // cannot rename LTS
 	}
 
-	if(typ && (typ in ['fuelstream',sLONGTS])){
+	if(typ && (typ in [sFUELSTRM,sLONGTS])){
 		readTmpFLD= [:] // clear memory file cache
 		readTmpBFLD= [:]
 		writeTmpFLD= [:]
@@ -253,6 +264,7 @@ def updated(){
 
 	state.remove('saveC')
 	state.remove('devInstruct')
+	state.remove('graphUsesHistory')
 
 	if(gtSetB('install_device')){
 		hubiTool_create_tile()
@@ -305,6 +317,10 @@ void setLoggingLevel(String level){
 }
 
 
+/**
+ * This defines the UI and external web methods for each graph type
+ * A running instance of this code is one of the below 'types'
+ */
 @Field static final Map<String,Map<String,String>> jumpFLD=[
 	"gauge":[
 		main: "mainGauge",
@@ -418,6 +434,7 @@ void setLoggingLevel(String level){
 		getSubscriptions: "none",
 		desc: "Weather Forecast Tile"
 	],
+// next two are not graphs
 	"longtermstorage":[
 		main: "mainLongtermstorage",
 		deviceSelection: "deviceLongtermstorage",
@@ -454,7 +471,7 @@ def mainPage(){
 	Map fs=(Map)state?.fuelStream
 	String typ
 	// fuel stream does not have graphType set
-	typ= fs ? 'fuelstream' : gtSetStr(sGRAPHT)
+	typ= fs ? sFUELSTRM : gtSetStr(sGRAPHT)
 	if(typ){
 		String s= sMs(jumpFLD[typ],'main')
 		if(isEric())myDetail null,"${s}",i1
@@ -466,8 +483,8 @@ def mainPage(){
 		Map<String,String> stuff
 		stuff=[:]
 
-		for(par in jumpFLD){
-			if(par.key in ['fuelstream']) continue // don't create fuels this way
+		for(Map.Entry<String,Map<String,String>>par in jumpFLD){
+			if(par.key in [sFUELSTRM]) continue // don't create fuels this way
 			if(par.key in [sLONGTS]){
 				Boolean ltsExists=(Boolean)parent.ltsExists()
 				if(ltsExists) continue // can only be 1 LTS
@@ -511,8 +528,10 @@ def getGraph(){
 	String typ=gtSetStr(sGRAPHT)
 	if(isEric())myDetail null,"getGraph_${typ}",i1
 	String s= (String)"${sMs(jumpFLD[typ],'getGraph')}"()
-	String ss= sBLK // s.replaceAll('<', '&lt;').replaceAll('>','&gt;')
-	if(isEric())myDetail null,"getGraph_${typ}: $ss"
+	if(isEric()){
+		String ss= sBLK // s.replaceAll('<', '&lt;').replaceAll('>','&gt;')
+		myDetail null,"getGraph_${typ}: $ss"
+	}
 	return wrender(contentType: "text/html", data: s)
 }
 
@@ -801,7 +820,7 @@ Boolean hasQuants(){
 		s= i.toString()
 		String sid= sQ+s
 		String typ=gtSetStr(sid+'_type')
-		if(typ in ['Fuel Stream','Sensor']) return true
+		if(typ in [sCFUELSTRM,sCSENSOR]) return true
 	}
 	return false
 }
@@ -844,10 +863,10 @@ Map makeFuelDataEntry(String stream, String attr='stream'){
  */
 void stToPoll(){
 	assignSt('hasFuel',true)
-	String ii= gtSetStr('graph_update_rate')
+	String ii= gtSetStr(sGRPHUPDRATE)
 	Integer i= ii!=sNL ? ii.toInteger() : iN1
 	if(i>=iZ && i<60000) // remove invalid
-		wremoveSetting('graph_update_rate')
+		wremoveSetting(sGRPHUPDRATE)
 }
 
 /**
@@ -855,7 +874,7 @@ void stToPoll(){
  * @param sensor
  * @param sid
  * @param attr
- * @return Map [(sT): 'sensor', id: sid, rid: sensor.id, displayName: sensor.displayName, a: attr]
+ * @return Map [(sT): sSENSOR, id: sid, rid: sensor.id, displayName: sensor.displayName, a: attr]
  */
 Map makeSensorDataEntry(sensor,String sid,String attr){
 	//String s= "makeSensorDataEntry $sensor $sid $attr "
@@ -863,7 +882,7 @@ Map makeSensorDataEntry(sensor,String sid,String attr){
 	if(!sid || !attr) error("no sid or attr sid: $sid attr: $attr",null,iN2)
 
 	Map ent
-	ent=[(sT):'sensor', (sID):sid, rid:sensor.id, (sDISPNM):sensor.displayName, (sA):attr]
+	ent=[(sT):sSENSOR, (sID):sid, rid:sensor.id, (sDISPNM):sensor.displayName, (sA):attr]
 
 	Map lu= checkLastUpd(ent)
 	if(lu){
@@ -891,18 +910,18 @@ Map makeQuantDataEntry(String typ,String sid,String attrn){
 
 	Map ent; ent=null
 
-	if(typ in ['Fuel Stream']){
+	if(typ in [sCFUELSTRM]){
 		String stream= gtSetting(sid)
 		ent=makeFuelDataEntry(stream)
 		//ent=[(sT): 'fuel', id: 'f'+i.toString(), rid: i, sn: stream, displayName: 'Fuel Stream '+i.toString(), n: n, c: c, a: attr]
 		attribute= attrn
-	}else if(typ in ['Sensor']){
+	}else if(typ in [sCSENSOR]){
 		def sensor= gtSetting(sid)
 		String msid=sD+gtSensorId(sensor)
 		if(msid!=sD){
 			attribute= gtSetting(attrn)
 			ent=makeSensorDataEntry(sensor,msid,attribute)
-			//ent=[(sT): 'sensor', id: sid, rid: sensor.id, displayName: sensor.displayName, a: attr]
+			//ent=[(sT): sSENSOR, id: sid, rid: sensor.id, displayName: sensor.displayName, a: attr]
 		}else
 			error "makeQuantDataEntry null sid ${sid} ${sensor}",null,iN2
 	}else{
@@ -917,7 +936,7 @@ Map makeQuantDataEntry(String typ,String sid,String attrn){
 	nent=[(sT): 'quant', (sID): sid, ent: ent, rid: ent.rid, (sDISPNM): sMs(ent,sDISPNM)+' quant', (sA): attribute]
 
 	// if to return data quantized, add to ent
-	Map params= quantParams(nent.id,sMs(nent,sA))
+	Map params= quantParams(nent[sID],sMs(nent,sA))
 	if(params){
 		nent+=[(sQ): params]
 		stToPoll()
@@ -942,7 +961,7 @@ Map makeQuantDataEntry(String typ,String sid,String attrn){
  * <br><br>
  * Map ent=[(sT): 'fuel', id: 'f'+i.toString(), rid: i, sn: stream, displayName: 'Fuel Stream '+i.toString(), n: n, c: c, a: 'stream']
  * <br><br>
- * Map ent=[(sT): 'sensor', id: 'd'+rid, rid: sensor.id, displayName: sensor.displayName, a: attr]
+ * Map ent=[(sT): sSENSOR, id: 'd'+rid, rid: sensor.id, displayName: sensor.displayName, a: attr]
  * <br><br>
  * Map ent=[(sT): 'quant', id: 'q'+[0-10]+'attr', rid: id, displayName: <entered>,  a: 'quant' or actual attr, qp: [params], ent: [sensor or fuel]]
  */
@@ -957,7 +976,7 @@ List<Map> gtDataSources(){
  * <br><br>
  * Map ent=[(sT): 'fuel', id: 'f'+i.toString(), rid: i, sn: stream, displayName: 'Fuel Stream '+i.toString(), n: n, c: c, a: 'stream']
  * <br><br>
- * Map ent=[(sT): 'sensor', id: 'd'+rid, rid: sensor.id, displayName: sensor.displayName, a: attr]
+ * Map ent=[(sT): sSENSOR, id: 'd'+rid, rid: sensor.id, displayName: sensor.displayName, a: attr]
  * <br><br>
  * Map ent=[(sT): 'quant', id: 'q'+[0-10]+'attr', rid: id, displayName: <entered>,  a: 'quant' or actual attr, qp: [params], ent: [sensor or fuel]]
  */
@@ -1022,7 +1041,7 @@ List<Map> createDataSources(Boolean multiple){
 				String sid= sQ+sb
 				String attribute= sid+'attr'
 				String typ=gtSetStr(sid+'_type')
-				if(!(typ in ['Fuel Stream','Sensor'])){
+				if(!(typ in [sCFUELSTRM,sCSENSOR])){
 					quantRmInput(sid, attribute)
 					rmAllowLastInput(sid,attribute)
 					wremoveSetting(sid+'_type')
@@ -1045,9 +1064,9 @@ List<Map> createDataSources(Boolean multiple){
 
 
 def addAllowLastActivity(Map ent){
-	String s= "lstUpd_${ent.id}_${ent.a}".toString()
-	String name= sMs(ent,sDISPNM)
 	String attribute= sMs(ent,sA)
+	String s= "lstUpd_${ent[sID]}_${attribute}".toString()
+	String name= sMs(ent,sDISPNM)
 	input( (sTYPE): sBOOL, (sNM): s,(sTIT): "Use last modified time for stream $name attribute $attribute as value?",
 			(sREQ): false, (sMULTP): false, (sSUBOC): false, (sDEFV): false)
 
@@ -1055,7 +1074,7 @@ def addAllowLastActivity(Map ent){
 
 // deal with fuel selection lastupdate - which means last time this stream value was updated
 Map checkLastUpd(Map ent){
-	String sn= "lstUpd_${ent.id}_${ent.a}".toString()
+	String sn= "lstUpd_${ent[sID]}_${sMs(ent,sA)}".toString()
 	if(gtSetB(sn)) return [('aa'):'lastupdate']
 	return [:]
 }
@@ -1066,7 +1085,7 @@ void rmAllowLastInput(String sid,String attribute){
 }
 
 void rmAllowLastInput(Map ent){
-	String s= "lstUpd_${ent.id}_${ent.a}".toString()
+	String s= "lstUpd_${ent[sID]}_${sMs(ent,sA)}".toString()
 	wremoveSetting(s)
 }
 
@@ -1235,7 +1254,7 @@ def gatherQuantSource(Boolean multiple,Boolean allowLastActivity){
 		String sid= sQ+s
 		//String attribute= sid+'attr'
 		String typ=gtSetStr(sid+'_type')
-		if(typ in ['Fuel Stream','Sensor']){
+		if(typ in [sCFUELSTRM,sCSENSOR]){
 			displayQuant(sid,allowLastActivity,false)
 		}else if(saveS==sNL){ saveS=s; fndf=true}
 	}
@@ -1258,7 +1277,7 @@ def displayQuant(String sid, Boolean allowLastActivity, Boolean create=false){
 	Boolean attrOk
 	attrOk=false
 	List<String> opts
-	opts= ['None','Fuel Stream','Sensor']
+	opts= ['None',sCFUELSTRM,sCSENSOR]
 
 	if(!create){
 		String typ=gtSetStr(sid+'_type')
@@ -1284,10 +1303,10 @@ def displayQuant(String sid, Boolean allowLastActivity, Boolean create=false){
 	hubiForm_container(container, i1)
 
 	String typ=gtSetStr(sid+'_type')
-	if(typ=='Fuel Stream'){
+	if(typ==sCFUELSTRM){
 		gatherFuelSource(sid,'Source Fuel Stream',false,allowLastActivity)
 		attrOk=true
-	}else if(typ=='Sensor'){
+	}else if(typ==sCSENSOR){
 		gatherSensorSource(sid,attribute,'Source Sensor','capability.*','Attribute',false,allowLastActivity)
 		if(gtSetting(attribute)) attrOk=true
 
@@ -1326,7 +1345,7 @@ def quantInput(String sid, String attribute){
 			(sREQ): false, (sMULTP): false, options: quantizationEnum, (sSUBOC): true, (sDEFV): s0)
 
 	String sqv= gtSetting(sq)
-	if(sqv && !(sqv in ['0']) ){
+	if(sqv && !(sqv in [s0]) ){
 		String sf= s+'_quantization_function'
 		input( (sTYPE): sENUM, (sNM): sf,(sTIT): "Quantization Function",
 				(sREQ): false, (sMULTP): false, options: quantizationFunctionEnum, (sSUBOC): true, (sDEFV): "average")
@@ -1337,8 +1356,7 @@ def quantInput(String sid, String attribute){
 					(sREQ): false, (sMULTP): false, (sSUBOC): true, (sDEFV): false)
 
 			input( (sTYPE): sENUM, (sNM): s+"_quantization_decimals",(sTIT): "Quantization Decimals to Maintain",
-					(sREQ): false, (sMULTP): false, options: [[0: "Zero"], [1: "One"], [2: "Two"], [3: "Three"], [4: "Four"]],
-					(sSUBOC): true, (sDEFV): s1)
+					(sREQ): false, (sMULTP): false, options: decimalsEnum, (sSUBOC): true, (sDEFV): s1)
 
 		}else{
 			remove=true
@@ -1376,9 +1394,9 @@ def gatherDataSources(Boolean multiple=true, Boolean ordered=false, Boolean allo
 	if(isEric())myDetail null,"gatherDataSources $multiple",i1
 
 	String fvarn=multiple ? 'fstreams' : 'fstream_'
-	String ftit=multiple ? 'Choose fuel streams' : 'Fuel Stream'
+	String ftit=multiple ? 'Choose fuel streams' : sCFUELSTRM
 	String varn=multiple ? 'sensors' : 'sensor_'
-	String tit=multiple ? 'Choose sensors' : 'Sensor'
+	String tit=multiple ? 'Choose sensors' : sCSENSOR
 	String atit=multiple ? 'Attributes to graph' : 'Attribute for Gauge'
 
 	List<Map> a=createDataSources(multiple)
@@ -1446,11 +1464,12 @@ def gatherDataSources(Boolean multiple=true, Boolean ordered=false, Boolean allo
 //def mainLinegraph(){
 //def mainRangebar(){
 //def mainTimegraph(){
-def mainShare1(String instruct, String okSet,Boolean multiple=true){
+def mainShare1(String instruct, String okSet,Boolean multiple=true,Boolean usesHistory=true){
 	if(isEric())myDetail null,"mainShare1: $okSet $multiple",iN2
 	List a=createDataSources(multiple)
 	if(!state.dataSources) wremoveSetting(okSet)
 	if(instruct) state.devInstruct=instruct
+	state.graphUsesHistory=usesHistory
 
 	dynamicPage((sNM): "mainPage"){
 
@@ -1463,8 +1482,8 @@ def mainShare1(String instruct, String okSet,Boolean multiple=true){
 			hubiForm_section(tDesc()+" Graph Options", i1, "tune", sBLK){
 				List<String> container
 				container=[]
-				container << hubiForm_page_button("Select Data Source(s)", "deviceSelectionPage", "100%", "vibration")
-				container << hubiForm_page_button("Configure Graph", "graphSetupPage", "100%", "poll")
+				container << hubiForm_page_button("Select Data Source(s)", "deviceSelectionPage", s100PCT, "vibration")
+				container << hubiForm_page_button("Configure Graph", "graphSetupPage", s100PCT, sPOLL)
 
 				hubiForm_container(container, i1)
 			}
@@ -1492,11 +1511,14 @@ def deviceShare1(Boolean multiple=true, Boolean ordered=false,Boolean allowLastA
 
 	if(isEric())myDetail null,"deviceShare1: $ordered",iN2
 	dynamicPage((sNM): "deviceSelectionPage", nextPage:"attributeConfigurationPage"){
-		if(state.devInstruct){
-			List<String> container
+		String di= (String)gtSt('devInstruct')
+		Boolean gh= gtStB('graphUsesHistory')
+		if(di || gh){
 			hubiForm_section("Directions", i1, "directions", sBLK){
+				List<String> container
 				container=[]
-				container << hubiForm_text((String)state.devInstruct)
+				if(di) container << hubiForm_text(di)
+				if(gh) container << hubiForm_text("Note LTS will be used if enabled for a sensor:attribute when you select a sensor")
 				hubiForm_container(container, i1)
 			}
 		}
@@ -1536,12 +1558,12 @@ def attributeShare1(Boolean ordered=false, String var_color=sBACKGRND){
 			container=[]
 
 			hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}${hint}", i1, "directions", sid+attribute){
-				if(typ=='Sensor'){
-					String tvar="var_"+sa+"_lts"
+				if(typ==sCSENSOR){
 					if(isLtsAvailable(rid, attribute)){
 						container << hubiForm_sub_section("Long Term Storage in use")
 
 					}else{
+						String tvar="var_"+sa+"_lts"
 						app.updateSetting(tvar, false)
 						settings[tvar]= false
 					}
@@ -1615,7 +1637,7 @@ def put_settings(Boolean needOauth=true){
 
 			if(needOauth && state.endpoint){
 				container << hubiForm_sub_section("Disable Oauth Authorization")
-				container << hubiForm_page_button("Disable API", "disableAPIPage", "100%", "cancel")
+				container << hubiForm_page_button("Disable API", "disableAPIPage", s100PCT, "cancel")
 			}
 
 			hubiForm_container(container, i1)
@@ -1664,7 +1686,7 @@ Map gtFloatMap(Map ent, Boolean multiple=true){
 	// [date: date, (sVAL): v, t: t]
 	if(lst){
 		Float val= "${lst[sVAL]}".toFloat()
-		Date dt= (Date)lst[sDT]
+		Date dt= dtMdt(lst)
 		res= [(sCUR): val, (sDT): dt]
 	}
 	if(isEric())myDetail null,"gtFloatMap $ent $multiple $res ",iN2
@@ -1683,7 +1705,7 @@ Map gtLatestMap(Map ent, Boolean multiple=true){
 		// [date: date, (sVAL): v, t: t]
 
 		String val= "${lst[sVAL]}"
-		Date dt= (Date)lst[sDT]
+		Date dt= dtMdt(lst)
 		res= [(sVAL): val, (sDT): dt]
 	}
 	if(isEric())myDetail null,"gtLatestMap $ent $multiple $res ",iN2
@@ -1736,14 +1758,12 @@ static Double extractNumber(String input){
 List<Map> CgetData(Map ent, Date time, Boolean multiple=true){
 
 	List<Map> return_data
+	return_data= gtDataSourceData(ent,multiple)
 
 	Long end=time.getTime()
 
-	return_data= gtDataSourceData(ent,multiple)
-
 	List<Map> data2
-	String t=sT
-	data2=return_data.findAll{ Map it -> (Long)it[t] > end }
+	data2=return_data.findAll{ Map it -> lMt(it) > end }
 
 	if(!data2) data2= return_data ? [return_data[-i1]] : data2
 
@@ -1773,7 +1793,7 @@ List<Map> gtDataSourceData(Map ent, Boolean multiple=true, String sensorV=sNL){
 		else warn 'gtDataSourceData: stream not found',null
 	}
 
-	if(typ=='Sensor'){
+	if(typ==sCSENSOR){
 		String varn= sensorV ?: (multiple ? 'sensors' : 'sensor_') // have to get devices from settings
 		def a=gtSetting(varn)
 		List devs= multiple ? (List)a : [a]
@@ -1819,10 +1839,10 @@ static String scriptIncludes(){
 	return html
 }
 
-String scriptIncludes1(){
+static String scriptIncludes1(Boolean isSystemType){
 	String html="""
 ${scriptIncludes()}
-		<script src="/local/${isSystemType() ? 'webcore/' : ''}a930f16d-d5f4-4f37-b874-6b0dcfd47ace-HubiGraph.js"></script>
+		<script src="/local/${isSystemType ? 'webcore/' : ''}a930f16d-d5f4-4f37-b874-6b0dcfd47ace-HubiGraph.js"></script>
 """
 	return html
 }
@@ -1837,7 +1857,7 @@ ${scriptIncludes()}
  */
 
 def mainGauge(){
-	mainShare1("Choose Numeric Attributes only",'gauge_title',false)
+	mainShare1("Choose Numeric Attributes only",'gauge_title',false,false)
 }
 
 def deviceGauge(){
@@ -1873,16 +1893,14 @@ def attributeGauge(){
 
 				hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}${hint}", i1, "directions", sid+attribute){
 
-					if(typ=='Sensor'){
-						String tvar="var_"+sa+"_lts"
+					if(typ==sCSENSOR){
 						if(isLtsAvailable(rid, attribute)){
-							hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}", i1, "directions", sid+attribute){
-								container=[]
-								container << hubiForm_sub_section("Long Term Storage in use")
-								hubiForm_container(container, i1)
-							}
+							container=[]
+							container << hubiForm_sub_section("Long Term Storage in use")
+							hubiForm_container(container, i1)
 
 						}else{
+							String tvar="var_"+sa+"_lts"
 							app.updateSetting(tvar, false)
 							settings[tvar]= false
 						}
@@ -1912,6 +1930,7 @@ def attributeGauge(){
 def graphGauge(){
 
 	Integer num_
+	String nh= 'num_highlights'
 
 	dynamicPage((sNM): "graphSetupPage"){
 		List<String> container
@@ -1920,23 +1939,23 @@ def graphGauge(){
 			if(gtStB('hasFuel'))
 				inputGraphUpdateRate()
 			else
-				app.updateSetting("graph_update_rate", '0')
+				app.updateSetting(sGRPHUPDRATE, s0)
 
 			container << hubiForm_text_input("Gauge Title", "gauge_title", "Gauge Title", false)
 			container << hubiForm_text_input("Gauge Units", "gauge_units", "Units", false)
 			container << hubiForm_text_input("Gauge Number Formatting<br><small>Example</small>", "gauge_number_format", "##.#", false)
 
-			container << hubiForm_slider ((sTIT): "Select Number of Highlight Areas on Gauge", (sNM): "num_highlights", (sDEFLT): i3, (sMIN): iZ, (sMAX): i3, (sUNITS): " highlights", (sSUBONCHG): true)
+			container << hubiForm_slider ((sTIT): "Select Number of Highlight Areas on Gauge", (sNM): nh, (sDEFLT): i3, (sMIN): iZ, (sMAX): i3, (sUNITS): " highlights", (sSUBONCHG): true)
 
 			hubiForm_container(container, i1)
 		}
 
-		if(num_highlights == null){
-			settings['num_highlights']=i3
-			app.updateSetting('num_highlights', i3)
+		if(gtSetting(nh) == null){
+			settings[nh]=i3
+			app.updateSetting(nh, i3)
 			num_=i3
 		}else{
-			num_=gtSetI('num_highlights')
+			num_=gtSetI(nh)
 		}
 
 		if(num_ > iZ){
@@ -1973,7 +1992,7 @@ def graphGauge(){
 				container << hubiForm_slider ((sTIT): "Number Major Tics", (sNM): vn, (sDEFLT): i3, (sMIN): iZ, (sMAX): i20, (sUNITS): " tics")
 				Integer tic
 				for(tic=iZ; tic<gtSetI(vn); tic++){
-					container << hubiForm_text_input("Input the Label for Tick ${tic+1}", "tic_title${tic}", "Label", false)
+					container << hubiForm_text_input("Input the Label for Tick ${tic+i1}", "tic_title${tic}", "Label", false)
 				}
 			}
 			hubiForm_container(container, i1)
@@ -2023,43 +2042,37 @@ Map getOptions_gauge(){
 		case i3:
 			redColor=gtSetB('highlight2_color_transparent') ? sTRANSPRNT : gtSetStr('highlight2_color')
 			redFrom=gtSetStr('highlight2_start')
-			redTo=gtSetStr('highlight_end')
-
-			yellowColor=gtSetB('highlight1_color_transparent') ? sTRANSPRNT : gtSetStr('highlight1_color')
-			yellowFrom=gtSetStr('highlight1_start')
-			yellowTo=gtSetStr('highlight2_start')
-
-			greenColor=gtSetB('highlight0_color_transparent') ? sTRANSPRNT : gtSetStr('highlight0_color')
-			greenFrom=gtSetStr('highlight0_start')
-			greenTo	= gtSetStr('highlight1_start')
-
-			break
 
 		case i2:
-
 			yellowColor=gtSetB('highlight1_color_transparent') ? sTRANSPRNT : gtSetStr('highlight1_color')
 			yellowFrom=gtSetStr('highlight1_start')
-			yellowTo=gtSetStr('highlight_end')
 
+		case i1:
 			greenColor=gtSetB('highlight0_color_transparent') ? sTRANSPRNT : gtSetStr('highlight0_color')
 			greenFrom=gtSetStr('highlight0_start')
+	}
+	switch (gtSetI('num_highlights')){
+		case i3:
+			redTo=gtSetStr('highlight_end')
+			yellowTo=gtSetStr('highlight2_start')
 			greenTo	= gtSetStr('highlight1_start')
 
 			break
+		case i2:
+			yellowTo=gtSetStr('highlight_end')
+			greenTo	= gtSetStr('highlight1_start')
 
+			break
 		case i1:
-
-			greenColor=gtSetB('highlight0_color_transparent') ? sTRANSPRNT : gtSetStr('highlight0_color')
-			greenFrom=gtSetStr('highlight0_start')
 			greenTo	= gtSetStr('highlight_end')
 
 			break
 	}
 	Map options=[
-		"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
+		"graphUpdateRate": Integer.parseInt(gtSetStr(sGRPHUPDRATE)),
 		"graphOptions": [
-			"width": gtSetB('graph_static_size') ? graph_h_size : "100%",
-			"height": gtSetB('graph_static_size') ? graph_v_size: "100%",
+			"width": gtSetB(sGRPHSTATICSZ) ? graph_h_size : s100PCT,
+			"height": gtSetB(sGRPHSTATICSZ) ? graph_v_size: s100PCT,
 			"min": minValue_,
 			"max": maxValue_,
 			"greenFrom": greenFrom,
@@ -2189,7 +2202,7 @@ async function onLoad(){
 		//loader.remove();
 	});
 
-	if(subscriptions.id=='poll'){
+	if(subscriptions.id==sPOLL){
 		if(options.graphUpdateRate > 0){
 			setInterval(() =>{
 				aupdate();
@@ -2269,14 +2282,14 @@ Map getSubscriptions_gauge(){
 		Map ent= dataSources[iZ]
 		String typ=sMs(ent,sT).capitalize()
 
-		if(typ=='Sensor'){
+		if(typ==sCSENSOR){
 			subscriptions=[
 				(sID): ent.rid,
 				(sATTR): sMs(ent,sA)
 			]
 		}else{
 			subscriptions=[
-				(sID): 'poll',
+				(sID): sPOLL,
 				(sATTR): sNONE
 			]
 		}
@@ -2304,7 +2317,7 @@ def inputGraphUpdateRate(String d=s0){
 		opt=rateEnumF
 	}
 
-	input( (sTYPE): sENUM, (sNM): "graph_update_rate",(sTIT): "<b>Select graph update rate</b><br><small>(For panel viewing; the refresh rate of the graph)</small>", (sMULTP): false, (sREQ): false, options: opt, (sDEFV): defl)
+	input( (sTYPE): sENUM, (sNM): sGRPHUPDRATE,(sTIT): "<b>Select graph update rate</b><br><small>(For panel viewing; the refresh rate of the graph)</small>", (sMULTP): false, (sREQ): false, options: opt, (sDEFV): defl)
 }
 
 
@@ -2323,7 +2336,9 @@ def inputGraphUpdateRate(String d=s0){
 ]
 
 
-// shared by bar, timeline, heatmap, rangebar
+/**
+ * shared by bar, timeline, heatmap, rangebar to show current sensor and attribute values if curStates==true
+ */
 Map gtSensorFmt(Boolean curStates=false,Boolean multiple=true){
 	if(isEric())myDetail null,"gtSensorFmt curStates: $curStates, (${sMULTP}): $multiple",i1
 	Map sensors_fmt
@@ -2350,8 +2365,8 @@ Map gtSensorFmt(Boolean curStates=false,Boolean multiple=true){
 		}
 		for(Map ent in dataSources){
 			String sid=sMs(ent,sID)
-			String dn= sMs(ent,sDISPNM)
 			String s=sid
+			String dn= sMs(ent,sDISPNM)
 			sensors_fmt[sid]=[ (sID): sid, (sDISPNM): dn] + (curStates ? ["currentStates": res[s] ] : [:])
 		}
 	}
@@ -2367,6 +2382,22 @@ static String sLblTyp(String typ){
 
 
 
+def gatherGraphSize(){
+	List<String> container
+	hubiForm_section("Graph Size", i1, sBLK, sBLK){
+		container=[]
+		input( (sTYPE): sBOOL, (sNM): sGRPHSTATICSZ,(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sDEFV): false, (sSUBOC): true)
+		if(gtSetB(sGRPHSTATICSZ)){
+			container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): i800, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
+			container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): i600, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
+		}
+
+		hubiForm_container(container, i1)
+	}
+}
+
+
+
 
 
 
@@ -2377,12 +2408,14 @@ static String sLblTyp(String typ){
  */
 
 def mainBar(){
-	mainShare1('Choose Numeric Attributes only','graph_update_rate')
+	mainShare1('Choose Numeric Attributes only',sGRPHUPDRATE,true,false)
 }
 
 def deviceBar(){
 	deviceShare1()
 }
+
+@Field static List<Map> decimalsEnum= [ [0:"None (123)"], [1: "One (123.1)"], [2: "Two (123.12)"], [3: "Three (123.123)"], [4: "Four (123.1234)"] ]
 
 def attributeBar(){
 	List<Map> dataSources= createDataSources(true)
@@ -2393,8 +2426,6 @@ def attributeBar(){
 		hubiForm_section("Graph Order", i1, "directions", sBLK){
 			hubiForm_list_reorder('graph_order', sBACKGRND)
 		}
-
-		List<Map> decimalsEnum=[ [0:"None (123)"], [1: "One (123.1)"], [2: "Two (123.12)"], [3: "Three (123.123)"], [4: "Four (123.1234)"] ]
 
 		//Integer count=0
 //	TODO
@@ -2412,23 +2443,21 @@ def attributeBar(){
 				container=[]
 				hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}${hint}", i1, "directions", sid+attribute){
 
-					if(typ=='Sensor'){
-						String tvar="var_"+sa+"_lts"
+					if(typ==sCSENSOR){
 						if(isLtsAvailable(rid, attribute)){
-							container=[]
 							container << hubiForm_sub_section("Long Term Storage in use")
 							hubiForm_container(container, i1)
+							container=[]
 
 						}else{
+							String tvar="var_"+sa+"_lts"
 							app.updateSetting(tvar, false)
 							settings[tvar]= false
 						}
 					}
 
-					input( (sTYPE): sENUM, (sNM): "attribute_"+sa+"_decimals",
-							(sTIT): "<b>Number of Decimal Places to Display</b>",
-							(sMULTP): false, (sREQ): false, options: decimalsEnum,
-							(sDEFV): 1)
+					input( (sTYPE): sENUM, (sNM): "attribute_"+sa+"_decimals", (sTIT): "<b>Number of Decimal Places to Display</b>",
+							(sMULTP): false, (sREQ): false, options: decimalsEnum, (sDEFV): 1)
 
 					container << hubiForm_text_input("<b>Scale Factor for Values</b><br><small>Example: To scale down by 10X, input 0.1<br>Leave as <b>1</b> for unchanged</small>",
 							"attribute_"+sa+"_scale",
@@ -2496,24 +2525,17 @@ def graphBar(){
 
 			hubiForm_container(container, i1)
 		}
-		hubiForm_section("Graph Size", i1, sBLK, sBLK){
-			container=[]
-			input( (sTYPE): sBOOL, (sNM): "graph_static_size",(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sDEFV): false, (sSUBOC): true)
-			if(gtSetB('graph_static_size')){
-				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): i800, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels")
-				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): i600, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels")
-			}
 
-			hubiForm_container(container, i1)
-		}
+		gatherGraphSize()
+
 		hubiForm_section("Annotations", i1, sBLK, sBLK){
 			container=[]
 			container << hubiForm_font_size ((sTIT): "Annotation", (sNM): "annotation", (sDEFLT): i16, (sMIN): i2, (sMAX): i40)
 			container << hubiForm_switch	([(sTIT): "Show Annotation Outside (true) or Inside (false) of Bars", (sNM): "annotation_inside", (sDEFLT):false])
 			container << hubiForm_color	("Annotation", "annotation", sWHT, false)
 			container << hubiForm_color	("Annotation Aura", "annotation_aura", sBLACK, false)
-			container << hubiForm_switch	([(sTIT): "Bold Annotation", (sNM): "annotation_bold", (sDEFLT):false])
-			container << hubiForm_switch	([(sTIT): "Italic Annotation", (sNM): "annotation_italic", (sDEFLT):false])
+			container << hubiForm_switch	((sTIT): "Bold Annotation", (sNM): "annotation_bold", (sDEFLT): false)
+			container << hubiForm_switch	((sTIT): "Italic Annotation", (sNM): "annotation_italic", (sDEFLT): false)
 
 			hubiForm_container(container, i1)
 		}
@@ -2556,7 +2578,7 @@ Map getOptions_bar(){
 			String sa="${sid}_${attribute}".toString()
 
 			String attrib_string="attribute_"+sa+"_color"
-			String transparent_attrib_string="attribute_"+sa+"_color_transparent"
+			String transparent_attrib_string= attrib_string+"_transparent"
 			colors << (gtSetB(transparent_attrib_string) ? sTRANSPRNT : settings[attrib_string])
 		}
 	}
@@ -2567,12 +2589,12 @@ Map getOptions_bar(){
 	axis2= gt1 ? "vAxis" : "hAxis"
 
 	Map options=[
-		"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
+		"graphUpdateRate": Integer.parseInt(gtSetStr(sGRPHUPDRATE)),
 		(sGRAPHT): Integer.parseInt(gtSetStr('graph_type')),
 		"graphOptions": [
 			"bar" : [ "groupWidth" : "${graph_bar_percent}%", ],
-			"width": gtSetB('graph_static_size') ? graph_h_size : "100%",
-			"height": gtSetB('graph_static_size') ? graph_v_size: "90%",
+			"width": gtSetB(sGRPHSTATICSZ) ? graph_h_size : s100PCT,
+			"height": gtSetB(sGRPHSTATICSZ) ? graph_v_size: "90%",
 			"timeline": [
 				"rowLabelStyle": ["fontSize": graph_axis_font, "color": gtSetB('graph_axis_color_transparent') ? sTRANSPRNT : graph_axis_color],
 				"barLabelStyle": ["fontSize": graph_axis_font]
@@ -2815,7 +2837,7 @@ async function onLoad(){
 		loader.remove();
 	});
 
-	if(subscriptions.id=='poll'){
+	if(subscriptions.id==sPOLL){
 		if(options.graphUpdateRate > 0){
 			setInterval(() =>{
 				aupdate();
@@ -2959,16 +2981,21 @@ Map getSubscriptions_bar(){
 
 			_attributes[sid] << attribute
 			labels[sid][attribute]=settings["graph_name_override_"+sa]
+
+			String au = gtSetB("attribute_"+sa+"_show_value") ? gtSetStr("attribute_"+sa+"_annotation_units") : sBLK
 			colors[sid][attribute]=[
 					"backgroundColor":			settings["attribute_"+sa+"_background_color"],
-					"currentValueColor":		settings["attribute_"+sa+"_current_color"],
 					"currentValueBorderColor":	settings["attribute_"+sa+"_current_border_color"],
 					"currentValueBorderLineSize": settings["attribute_"+sa+"_current_border_line_size"],
-					"showAnnotation":			settings["attribute_"+sa+"_show_value"],
+					"showAnnotation":			settings["attribute_"+sa+"_show_value"], // not used by js
+					"annotation_units":			au,
+
+					// These 4 do not exist as inputs, nor are used in js
+					"currentValueColor":		settings["attribute_"+sa+"_current_color"],
 					"annotation_font":			settings["attribute_"+sa+"_annotation_font"],
 					"annotation_font_size":		settings["attribute_"+sa+"_annotation_font_size"],
 					"annotation_color":			settings["attribute_"+sa+"_annotation_color"],
-					"annotation_units":			settings["attribute_"+sa+"_annotation_units"],
+
 					"opacity":					settings["attribute_"+sa+"_opacity"]/100.0,
 					"scale":					settings["attribute_"+sa+"_scale"],
 					"decimals":					settings["attribute_"+sa+"_decimals"]
@@ -2981,14 +3008,14 @@ Map getSubscriptions_bar(){
 	List order=gtSetStr('graph_order') ? parseJson(gtSetStr('graph_order')) : []
 
 	Map subscriptions=[
-			(sID): isPoll ? 'poll' : 'sensor',
-			"sensors": sensors_fmt,
+			(sID): isPoll ? sPOLL : sSENSOR,
+			'sensors': sensors_fmt,
 			"ids": _ids,
-			"attributes": _attributes,
+			'attributes': _attributes,
 			"labels": labels,
 			"colors": colors,
 			"order": order,
-			"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
+			"graphUpdateRate": Integer.parseInt(gtSetStr(sGRPHUPDRATE)),
 	]
 
 	return subscriptions
@@ -3005,7 +3032,7 @@ Map getSubscriptions_bar(){
 @Field static Map<String,Map<String,String>> supportedTypes
 
 
-void fill_supportedTypes(){
+static void fill_supportedTypes(){
 	supportedTypes = [
 				"alarm"         : [(sSTART): sON, (sEND): sOFF],
 				"contact"       : [(sSTART): "open", (sEND): "closed"],
@@ -3092,7 +3119,7 @@ Map gtStartEndTypes(Map ent, String attribute){
 
 def mainTimeline(){
 	mainShare1( """Choose Numeric Attributes or common sensor attributes (like on/off, open/close, present/not present,
-								detected/clear, active/inactive, wet/dry)""" ,'graph_update_rate')
+								detected/clear, active/inactive, wet/dry)""" ,sGRPHUPDRATE)
 }
 
 def deviceTimeline(){
@@ -3114,6 +3141,7 @@ def attributeTimeline(){
 									For example, to select all the times a temperature is above 70.5 degrees fahrenheit, you would set the start to '> 70.5', and the end to '< 70.5'.
 									Supported comparators are: '<', '>', '<=', '>=', '==', '!='.\n\nBecause we are dealing with HTML, '<' is abbreviated to &amp;lt; after you save. That is completely normal. It will still work.""" )
 
+			container << hubiForm_text("Note LTS will be used if enabled for a sensor:attribute when you select a sensor")
 			hubiForm_container(container, i1)
 
 		}
@@ -3139,13 +3167,12 @@ def attributeTimeline(){
 				hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}${hint}", i1, "directions", sid+attribute){
 					container=[]
 
-					if(typ=='Sensor'){
-						String tvar="var_"+sa+"_lts"
+					if(typ==sCSENSOR){
 						if(isLtsAvailable(rid, attribute)){
-							container=[]
 							container << hubiForm_sub_section("Long Term Storage in use")
 
 						}else{
+							String tvar="var_"+sa+"_lts"
 							app.updateSetting(tvar, false)
 							settings[tvar]= false
 						}
@@ -3190,16 +3217,9 @@ def graphTimeline(){
 			container << hubiForm_color ("Background", "graph_background", sWHT, false)
 
 		}
-		hubiForm_section("Graph Size", i1, sBLK, sBLK){
-			container=[]
-			input( (sTYPE): sBOOL, (sNM): "graph_static_size",(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sDEFV): false, (sSUBOC): true)
-			if(gtSetB('graph_static_size')){
-				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): i800, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
-				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): i600, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
-			}
 
-			hubiForm_container(container, i1)
-		}
+		gatherGraphSize()
+
 		hubiForm_section("Device Name Display", i1, sBLK, sBLK){
 			container=[]
 			container << hubiForm_color ("Device Text", "graph_axis", sWHT, false)
@@ -3239,7 +3259,7 @@ String getData_timeline(){
 
 			List<Map>data1=data.collect{ Map it-> [(sDT): it.t, (sVAL): "${it[sVAL]}".toString()]}
 
-			resp[sid][attribute]=data1.findAll{ Map it-> (Long)it[sDT] > graph_time}
+			resp[sid][attribute]=data1.findAll{ Map it-> lMs(it,sDT) > graph_time}
 
 			List<Map> temp=([]+data1) as List<Map>
 			//temp=temp.sort{ (Long)it.date }
@@ -3260,17 +3280,17 @@ Map getOptions_timeline(){
 	for(Map device in order){
 		//String sa="${sid}_${attribute}".toString()
 		String attrib_string="attribute_${device[sID]}_${device[sATTR]}_line_color"
-		String transparent_attrib_string="attribute_${device[sID]}_${device[sATTR]}_line_color_transparent"
+		String transparent_attrib_string= attrib_string+"_transparent"
 		colors << (gtSetB(transparent_attrib_string) ? sTRANSPRNT : settings[attrib_string])
 	}
 
 	Map options=[
 		"graphTimespan": Integer.parseInt(gtSetStr('graph_timespan')),
-		"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
+		"graphUpdateRate": Integer.parseInt(gtSetStr(sGRPHUPDRATE)),
 		"graphCombine_msecs": Integer.parseInt(gtSetStr('graph_combine_rate')),
 		"graphOptions": [
-			"width": gtSetB('graph_static_size') ? graph_h_size : "100%",
-			"height": gtSetB('graph_static_size') ? graph_v_size: "100%",
+			"width": gtSetB(sGRPHSTATICSZ) ? graph_h_size : s100PCT,
+			"height": gtSetB(sGRPHSTATICSZ) ? graph_v_size: s100PCT,
 			"timeline": [
 				"rowLabelStyle": ["fontSize": graph_axis_font, "color": gtSetB('graph_axis_color_transparent') ? sTRANSPRNT : graph_axis_color],
 				"barLabelStyle": ["fontSize": graph_axis_font],
@@ -3293,7 +3313,7 @@ String getGraph_timeline(){
 <!DOCTYPE html>
 <html style="${fullSizeStyle}">
 	<head>
-${scriptIncludes1()}
+${scriptIncludes1(isSystemType())}
 		<script type="text/javascript">
 
 //google.load("visualization", "1.1",{packages:["timeline"]});
@@ -3620,7 +3640,7 @@ async function onLoad(){
 		loader.remove();
 	});
 
-	if(subscriptions.id=='poll'){
+	if(subscriptions.id==sPOLL){
 		if(options.graphUpdateRate > 0){
 			setInterval(() =>{
 				aupdate();
@@ -3802,9 +3822,9 @@ Map getSubscriptions_timeline(){
 	List order=gtSetStr('graph_order') ? parseJson(gtSetStr('graph_order')) : []
 
 	Map subscriptions=[
-			(sID): isPoll ? 'poll' : 'sensor',
+			(sID): isPoll ? sPOLL : sSENSOR,
 			"ids": _ids,
-			"sensors": sensors_fmt,
+			'sensors': sensors_fmt,
 			"definitions": definitions,
 			"labels": labels,
 			"order": order
@@ -3929,7 +3949,7 @@ def graphTimegraph(){
 			hubiForm_container(container, i1)
 		}
 
-		hubiForm_section("Graph Size", i1, sBLK, sBLK){
+		hubiForm_section("Graph Fill", i1, sBLK, sBLK){
 			container=[]
 
 			container << hubiForm_switch	([(sTIT): "<b>Set Fill % of Graph?</b><br><small>(False=Default (80%) Fill)</small>",
@@ -3942,18 +3962,10 @@ def graphTimegraph(){
 						(sDEFLT): 80, (sMIN): i1, (sMAX): i100, (sUNITS): "%", (sSUBONCHG): false)
 
 			}
-			container << hubiForm_switch	([(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>",
-											  (sNM): "graph_static_size", (sDEFLT): false, (sSUBONCHG): true])
-			if(gtSetB('graph_static_size')){
-
-				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size",
-						(sDEFLT): i800, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
-				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size",
-						(sDEFLT): i600, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
-			}
-
 			hubiForm_container(container, i1)
 		}
+
+		gatherGraphSize()
 
 		hubiForm_section("Horizontal Axis", i1, sBLK, sBLK){
 			//Axis
@@ -4282,7 +4294,7 @@ def graphTimegraph(){
 						enumType=true
 						possible_values = [defltS,defltE]
 					}else{
-						if(typ=='Sensor'){
+						if(typ==sCSENSOR){
 							Boolean multiple=true
 							String varn=multiple ? 'sensors' : 'sensor_' // have to get devices from settings
 							def a=gtSetting(varn)
@@ -4358,7 +4370,6 @@ def graphTimegraph(){
 								container << hubiForm_subcontainer([objects: subcontainer, breakdown: [0.5, 0.5]])
 
 							}
-
 						}
 
 						// Remove previous custom state value settings
@@ -4484,7 +4495,7 @@ String getData_timegraph(){
 			data = gtDataSourceData(ent)  // Get all sensor data regardless of time.
 
 			// Get the index of the first data item that is in the timespan.
-			def first_index = data.findIndexOf{ Map it -> (Long)it[sT] > graph_time}
+			Integer first_index = data.findIndexOf{ Map it -> lMt(it) > graph_time}
 
 			if (first_index >= iZ){  // Some data is in the timespan:
 				if (first_index > iZ){  // Also some data is before the timespan:
@@ -4501,7 +4512,7 @@ String getData_timegraph(){
 			}
 
 			// Map state names to values.
-			resp[sid][attribute]=data.collect{ Map it -> [(sDT): (Long)it[sT], (sVAL): getValue(sid, attribute, it[sVAL])]}
+			resp[sid][attribute]=data.collect{ Map it -> [(sDT): lMt(it), (sVAL): getValue(sid, attribute, it[sVAL])]}
 
 			// Eliminate "bad" values
 			if(gtSetB("attribute_${sa}_bad_value")){
@@ -4522,7 +4533,7 @@ Map getOptions_timegraph(){
 	Map options=[
 			"graphReduction": gtSetI('graph_max_points'),
 			"graphTimespan": Long.parseLong(gtSetStr('graph_timespan')),
-			"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
+			"graphUpdateRate": Integer.parseInt(gtSetStr(sGRPHUPDRATE)),
 			"graphPointSpan": Long.parseLong(gtSetStr('graph_point_span')),
 //			"graphRefreshRate" : Integer.parseInt(gtSetStr('graph_refresh_rate')),
 			"overlays": [ "display_overlays" : show_overlay,
@@ -4532,10 +4543,10 @@ Map getOptions_timegraph(){
 			],
 			"graphOptions": [
 					"tooltip" : ["format" : "short"],
-					"width": gtSetB('graph_static_size') ? graph_h_size : "100%",
-					"height": gtSetB('graph_static_size') ? graph_v_size : "100%",
-					"chartArea": [ "width":	graph_percent_fill ? "${graph_h_fill}%" : "80%",
-									"height": graph_percent_fill ? "${graph_v_fill}%" : "80%"],
+					"width": gtSetB(sGRPHSTATICSZ) ? graph_h_size : s100PCT,
+					"height": gtSetB(sGRPHSTATICSZ) ? graph_v_size : s100PCT,
+					"chartArea": [ "width":	graph_percent_fill ? "${graph_h_fill}%" : s80PCT,
+									"height": graph_percent_fill ? "${graph_v_fill}%" : s80PCT],
 					"explorer": [
 						"actions": ["dragToZoom", "rightClickToReset"],
 						"axis": "horizontal",
@@ -4610,7 +4621,7 @@ Map getOptions_timegraph(){
 			String type_
 			type_= settings["graph_type_${sa}"] != null ? gtSetStr("graph_type_${sa}").toLowerCase() : 'line'
 			if(type_ == "stepped") type_="steppedArea"
-			Integer axes_=settings["graph_axis_number_${sa}"] == "Left" ? 0 : 1
+			Integer axes_=settings["graph_axis_number_${sa}"] == "Left" ? iZ : i1
 			String stroke_color=gtSetStr("var_${sa}_stroke_color")
 			String stroke_opacity=gtSetStr("var_${sa}_stroke_opacity")
 			//def stroke_line_size=settings["var_${sa}_stroke_line_size"]
@@ -4644,9 +4655,10 @@ Map getOptions_timegraph(){
 			String sa= "${sid}_${attribute}".toString()
 
 	//add colors and thicknesses
-			Integer axis=settings["graph_axis_number_${sa}"] == "Left" ? 0 : 1
-			String text_color=gtSetStr("graph_line_${sa}_color")
-			Boolean text_color_transparent=gtSetB("graph_line_${sa}_color_transparent")
+			Integer axis=settings["graph_axis_number_${sa}"] == "Left" ? iZ : i1
+			String tc= "graph_line_${sa}_color"
+			String text_color=gtSetStr(tc)
+			Boolean text_color_transparent=gtSetB(tc+"_transparent")
 
 			Map annotations=[
 					"targetAxisIndex": axis,
@@ -4939,7 +4951,7 @@ async function onLoad(){
 		loader.remove();
 	});
 
-	if(subscriptions.id=='poll'){
+	if(subscriptions.id==sPOLL){
 		if(options.graphUpdateRate > 0){
 			setInterval(() =>{
 				aupdate();
@@ -5302,8 +5314,8 @@ String getOverlay_timegraph(){
 		Map ent=findDataSourceEntry(sid,attribute)
 		Double v=getValue(sid,attribute,getLatestVal(ent))
 
-		String units=gtSetStr("units_${sa}") ?: sBLK
-		String name; name=gtSetStr("graph_name_override_${sa}")
+		String units= gtSetStr("units_${sa}") ?: sBLK
+		String name; name= gtSetStr("graph_name_override_${sa}")
 		name=name.replaceAll("%deviceName%", sMs(ent,sDISPNM)).replaceAll("%attributeName%", attribute)
 		String s=sprintf("%.1f%s",v,units)
 		html += """<tr><td class="overlay-title" id="overlay-${sa}-name">${name}</td>
@@ -5355,7 +5367,7 @@ Map getSubscriptions_timegraph(){
 
 			labels[sid]= labels[sid] ?: [:]
 
-			labels[sid][attr]=settings["graph_name_override_${sa}"]
+			labels[sid][attr]=gtSetStr("graph_name_override_${sa}")
 
 			states_[sid]= states_[sid] ?: [:]
 
@@ -5405,7 +5417,7 @@ Map getSubscriptions_timegraph(){
 					fill_color:	fill_color,
 					fill_opacity:	fill_opacity,
 					function:	function,
-					(sUNITS):		settings["units_${sa}"] ?: sBLK,
+					(sUNITS):		gtSetStr("units_${sa}") ?: sBLK,
 			]
 		}
 	}
@@ -5413,11 +5425,11 @@ Map getSubscriptions_timegraph(){
 	Integer logging_ = iMs((Map)state,sLOGNG)
 
 	Map subscriptions=[
-		(sID): isPoll ? 'poll' : 'sensor',
+		(sID): isPoll ? sPOLL : sSENSOR,
 		logging: logging_,
 		ids: ids, //.sort(),
-		sensors: sensors_,
-		attributes: attributes,
+		'sensors': sensors_,
+		'attributes': attributes,
 		labels : labels,
 		drop : drop_,
 		extend: extend_,
@@ -5445,7 +5457,7 @@ Map getSubscriptions_timegraph(){
 def mainHeatmap(){
 	mainShare1("""Choose Numeric Attributes or common sensor attributes (like on/off, open/close, present/not present,
 			detected/clear, active/inactive, wet/dry, last Activity)""",
-			'graph_update_rate')
+			sGRPHUPDRATE,true,false)
 }
 
 def deviceHeatmap(){
@@ -5556,7 +5568,6 @@ def graphHeatmap(){
 							hubiTools_rotating_colors(gradient),
 							false)
 					container << hubiForm_subcontainer([objects: subcontainer, breakdown: [0.25, 0.75]])
-
 				}
 			}else{
 				Long add_time=(graph_decay.toInteger()/(graph_num_gradients.toInteger()-i1))
@@ -5582,13 +5593,12 @@ def graphHeatmap(){
 					container << hubiForm_subcontainer([objects: subcontainer, breakdown: [0.25, 0.75]])
 
 					curr_time += add_time
-
 				}
 			}
 			hubiForm_container(container, i1)
 		}
 
-		hubiForm_section("Graph Size", i1, sBLK, sBLK){
+		hubiForm_section("Graph Columns", i1, sBLK, sBLK){
 			container=[]
 			Integer default_=Math.ceil(Math.sqrt(count_)).intValue()
 			Integer cols=graph_num_columns ? "${graph_num_columns}".toInteger() : default_
@@ -5601,14 +5611,11 @@ def graphHeatmap(){
 					(sUNITS): " columns",
 					(sSUBONCHG): true)
 
-			input( (sTYPE): sBOOL, (sNM): "graph_static_size",(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sDEFV): false, (sSUBOC): true)
-			if(gtSetB('graph_static_size')){
-				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): i800, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels")
-				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): i600, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels")
-			}
-
 			hubiForm_container(container, i1)
 		}
+
+		gatherGraphSize()
+
 		hubiForm_section("Annotations", i1, sBLK, sBLK){
 			container=[]
 			container << hubiForm_switch([(sTIT): "Show values inside Heat Map?", (sNM): "show_annotations", (sDEFLT): false, (sSUBONCHG): true])
@@ -5645,10 +5652,10 @@ String getData_heatmap(){
 			// [date: date, (sVAL): v, t: t]
 			if(lst && sMs(ent,'aa') == 'lastupdate'){
 				//Date lastEvent=(Date)lst.date //sensor.getLastActivity()
-				Long latest= (Long)lst[sT] //lastEvent ? lastEvent.getTime() : 0L
+				Long latest= lMt(lst) //lastEvent ? lastEvent.getTime() : 0L
 				resp[sid]['lastupdate']=[(sCUR): (now.getTime()-latest), (sDT): latest]
 			}else{
-				def latest=lst ? lst[sVAL] : 0 // sensor.latestState(attribute)
+				def latest=lst ? lst[sVAL] : iZ // sensor.latestState(attribute)
 				resp[sid][attribute]=[(sCUR): latest, (sDT): lst[sDT] ?: now]
 			}
 		}
@@ -5669,7 +5676,7 @@ Map getOptions_heatmap(){
 			String attribute=sMs(ent,sA)
 
 			String attrib_string="attribute_${sid}_${attribute}_color"
-			String transparent_attrib_string="attribute_${sid}_${attribute}_color_transparent"
+			String transparent_attrib_string= attrib_string+"_transparent"
 			colors << (gtSetB(transparent_attrib_string) ? sTRANSPRNT : settings[attrib_string])
 		}
 	}
@@ -5684,12 +5691,12 @@ Map getOptions_heatmap(){
 	} */
 
 	Map options=[
-			"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
+			"graphUpdateRate": Integer.parseInt(gtSetStr(sGRPHUPDRATE)),
 			(sGRAPHT): gtSetStr('graph_type'),
 			"graphOptions": [
-					"bar" : [ "groupWidth" : "100%" ],
-					"width": gtSetB('graph_static_size') ? graph_h_size : "100%",
-					"height": gtSetB('graph_static_size') ? graph_v_size: "100%",
+					"bar" : [ "groupWidth" : s100PCT ],
+					"width": gtSetB(sGRPHSTATICSZ) ? graph_h_size : s100PCT,
+					"height": gtSetB(sGRPHSTATICSZ) ? graph_v_size: s100PCT,
 					"timeline": [
 							"rowLabelStyle": ["fontSize": graph_axis_font, "color": gtSetB('graph_axis_color_transparent') ? sTRANSPRNT : graph_axis_color],
 							"barLabelStyle": ["fontSize": graph_axis_font]
@@ -5734,7 +5741,7 @@ String getGraph_heatmap(){
 <!DOCTYPE html>
 <html style="${fullSizeStyle}">
 	<head>
-${scriptIncludes1()}
+${scriptIncludes1(isSystemType())}
 		<script type="text/javascript">
 google.charts.load('current',{'packages':['corechart']});
 
@@ -5959,7 +5966,7 @@ async function onLoad(){
 		loader.remove();
 	});
 
-	if(subscriptions.id=='poll'){
+	if(subscriptions.id==sPOLL){
 		if(options.graphUpdateRate > 0){
 			setInterval(() =>{
 				aupdate();
@@ -6219,12 +6226,12 @@ Map getSubscriptions_heatmap(){
 	List order=gtSetStr('graph_order') ? parseJson(gtSetStr('graph_order')) : []
 
 	Map subscriptions=[
-			(sID): isPoll ? 'poll' : 'sensor',
+			(sID): isPoll ? sPOLL : sSENSOR,
 			"decimals" : graph_decimals,
 			"count" : count_,
-			"sensors": sensors_fmt,
+			'sensors': sensors_fmt,
 			"ids": _ids,
-			"attributes": _attributes,
+			'attributes': _attributes,
 			"labels": labels,
 			"order": order,
 			"show_annotations": show_annotations,
@@ -6317,16 +6324,7 @@ def graphLinegraph(){
 			hubiForm_container(container, i1)
 		}
 
-		hubiForm_section("Graph Size", i1, sBLK, sBLK){
-			container=[]
-			container << hubiForm_switch	((sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sNM): "graph_static_size", (sDEFLT): false, (sSUBONCHG): true)
-			if(gtSetB('graph_static_size')){
-				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): i800, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
-				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): i600, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
-			}
-
-			hubiForm_container(container, i1)
-		}
+		gatherGraphSize()
 
 		hubiForm_section("Horizontal Axis", i1, sBLK, sBLK){
 			//Axis
@@ -6529,7 +6527,7 @@ String getData_linegraph(){
 			data1=data.collect{ Map it -> [(sDT): it[sT], (sVAL): getValue(sid, attribute, it[sVAL])]}
 
 			List<Map> data2
-			data2=data1.findAll{  Map it ->(Long)it[sDT] > graph_time}
+			data2=data1.findAll{ Map it -> lMs(it,sDT) > graph_time }
 
 			List<Map> temp
 			temp=([]+data2)// as List<Map>
@@ -6563,7 +6561,7 @@ String getData_linegraph(){
 				}
 				Integer i
 				for(i=iZ; i<respEvents.size(); i++){
-					currDate=(Long)respEvents[i][sDT]
+					currDate= lMs(respEvents[i],sDT)
 					if(respEvents[i][sVAL] == startVal){
 						tEvents.push([(sDT): currDate-1000L, (sVAL): endVal])
 
@@ -6576,10 +6574,10 @@ String getData_linegraph(){
 			}
 
 			//graph_max_points
-			if(gtSetI('graph_max_points') > 0){
+			if(gtSetI('graph_max_points') > iZ){
 				Integer reduction=Math.ceil(respEvents.size() / gtSetI('graph_max_points').toDouble()).toInteger()
 				respEvents=respEvents.collate(reduction).collect{ List group ->
-					group.inject([ (sDT): 0, (sVAL): 0 ]){ col, it ->
+					group.inject([ (sDT): iZ, (sVAL): iZ ]){ col, it ->
 						col[sDT] += it[sDT] / group.size()
 						col[sVAL] += it[sVAL] / group.size()
 						return col
@@ -6593,15 +6591,15 @@ String getData_linegraph(){
 				def curr, prev
 				Long currDate, prevDate
 
-				String drop_time=settings["attribute_${sa}_drop_time"]
-				String drop_value=settings["attribute_${sa}_drop_value"]
+				String drop_time= gtSetStr("attribute_${sa}_drop_time")
+				String drop_value= gtSetStr("attribute_${sa}_drop_value")
 				tEvents.push(respEvents[iZ])
 				Integer i
 				for(i=iZ; i<respEvents.size(); i++){
 					curr=respEvents[i]
 					prev=respEvents[i-i1]
-					currDate=(Long)curr[sDT]
-					prevDate=(Long)prev[sDT]
+					currDate=lMs(curr,sDT)
+					prevDate=lMs(prev,sDT)
 
 					if((currDate - prevDate) > Integer.parseInt(drop_time)){
 						//add first zero
@@ -6621,14 +6619,18 @@ String getData_linegraph(){
 
 Map getOptions_linegraph(){
 
+	Boolean grpsz= gtSetB(sGRPHSTATICSZ)
 	Map options=[
 			"graphReduction": gtSetI('graph_max_points'),
 			"graphTimespan": Integer.parseInt(gtSetStr('graph_timespan')),
-			"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
+			"graphUpdateRate": Integer.parseInt(gtSetStr(sGRPHUPDRATE)),
 			"graphOptions": [
-					"width": gtSetB('graph_static_size') ? graph_h_size : "100%",
-					"height": gtSetB('graph_static_size') ? graph_v_size: "100%",
-					"chartArea": [ "width": gtSetB('graph_static_size') ? graph_h_size : "80%", "height": gtSetB('graph_static_size') ? graph_v_size: "80%"],
+					"width": grpsz ? graph_h_size : s100PCT,
+					"height": grpsz ? graph_v_size: s100PCT,
+					"chartArea": [
+							"width": grpsz ? graph_h_size : s80PCT,
+							"height": grpsz ? graph_v_size: s80PCT
+					],
 					"hAxis": ["textStyle": ["fontSize": graph_haxis_font,
 											"color": gtSetB('graph_hh_color_transparent') ? sTRANSPRNT : graph_hh_color ],
 							"gridlines": ["color": gtSetB('graph_ha_color_transparent') ? sTRANSPRNT : graph_ha_color,
@@ -6686,9 +6688,10 @@ Map getOptions_linegraph(){
 
 			//add colors and thicknesses
 			Integer axis=Integer.parseInt(settings["graph_axis_number_${sa}"].toString())
-			String text_color=gtSetStr("graph_line_${sa}_color")
-			Boolean text_color_transparent=gtSetB("graph_line_${sa}_color_transparent")
-			Integer line_thickness=(Integer)settings["attribute_${sa}_line_size"]
+			String tc= "graph_line_${sa}_color"
+			String text_color=gtSetStr(tc)
+			Boolean text_color_transparent=gtSetB(tc+"_transparent")
+			Integer line_thickness=gtSetI("attribute_${sa}_line_size")
 			Float opacity
 			opacity=0.0
 			if(settings["attribute_${sa}_opacity"]){
@@ -6971,7 +6974,7 @@ async function onLoad(){
 		loader.remove();
 	});
 
-	if(subscriptions.id=='poll'){
+	if(subscriptions.id==sPOLL){
 		if(options.graphUpdateRate > 0){
 			setInterval(() =>{
 				aupdate();
@@ -7137,8 +7140,8 @@ Map getSubscriptions_linegraph(){
 			attributes[sid] << attribute
 
 			labels[sid]= labels[sid] ?: [:]
-			labels[sid][attr]=settings["graph_name_override_${sa}"]
-			labels[sid][attr]=settings["graph_name_override_${sa}"]
+			labels[sid][attr]= gtSetStr("graph_name_override_${sa}")
+			labels[sid][attr]= gtSetStr("graph_name_override_${sa}")
 
 			drop_[sid]= drop_[sid] ?: [:]
 			non_num_[sid]= non_num_[sid] ?: [:]
@@ -7165,10 +7168,10 @@ Map getSubscriptions_linegraph(){
 	}
 
 	Map subscriptions=[
-			(sID): isPoll ? 'poll' : 'sensor',
+			(sID): isPoll ? sPOLL : sSENSOR,
 			ids: ids,
-			sensors: sensors_,
-			attributes: attributes,
+			'sensors': sensors_,
+			'attributes': attributes,
 			labels : labels,
 			drop : drop_,
 			non_num: non_num_
@@ -7219,15 +7222,15 @@ def attributeRangebar(){
 
 //				Integer cnt=1
 				//state.count_++
-				hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}${hint}", i1, "direction",sid+attribute){
+				hubiForm_section("${sLblTyp(sMs(ent,sT))}${dn} - ${attribute}${hint}", i1, "directions",sid+attribute){
 					container=[]
 
-					if(typ=='Sensor'){
-						String tvar="var_"+sa+"_lts"
+					if(typ==sCSENSOR){
 						if(isLtsAvailable(rid, attribute)){
 							container << hubiForm_sub_section("Long Term Storage in use")
 
 						}else{
+							String tvar="var_"+sa+"_lts"
 							app.updateSetting(tvar, false)
 							settings[tvar]= false
 						}
@@ -7287,16 +7290,9 @@ def graphRangebar(){
 
 			hubiForm_container(container, i1)
 		}
-		hubiForm_section("Graph Size", i1, sBLK, sBLK){
-			container=[]
-			input( (sTYPE): sBOOL, (sNM): "graph_static_size",(sTIT): "<b>Set size of Graph?</b><br><small>(False=Fill Window)</small>", (sDEFV): false, (sSUBOC): true)
-			if(gtSetB('graph_static_size')){
-				container << hubiForm_slider ((sTIT): "Horizontal dimension of the graph", (sNM): "graph_h_size", (sDEFLT): i800, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
-				container << hubiForm_slider ((sTIT): "Vertical dimension of the graph", (sNM): "graph_v_size", (sDEFLT): i600, (sMIN): i100, (sMAX): i3000, (sUNITS): " pixels", (sSUBONCHG): false)
-			}
 
-			hubiForm_container(container, i1)
-		}
+		gatherGraphSize()
+
 		hubiForm_section("Annotations", i1, sBLK, sBLK){
 			container=[]
 			container << hubiForm_font_size ((sTIT): "Annotation", (sNM): "annotation", (sDEFLT): i16, (sMIN): i2, (sMAX): i40)
@@ -7392,7 +7388,7 @@ Map getOptions_rangebar(){
 			String attribute=sMs(ent,sA)
 
 			String attrib_string="attribute_${sid}_${attribute}_color"
-			String transparent_attrib_string="attribute_${sid}_${attribute}_color_transparent"
+			String transparent_attrib_string= attrib_string+"_transparent"
 			colors << (gtSetB(transparent_attrib_string) ? sTRANSPRNT : gtSetStr(attrib_string))
 
 		}
@@ -7410,13 +7406,13 @@ Map getOptions_rangebar(){
 
 	Map options=[
 			"graphTimespan": Integer.parseInt(gtSetStr('graph_timespan')),
-			"graphUpdateRate": Integer.parseInt(gtSetStr('graph_update_rate')),
+			"graphUpdateRate": Integer.parseInt(gtSetStr(sGRPHUPDRATE)),
 			(sGRAPHT): Integer.parseInt(gtSetStr('graph_type')),
 			"graphOptions": [
 					"bar" : [ "groupWidth" : "${settings.graph_bar_percent}%",
 					],
-					"width": gtSetB('graph_static_size') ? settings.graph_h_size : "100%",
-					"height": gtSetB('graph_static_size') ? settings.graph_v_size: "90%",
+					"width": gtSetB(sGRPHSTATICSZ) ? settings.graph_h_size : s100PCT,
+					"height": gtSetB(sGRPHSTATICSZ) ? settings.graph_v_size: "90%",
 					"timeline": [
 							"rowLabelStyle": ["fontSize": settings.graph_axis_font, "color": gtSetB('graph_axis_color_transparent') ? sTRANSPRNT : settings.graph_axis_color],
 							"barLabelStyle": ["fontSize": settings.graph_axis_font]
@@ -7659,7 +7655,7 @@ async function onLoad(){
 		loader.remove();
 	});
 
-	if(subscriptions.id=='poll'){
+	if(subscriptions.id==sPOLL){
 		if(options.graphUpdateRate > 0){
 			setInterval(() =>{
 				aupdate();
@@ -7870,7 +7866,7 @@ Map getSubscriptions_rangebar(){
 			colors[sid]=[:]
 
 			_attributes[sid] << attribute
-			labels[sid][attribute]=settings["graph_name_override_${sa}"]
+			labels[sid][attribute]= gtSetStr("graph_name_override_${sa}")
 			colors[sid][attribute]=["backgroundColor":		gtSetB("attribute_${sa}_background_color_transparent") ? sTRANSPRNT : gtSetStr("attribute_${sa}_background_color"),
 									"minMaxColor":			gtSetB("attribute_${sa}_minmax_color_transparent") ? sTRANSPRNT : settings["attribute_${sa}_minmax_color"],
 									"currentValueColor":	gtSetB("attribute_${sa}_current_color_transparent") ? sTRANSPRNT : settings["attribute_${sa}_current_color"],
@@ -7887,10 +7883,10 @@ Map getSubscriptions_rangebar(){
 	List order=gtSetStr('graph_order') ? parseJson(gtSetStr('graph_order')) : []
 
 	Map subscriptions=[
-			(sID): isPoll ? 'poll' : 'sensor',
-			"sensors": sensors_fmt,
+			(sID): isPoll ? sPOLL : sSENSOR,
+			'sensors': sensors_fmt,
 			"ids": _ids,
-			"attributes": _attributes,
+			'attributes': _attributes,
 			"labels": labels,
 			"colors": colors,
 			"order": order
@@ -8032,7 +8028,7 @@ def mainRadar(){
 		}else{
 			hubiForm_section(tDesc()+" Graph Options", i1, "tune", sBLK){
 				container=[]
-				container << hubiForm_page_button("Setup Tile", "graphSetupPage", "100%", "vibration")
+				container << hubiForm_page_button("Setup Tile", "graphSetupPage", s100PCT, "vibration")
 				hubiForm_container(container, i1)
 			}
 
@@ -8217,7 +8213,7 @@ def deviceWeather2(){
 			hubiForm_section("Sensor Selection", i1, sBLK, sBLK){
 				container=[]
 				if(container)hubiForm_container(container, i1)
-				input ("sensors", "capability.*",(sTIT): "Select Sensors", (sMULTP): true, (sREQ): false, (sSUBOC): true)
+				input ('sensors', "capability.*",(sTIT): "Select Sensors", (sMULTP): true, (sREQ): false, (sSUBOC): true)
 			}
 			if(sensors){
 				final_attrs=[]
@@ -8689,7 +8685,7 @@ def mainWeather2(){
 	temp.wind_gust.in_units=sMILESPH
 	//atomicState.tile_type.each{key, item->
 	temp_type.each{String key, Map item->
-		if(sMs(item,'sensor') == sNO){
+		if(sMs(item,sSENSOR) == sNO){
 			temp << [(key): item]
 		}
 	}
@@ -8719,7 +8715,7 @@ def mainWeather2(){
 			if(item[span_key] == sYES)
 				((TreeMap)((TreeMap)typeList[span_key]).measurement_list) << [(key): [(sNM): sMs(item,sNM)]]
 		}
-		Integer cnt= (Integer)span.num_time
+		Integer cnt= iMs(span,'num_time')
 		if(cnt > iZ){
 			((TreeMap)typeList[span_key]).time_list=new TreeMap([:])
 			String time_units=sMs(span,'time_units')
@@ -8758,8 +8754,8 @@ def mainWeather2(){
 		}else{
 			hubiForm_section("Tile Options", i1, "tune", sBLK){
 				container=[]
-				container << hubiForm_page_button("Select Device/Data", "deviceSelectionPage", "100%", "vibration")
-				container << hubiForm_page_button("Configure Tile", "graphSetupPage", "100%", "poll")
+				container << hubiForm_page_button("Select Device/Data", "deviceSelectionPage", s100PCT, "vibration")
+				container << hubiForm_page_button("Configure Tile", "graphSetupPage", s100PCT, sPOLL)
 				hubiForm_container(container, i1)
 			}
 
@@ -9227,7 +9223,6 @@ def applyConversion(Map tile, ival){
 	return val
 }
 
-
 @Field final List<Map<String,String>>pairingsFLD=[
 		[(sNM): "thunderstorm with light rain",		(sICON): "weather-lightning-rainy"],
 		[(sNM): "thunderstorm with rain",			(sICON): "weather-lightning-rainy"],
@@ -9289,7 +9284,6 @@ def applyConversion(Map tile, ival){
 		[(sNM): "overcast clouds",					(sICON): "weather-cloudy"]
 ]
 
-
 List<String> translateCondition(Map tile, String condition){
 
 	//String icon="mdi-weather-sunny-off"
@@ -9349,6 +9343,7 @@ Boolean isNight(Date date, Boolean round_hour){
 	return now < sunrise || now > sunset
 }
 
+/*
 List formatHourData(Map tile, val){
 
 	Long val_micro=val*1000L
@@ -9362,6 +9357,7 @@ List formatHourData(Map tile, val){
 	}
 	return [sVAL,  "XXXX"]
 }
+*/
 
 List<String> formatDayData(Map tile, val){
 
@@ -9385,7 +9381,6 @@ List<String> formatTextData(Map tile, String val){
 	}
 	return [sVAL, val]
 }
-
 
 /*
 List<String> formatConditionText(Map tile, String val){
@@ -9448,7 +9443,7 @@ void buildWeatherData(){
 		try{
 			period=tile.period
 			measurement=state.tile_type."${tile.type}".ow
-			if(period == "sensor"){
+			if(period == sSENSOR){
 				val=getSensorData1(measurement)
 			}else if(measurement == "precipitation"){
 				rain_val=getMapData(data, period+".rain")
@@ -9499,7 +9494,7 @@ String getTileHTML(Map item, Boolean locked){
 	BigDecimal iconScale=3.5
 	//def header=0.1
 
-	Integer height=(Integer)item.h
+	Integer height=iMs(item,'h')
 	String html; html=sBLK
 	String tile_locked=locked ? sFALSE : sTRUE
 	String background=getRGBA(sMs(item,'background_color'), (Float.parseFloat(item.background_opacity.toString())))
@@ -9667,7 +9662,7 @@ static String addButtonMenu(Map map){
 """
 
 	item_list.each{Map item->
-		Integer weight=item.font_weight ? (Integer)item.font_weight : 400
+		Integer weight=item.font_weight ? iMs(item,'font_weight') : 400
 		String nm=sMs(item,sNM).toLowerCase()
 		html += """
 				<li class="mdl-menu__item" onclick="${button_var}_itemSelected('${item.icon}',  '${nm}')">
@@ -9762,7 +9757,7 @@ static String addIconMenu(Map map){
 	String tooltip
 	tooltip=sMs(map,'tooltip') ?: sBLK
 	Boolean description=map.description ? map.description : false
-	Integer width=(Integer)map.width
+	Integer width= iMs(map,'width')
 	if(sMs(map,'tooltip') == "Use Icon Name") tooltip="No Icon Selected"
 
 	String html
@@ -9792,7 +9787,7 @@ static String addIconMenu(Map map){
 			html+="""<div class="flex-container">
 """
 		}
-		Integer weight=item.font_weight ? (Integer)item.font_weight : 400
+		Integer weight=item.font_weight ? iMs(item,'font_weight') : 400
 		String icon_var=sMs(item,sICON).replaceAll("-","_")
 		html += """ <div class="flex-item" style="flex-grow:1;">
 					<li class="mdl-menu__item" onclick="${button_var}_itemSelected('${item.icon}',  '${sMs(item,sNM).toLowerCase()}', '${sMs(item,sNM)}')">
@@ -10162,7 +10157,7 @@ static String defineTileDialog(){
 			<div class="flex-item" style="flex-grow:1;" tabindex="-1">
 """
 
-	html+= addButtonMenu(var_name: "font_weight", default_icon: "numeric-4-circle", default_value: sCENTER, tooltip: "Font Weight", side: sRIGHT,
+	html+= addButtonMenu(var_name: 'font_weight', default_icon: "numeric-4-circle", default_value: sCENTER, tooltip: "Font Weight", side: sRIGHT,
 			list:[[(sNM): "Thin",   (sICON): "numeric-1-circle"],
 				[(sNM): "Normal", (sICON): "numeric-4-circle"],
 				[(sNM): "Bold",   (sICON): "numeric-7-circle"],
@@ -10296,9 +10291,10 @@ String defineHTML_Tile(Boolean locked){
 	}
 */
 	String background; background='black'
-	if(gtSetStr('background_color') != null){
-		Float transparent=gtSetB('background_color_transparent') ? 0.0 : background_opacity
-		background=getRGBA(gtSetStr('background_color'), transparent)
+	String bc= 'background_color'
+	if(gtSetStr(bc) != null){
+		Float transparent=gtSetB(bc+'_transparent') ? 0.0 : background_opacity
+		background=getRGBA(gtSetStr(bc), transparent)
 	}
 
 	String html_
@@ -10601,7 +10597,7 @@ def tileForecast(){
 		}
 
 		if(map){
-			List<Map> decimalsEnum=[ [0:"None (123)"], [1: "One (123.1)"], [2: "Two (123.12)"], [3: "Three (123.123)"], [4: "Four (123.1234)"] ]
+
 			selectionsF.each{Map measurement->
 				String mvar=sMs(measurement,sVAR)
 				hubiForm_section(sMs(measurement,sTIT), i1, sBLK, sBLK){
@@ -10669,7 +10665,7 @@ def mainForecast(){
 		}else{
 			hubiForm_section("Tile Options", i1, "tune", sBLK){
 				container=[]
-				container << hubiForm_page_button("Configure Tile", "graphSetupPage", "100%", "poll")
+				container << hubiForm_page_button("Configure Tile", "graphSetupPage", s100PCT, sPOLL)
 				hubiForm_container(container, i1)
 			}
 
@@ -10945,8 +10941,8 @@ def mainLongtermstorage(){
 		List<String> container
 		hubiForm_section(tDesc()+" Options", i1, "tune", sBLK){
 			container=[]
-			container << hubiForm_page_button("Select Device/Data", "deviceSelectionPage", "100%", "vibration")
-			container << hubiForm_page_button("Configure/Report Data Storage", "graphSetupPage", "100%", "poll")
+			container << hubiForm_page_button("Select Device/Data", "deviceSelectionPage", s100PCT, "vibration")
+			container << hubiForm_page_button("Configure/Report Data Storage", "graphSetupPage", s100PCT, sPOLL)
 			hubiForm_container(container, i1)
 
 		}
@@ -10997,7 +10993,7 @@ def deviceLongtermstorage(){
 		}else{
 			hubiForm_section("Sensor and Attribute Selection", i1, sBLK, sBLK){
 
-				input "sensors", "capability.*",(sTIT): "<b>Sensor Selection for Long Term Storage</b>", (sMULTP): true, (sSUBOC): true
+				input 'sensors', "capability.*",(sTIT): "<b>Sensor Selection for Long Term Storage</b>", (sMULTP): true, (sSUBOC): true
 
 				if(sensors){
 
@@ -11075,8 +11071,8 @@ def optionsLongtermstorage(){
 						if(num_events > i2){
 
 							// TODO
-							def span=(((Date)events[num_events-i1][sDT]).getTime()-((Date)events[iZ][sDT]).getTime())/(1000*60*60*24)
-							def since=(now.getTime() - ((Date)events[iZ][sDT]).getTime())/(1000*60*60)
+							def span=( dtMdt(events[num_events-i1]).getTime()- dtMdt(events[iZ]).getTime())/(1000*60*60*24)
+							def since=(now.getTime() - dtMdt(events[iZ]).getTime())/(1000*60*60)
 
 							List quantData= doQuant(events, sid, attr, true)
 
@@ -11174,10 +11170,11 @@ def graphLongtermstorage(){
 							subcontainer << hubiForm_text(sensor_name, uri_)
 							subcontainer << hubiForm_text(attribute, uri_)
 							subcontainer << hubiForm_text(storage.num_events.toString())
-							subcontainer << hubiForm_text(formatTime((Date)storage.first))
-							subcontainer << hubiForm_text(formatTime((Date)storage.last))
-							subcontainer << hubiForm_text(convertStorageSize((Integer)storage.size))
-							totalS += (Integer)storage.size
+							subcontainer << hubiForm_text(formatTime(dtMs(storage,'first')))
+							subcontainer << hubiForm_text(formatTime(dtMs(storage,'last')))
+							Integer s= iMs(storage,'size')
+							subcontainer << hubiForm_text(convertStorageSize(s))
+							totalS += s
 
 							container << hubiForm_subcontainer([objects: subcontainer, breakdown: [0.2, 0.2, 0.2, 0.2, 0.2, 0.2]])
 
@@ -11249,7 +11246,7 @@ void updateData_LTS(Map data){
 			List<Map> evtQ
 			evtQ=theQueuesVFLD[pNm]
 			if(!evtQ){
-				if(theSemaphoresVFLD[pNm]<=(Long)qres.semaphore){
+				if(theSemaphoresVFLD[pNm]<= lMs(qres,'semaphore')){
 					msgt='Released Lock and exiting'
 					theSemaphoresVFLD[pNm]=lZ
 					theSemaphoresVFLD=theSemaphoresVFLD
@@ -11309,10 +11306,10 @@ private void clearSch(){
 private addToSched(Map data){
 	if(isEric())myDetail null,"addToSched",i1
 
-	Integer hrs=(Integer)data.hrs
-	Integer mins=(Integer)data.mins
-	Integer repeatHrs=(Integer)data.repeatHrs
-	String sid=data.sid
+	Integer hrs= iMs(data,'hrs')
+	Integer mins= iMs(data,'mins')
+	Integer repeatHrs= iMs(data,'repeatHrs')
+	String sid= sMs(data,'sid')
 	String attribute=sMs(data,sATTR)
 
 	Long nextRun=pushAhead(hrs,mins,repeatHrs)
@@ -11377,11 +11374,11 @@ private runNextSched(Map a=[:]){
 	for(i=iZ; i< sched.size(); i++){
 		Map s=sched[i]
 		Long nextRun
-		nextRun=(Long)s.nextRun
-		Integer hrs=(Integer)s.hrs
-		Integer mins=(Integer)s.mins
-		Integer repeatHrs=(Integer)s.repeatHrs
-		String sid=s.sid
+		nextRun= lMs(s,'nextRun')
+		Integer hrs= iMs(s,'hrs')
+		Integer mins= iMs(s,'mins')
+		Integer repeatHrs= iMs(s,'repeatHrs')
+		String sid= sMs(s,'sid')
 		String attribute=s[sATTR]
 		if(nextRun < wnow()){
 			didSomething=true
@@ -11518,7 +11515,7 @@ static Long getTime(String text){
 /** round a date based on quant settings */
 Date roundDate(Map map){
 
-	Date date=(Date)map[sDT]
+	Date date= dtMdt(map)
 	Boolean boundary= !!bIs(map,'boundary')
 	Integer granularity=map.granularity as Integer
 
@@ -11536,14 +11533,9 @@ Date roundDate(Map map){
 
 /**
  *
- * @param events - internal format
- * @param mins
- * @param funct
- * @param dec
- * @param boundary
- * @param toStore
  * @return - internal format
  */
+@CompileStatic
 List quantizeData(List<Map> events, String mins, String funct, Integer dec, Boolean boundary, Boolean toStore){
 
 	Integer minutes=mins as Integer
@@ -11551,11 +11543,12 @@ List quantizeData(List<Map> events, String mins, String funct, Integer dec, Bool
 	String s
 	s='quantizeData '
 
+	Boolean isE= isEric()
 	sz=events.size()
-	if(isEric())myDetail null,s+"mins: $mins func: $funct decimals: $dec boundary: $boundary size: $sz",i1
+	if(isE)myDetail null,s+"mins: $mins func: $funct decimals: $dec boundary: $boundary size: $sz",i1
 
 	if(minutes==iZ || funct==sNONE){
-		if(isEric())myDetail null,s+"no change"
+		if(isE)myDetail null,s+"no change"
 		return events
 	}
 
@@ -11567,7 +11560,7 @@ List quantizeData(List<Map> events, String mins, String funct, Integer dec, Bool
 	try{
 
 		Long stop
-		stop=roundDate([(sDT): events[iZ][sDT], granularity: minutes, boundary: boundary]).getTime() + milliSeconds
+		stop=roundDate([(sDT): dtMdt(events[iZ]), granularity: minutes, boundary: boundary]).getTime() + milliSeconds
 
 		List<Map> tempEvents
 		tempEvents=[]
@@ -11584,11 +11577,11 @@ List quantizeData(List<Map> events, String mins, String funct, Integer dec, Bool
 				sz=tempEvents.size()
 				newEntry=tempEvents[iZ]
 				if(sz == i1 && newEntry[sQ] == i1){ // deals with count cannot be re-processed
-					if(isEric()) trace "DID NOT REPROCESS "+s+"$funct $sz",null
+					if(isE) trace "DID NOT REPROCESS "+s+"$funct $sz",null
 					newEvents.add(newEntry)
 				}else if(sz > 0 ){
-					if(isEric()) trace s+"$funct $sz",null
-					newEntry="${funct}"(tempEvents, decimals, boundary, minutes)
+					if(isE) trace s+"$funct $sz",null
+					newEntry=callFunc(funct,tempEvents, decimals, boundary, minutes)
 					newEvents.add(newEntry)
 				}
 				stop += milliSeconds
@@ -11605,11 +11598,11 @@ List quantizeData(List<Map> events, String mins, String funct, Integer dec, Bool
 		if(	(sz == i1 && tempEvents[iZ][sQ]==i1) ||
 			(sz>0 && toStore && funct in ['average','count']) ){ // don't screw up average, count -> leave last unprocessed
 
-			if(isEric()) trace s+"$funct adding $sz $tempEvents ",null
+			if(isE) trace s+"$funct adding $sz $tempEvents ",null
 			newEvents=newEvents + tempEvents
 		}else if(sz != iZ){
-			if(isEric()) trace s+"LAST $funct $sz",null
-			newEntry="${funct}"(tempEvents, decimals, boundary, minutes)
+			if(isE) trace s+"LAST $funct $sz",null
+			newEntry=callFunc(funct,tempEvents, decimals, boundary, minutes)
 			newEvents.add(newEntry)
 		}
 
@@ -11617,8 +11610,14 @@ List quantizeData(List<Map> events, String mins, String funct, Integer dec, Bool
 		error s,null,iN2,e
 	}
 	sz=newEvents.size()
-	if(isEric())myDetail null,s+"Final size $sz"
+	if(isE)myDetail null,s+"Final size $sz"
 	return newEvents
+}
+
+
+Map callFunc(String funct, List<Map>tempEvents, Integer decimals, Boolean boundary, Integer minutes){
+	Map newEntry="${funct}"(tempEvents, decimals, boundary, minutes)
+	return newEntry
 }
 
 
@@ -11649,7 +11648,7 @@ static Long averageFrequency(List<Map> events){
 	Integer i
 	for(i=i1; i<events.size(); i++){
 		// TODO
-		sum += ((Date)events[i][sDT]).getTime() - ((Date)events[i-i1][sDT]).getTime()
+		sum += dtMdt(events[i]).getTime() - dtMdt(events[i-i1]).getTime()
 	}
 	return Math.round(sum/events.size())
 }
@@ -11662,11 +11661,11 @@ List<Map> getEvents(Map map){
 	try{
 		def sensor=map.sensor
 		String attribute=map[sATTR]
-		Integer days=(Integer)map.days
+		Integer days= iMs(map,'days')
 
 		Date then
 		if(map.start_time){
-			then=(Date)map.start_time
+			then= dtMs(map,'start_time')
 		}else{
 			Date now=new Date()
 			then=now
@@ -11787,7 +11786,7 @@ Map readFile(sensor, String attribute, String fname=sNL){
 			List<Map> parse=convertToInternal((List<Map>)jsonSlurper.parseText(readTmpFLD[pNm]))
 			if(isEric())trace "readFile cache hit",null
 			if(isEric())myDetail null,s
-			return [size: sz, data: parse ]
+			return ['size': sz, 'data': parse ]
 		}
 	} catch(ignored){}
 
@@ -11852,7 +11851,7 @@ Map readFile(sensor, String attribute, String fname=sNL){
 			parse=convertToInternal((List<Map>)jsonSlurper.parseText(readTmpFLD[pNm]))
 		}else sz=iZ
 		if(isEric())myDetail null,s+" $sz"
-		return [size: sz, data: parse ]
+		return ['size': sz, 'data': parse ]
 	}catch(e){
 		String sensor_name=gtLbl(sensor)
 		String ts1= " for ${sensor_name} (${attribute}) ($filename_}"
@@ -11867,7 +11866,7 @@ Map readFile(sensor, String attribute, String fname=sNL){
 	readTmpFLD[pNm]=sNL
 	readTmpFLD= readTmpFLD
 	if(isEric())myDetail null,s
-	return [size: iZ, data: [] ]
+	return ['size': iZ, 'data': [] ]
 }
 
 String getFileName(sensor, String attribute){
@@ -11883,36 +11882,33 @@ String getFileName(sensor, String attribute){
 /** receives internal format */
 List<Map> pruneData(List<Map> input_data, Integer days){
 
-	if(isEric())myDetail null,"pruneData ${input_data.size()} time: $days",i1
+	Boolean isE= isEric()
+	if(isE)myDetail null,"pruneData ${input_data.size()} time: $days",i1
 
 	if(days == iZ || !input_data){
-		if(isEric())myDetail null,"pruneData nochange"
+		if(isE)myDetail null,"pruneData nochange"
 		return input_data
 	}
 	List return_data=[]+input_data
 	if(input_data.size() > 0){
 
-		Date then
-		then=new Date()
-		use (TimeCategory){
-			then -= days.days
-		}
-
-		Long startDate=then.getTime()
+		Long startDate; startDate=wnow()
+		startDate -= (days * lMSDAY)
 
 		Long date
-		date=(Long)input_data[iZ].t
+		date= lMt(input_data[iZ])
 
 		while (date && return_data && date < startDate){
-			if(isEric())debug "date: $date startDate: $startDate return_data[0]: ${return_data[iZ]}",null
+			if(isE)debug "date: $date startDate: $startDate return_data[0]: ${return_data[iZ]}",null
 			Map a=return_data.remove(0)
-			date=return_data ? (Long)return_data[iZ].t : null
+			date=return_data ? lMt(return_data[iZ]) : null
 		}
 	}
-	if(isEric())myDetail null,"pruneData ${return_data.size()} time: $days"
+	if(isE)myDetail null,"pruneData ${return_data.size()} time: $days"
 	return return_data
 }
 
+@CompileStatic
 static List<Map> addData(List<Map> main, List<Map> append){
 
 	List<Map> return_data=main
@@ -11994,14 +11990,11 @@ List<Map>getAllDataLimit(sensor,String attribute, Integer maxdays=7){
 
 	List<Map> data=getAllData(sensor,attribute,maxdays,true,false)
 
-	Date then
-	then=new Date()
-	use (TimeCategory){
-		then -= maxdays.days
-	}
-	Long gt=then.getTime()
+	Long gt; gt= wnow()
+	gt -= (maxdays * lMSDAY)
+
 	List<Map> all_data
-	all_data= data.findAll{ Map it -> (Long)it.t > gt}
+	all_data= data.findAll{ Map it -> lMt(it) > gt}
 
 	return all_data
 }
@@ -12045,7 +12038,7 @@ List<Map>getAllData(sensor,String attribute, Integer mindays=1461, Boolean add=t
 			parse_data=getFileData(sensor, attribute)
 			//Get the most Current Data
 			sz=parse_data.size()
-			if(sz) then=(Date)parse_data[sz-i1][sDT]
+			if(sz) then= dtMdt(parse_data[sz-i1])
 			lts=true
 //		}
 		}
@@ -12132,13 +12125,13 @@ static List<Map> convertToInternal(List<Map>json){
 	for(Map data in json){
 		t=null
 		if(data.containsKey(sT)){
-			t= (Long)data[sT]
+			t= lMt(data)
 		}else if(data[sDT]){
 			String dateFormat="yyyy-MM-dd'T'HH:mm:ssX"
 			Date date=Date.parse(dateFormat, sMs(data,sDT))
 			t= date.getTime()
 		}else if(data[sI]){
-			t= (Long)data[sI]
+			t= lMs(data,sI)
 		}
 		Date date=new Date(t)
 		v= data.containsKey(sV) ? data[sV] : data[sVAL]
@@ -12165,8 +12158,8 @@ static List<Map> rtnFileData(List<Map> events){
 	for(Map data in events){
 		v= data.containsKey(sV) ? data[sV] : data[sVAL]
 		v= data.containsKey(sD) ? data[sD] : v
-		t= data.containsKey(sI) ? (Long)data[sI] : 0L
-		t= data.containsKey(sT) ? (Long)data[sT] : ((Date)data[sDT]).getTime()
+		t= data.containsKey(sI) ? lMs(data,sI) : 0L
+		t= data.containsKey(sT) ? lMt(data) : dtMdt(data).getTime()
 		if(data.containsKey(sQ))
 			file_data << [(sV): v, (sT): t, (sQ):data[sQ]]
 		else
@@ -12286,20 +12279,20 @@ Map getCurrentDailyStorage(sensor, String attribute, String fname=sNL){
 	if(json?.data){
 
 		List<Map> data=(List<Map>)json.data
-		Integer size=(Integer)json.size
+		Integer size= iMs(json,'size')
 
 		Integer dsz=data.size()
 		Date first
 		Date then
 		if(dsz){
-			first = new Date((Long) data[iZ][sT])
-			then = new Date((Long) data[dsz-i1][sT])
+			first = new Date( lMt(data[iZ]))
+			then = new Date( lMt(data[dsz-i1]))
 		}else{
 			first=null
 			then=null
 		}
 
-		return [num_events: dsz, first: first, last: then, size: size]
+		return [num_events: dsz, first: first, last: then, 'size': size]
 
 	}else{
 
@@ -12313,7 +12306,8 @@ Map getCurrentDailyStorage(sensor, String attribute, String fname=sNL){
 
 				writeFile(sensor, attribute, respEvents)
 
-				return [num_events: respEvents.size(), first: respEvents[iZ][sDT], last: respEvents[respEvents.size()-i1][sDT], size: respEvents.size()*34]
+				Integer sz= respEvents.size()
+				return [num_events: sz, first: dtMdt(respEvents[iZ]), last: dtMdt(respEvents[sz-i1]), 'size': sz*34]
 			}else
 				error "getCurrentDailyStorage null sid ${sensor} (${attribute}) ($fname)",null,iN2
 		}catch (e){
@@ -12330,17 +12324,18 @@ Map getCurrentDailyStorageFS(){
 	List<Map> a=getFuelStreamData(null)
 	List<Map> file_data
 	file_data=rtnFileData(a) // we are measure as stored size
-	Integer sz=file_data.toString().size()
-	Map json=[size: sz, data: a ]
+	Integer sz; sz=file_data.toString().size()
+	Map json=['size': sz, 'data': a ]
 	if(json.data){
 
 		List<Map> data=(List<Map>)json.data
-		Integer size=(Integer)json.size
+		Integer size= iMs(json,'size')
 
-		Date first=new Date((Long)data[iZ][sT])
-		Date then=new Date((Long)data[data.size()-i1][sT])
+		Date first=new Date( lMt(data[iZ]))
+		sz= data.size()
+		Date then=new Date( lMt(data[sz-i1]))
 
-		return [num_events: data.size(), first: first, last: then, size: size]
+		return [num_events: sz, first: first, last: then, 'size': size]
 	}
 	return null
 }
@@ -12567,7 +12562,7 @@ public List<Map> listFuelStreamData(String streamid){
 	if(res){
 		for(Map data in res){
 			def v=data.containsKey(sV) ? data[sV] : data[sVAL]
-			Long t=data.containsKey(sT) ? (Long)data[sT] : ((Date)data[sDT]).getTime()
+			Long t=data.containsKey(sT) ? lMt(data) : dtMdt(data).getTime()
 			//ideData << [ (sD): v, (sI): t, (sT): getFormattedDate(new Date(t))]
 			ideData << [ (sD): v, (sT): t ]
 		}
@@ -13214,6 +13209,9 @@ String hubiForm_text_input(String title, String ivar, String defaultVal, Boolean
 	return cleanHtml(html_)
 }
 
+/**
+ *  gathers settings input (Integer)varname_font
+ */
 String hubiForm_font_size(Map map){
 
 	String title=sMs(map,sTIT)
@@ -13266,6 +13264,9 @@ String hubiForm_font_size(Map map){
 	return cleanHtml(html_)
 }
 
+/**
+ *  gathers settings input (Integer)varname_font
+ */
 String hubiForm_fontvx_size(Map map){
 
 	String title=sMs(map,sTIT)
@@ -13280,7 +13281,7 @@ String hubiForm_fontvx_size(Map map){
 	icon=sNL
 
 	String varFontSize="${varname}_font"
-	Integer varVal; varVal=(Integer)settings[varFontSize]
+	Integer varVal; varVal= gtSetI(varFontSize)
 	if(varVal==null || (min!=null && varVal<min) || (max!=null && varVal>max)){
 		app.updateSetting(varFontSize, default_)
 		settings[varFontSize]=default_
@@ -13456,10 +13457,13 @@ String hubiForm_slider(Map map){
 	return cleanHtml(html_)
 }
 
+/**
+ *  gathers settings input (String)varname_color, (Boolean)varname_color_transparent
+ */
 String hubiForm_color(String title, String varname, String defaultColorValue, Boolean defaultTransparentValue, Boolean submit=false){
 
 	String varnameColor="${varname}_color"
-	String varnameTransparent="${varname}_color_transparent"
+	String varnameTransparent= varnameColor+"_transparent"
 	String colorTitle="<b>${title} Color</b>"
 	String notTransparentTitle="Transparent"
 	String transparentTitle="${title}: Transparent"
@@ -13615,7 +13619,7 @@ def hubiForm_list_reorder(String var, String var_color, String solid_background=
 	String nres
 	nres=gtSetStr(var)
 	if(!result_ && var){
-		settings["${var}"]=null
+		settings[var]=null
 		nres=sNL
 		wremoveSetting(var)
 	}
@@ -13654,7 +13658,7 @@ def hubiForm_list_reorder(String var, String var_color, String solid_background=
 		nres== nres.substring(iZ, nres.length() - i1)
 		//settings["${var}"] += "]"
 		nres += "]"
-		settings["${var}"]=nres
+		settings[var]=nres
 		app.updateSetting(var, nres)
 	}
 
@@ -13886,6 +13890,7 @@ Boolean hubiTools_check_list(List<Map> dataSources, List<Map> list_){
 
 	Boolean result; result=true
 	Integer count_; count_=iZ
+	Integer sz; sz=list_.size()
 	//check for addition/changes
 	if(dataSources){
 		Boolean inner_result
@@ -13897,7 +13902,7 @@ Boolean hubiTools_check_list(List<Map> dataSources, List<Map> list_){
 
 			count_++
 			inner_result=false
-			for(i=iZ; i<list_.size(); i++){
+			for(i=iZ; i<sz; i++){
 				if(sMs(list_[i],sID) == sid && sMs(list_[i],sATTR) == attribute){
 					inner_result=true
 					break
@@ -13909,7 +13914,7 @@ Boolean hubiTools_check_list(List<Map> dataSources, List<Map> list_){
 
 	//check for smaller
 	Boolean count_result; count_result=false
-	if(list_.size() == count_)
+	if(sz == count_)
 		count_result=true
 
 	if(isEric())myDetail null,"_check_list $result $count_result"
@@ -14154,6 +14159,11 @@ private void error(message,Map r9,Integer shift=iN2,Exception err=null){
 	if(aa||bb)log.error tDesc()+" exception: "+aa+" \n"+bb
 }
 //error "object: ${describeObject(e)}",r9
+
+@CompileStatic
+private static Date dtMdt(Map m){ (Date)m[sDT] }
+@CompileStatic
+private static Date dtMs(Map m,String s){ (Date)m[s] }
 
 @CompileStatic
 private static Long lMs(Map m,String v){ (Long)m[v] }
