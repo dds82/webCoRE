@@ -18,7 +18,7 @@
  *  You should have received a copy of the GNU General Public License
  *  along with this program.  If not see <http://www.gnu.org/licenses/>.
  *
- * Last update July 12, 2023 for Hubitat
+ * Last update July 25, 2023 for Hubitat
  */
 
 //file:noinspection GroovySillyAssignment
@@ -33,7 +33,7 @@
 //file:noinspection UnnecessaryQualifiedReference
 
 @Field static final String sVER='v0.3.114.20220203'
-@Field static final String sHVER='v0.3.114.20230708_HE'
+@Field static final String sHVER='v0.3.114.20230725_HE'
 
 static String version(){ return sVER }
 static String HEversion(){ return sHVER }
@@ -315,6 +315,7 @@ static Boolean eric1(){ return false }
 @Field static final String sTMP='temporary'
 @Field static final String sRTHIS='runTimeHis'
 @Field static final String sPTS='points'
+@Field static final String sTZ='tz'
 
 @Field static final String sLOCID='locationId'
 @Field static final String sUSELFUELS='useLocalFuelStreams'
@@ -1036,6 +1037,7 @@ void installed(){
 
 void updated(){
 	wunsubscribe()
+	wstateRemove(sTZ)
 	initialize()
 }
 
@@ -2256,6 +2258,18 @@ private LinkedHashMap getDSCache(String meth,Boolean Upd=true){
 		t1[sLEXEC]=lMs(aS,sLEXEC)
 		l0=liMs(aS,sLOGS); t1[sLOGS]=l0 ? []+l0:[]
 		m0=mMs(aS,sVARS); t1[sVARS]=m0 ? [:]+m0:[:]
+
+		String tzid= sMs(aS,sTZ)
+		TimeZone tz; tz=null
+		if(tzid){
+			try{
+				tz= TimeZone.getTimeZone(tzid)
+			} catch(ignored){
+				wstateRemove(sTZ)
+			}
+		}
+		t1[sTZ]=tz ?: mTZ()
+
 		t1[sMEM]=mem()
 		resetRandomValues(t1)
 		def devs=gtSetting(sDV)
@@ -3501,7 +3515,7 @@ private void processSchedules(Map r9,Boolean scheduleJob=false){
 			t=nextT-wnow()
 			t=(t<sVariance ? sVariance:t)
 			wrunInMillis(t,sTIMHNDR,[(sDATA): tnext])
-			if(isInf(r9))info 'Setting up scheduled job for '+formatLocalTime(nextT)+' (in '+t.toString()+'ms)'+(ssz>i1 ? ',with '+(ssz-i1).toString()+' more job'+(ssz>i2 ? sS:sBLK)+' pending':sBLK),r9
+			if(isInf(r9))info 'Setting up scheduled job for '+formatLocalTime(r9,nextT)+' (in '+t.toString()+'ms)'+(ssz>i1 ? ',with '+(ssz-i1).toString()+' more job'+(ssz>i2 ? sS:sBLK)+' pending':sBLK),r9
 		}
 		if(nextT==lZ){
 			if(lMs(r9,sNSCH)!=lZ)wunschedule(sTIMHNDR)
@@ -4411,7 +4425,7 @@ private void executePhysicalCommand(Map r9,device,String command,prms=[],Long id
 			mMs(schedule,sD)['ig']=ignRest
 		}
 		if(doI){
-			if(doL)debug s+wakeS('Requesting a device command',schedule),r9
+			if(doL)debug s+wakeS(r9,'Requesting a device command',schedule),r9
 			else info s,r9
 		}
 		Boolean a=spshSch(r9,schedule)
@@ -4545,7 +4559,7 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 
 		//result is sDTIME
 		if(lastRun==lZ) //first run, just adjust the time so in the future
-			time=pushTimeAhead(time,wnow())
+			time=pushTimeAhead(r9,time,wnow())
 	}else{
 		delta=Math.round(delta*interval*d1)
 		if(lge) myDetail r9,mySt1+"interval: $interval delta: $delta level: $level intervlUnit: $intervlUnit",iN2
@@ -4582,7 +4596,7 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 		}else{ // [sD, sW, sN, sY]
 			if(lge) myDetail r9,mySt1+"time: $time rightNow: $rightNow",iN2
 			//advance ahead of rightNow if in the past
-			time=pushTimeAhead(time,rightNow)
+			time=pushTimeAhead(r9,time,rightNow)
 			Long lastDay=Math.floor((nxtSchd/dMSDAY).toDouble()).toLong()
 			Long thisDay=Math.floor((time/dMSDAY).toDouble()).toLong()
 			if(lge) myDetail r9,mySt1+"time: $time rightNow: $rightNow lastDay: $lastDay thisDay: $thisDay",iN2
@@ -4598,7 +4612,7 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 				case sD:
 					if(priorActivity){
 						//add the required number of days
-						nxtSchd=addTime(time,Math.round(dMSDAY*(interval-(thisDay-lastDay))),level)
+						nxtSchd=addTime(r9,time,Math.round(dMSDAY*(interval-(thisDay-lastDay))),level)
 					}else nxtSchd=time
 					break
 				case sW:
@@ -4608,10 +4622,10 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 					if(lge) myDetail r9,mySt1+"currentDay: $currentDay requiredDay: $requiredDay ",iN2
 					if(currentDay>requiredDay)requiredDay+=i7
 					//move to first matching day in future
-					nxtSchd=addTime(time,Math.round(dMSDAY*(requiredDay-currentDay)),level) // this is ahead of now on proper day (could be today)
+					nxtSchd=addTime(r9,time,Math.round(dMSDAY*(requiredDay-currentDay)),level) // this is ahead of now on proper day (could be today)
 					Integer myInterval; myInterval=interval
 					if(requiredDay!=currentDay) myInterval-=i1 //if we changed the day adjust interval calculation
-					if(priorActivity)nxtSchd=addTime(nxtSchd,Math.round(604800000.0D*myInterval),level) // this is n weeks from now
+					if(priorActivity)nxtSchd=addTime(r9,nxtSchd,Math.round(604800000.0D*myInterval),level) // this is n weeks from now
 					break
 				case sN: // months
 				case sY:
@@ -4666,7 +4680,7 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 						Long t0,t1
 						t0=time
 						t1=date.getTime()
-						nxtSchd=addTime(t0,t1-t0,level)
+						nxtSchd=addTime(r9,t0,t1-t0,level)
 					}
 					break
 			}
@@ -4680,7 +4694,7 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 					myDetail r9,mySt1+"TIME RESTRICTION PASSED cycle: ${tcy-cycles} nxtSchd: $nxtSchd priorActivity: $priorActivity lastRun: $lastRun lastR: $lastR rightNow: $rightNow",iN2
 				break
 			}
-			if(offset>lZ)nxtSchd=addTime(nxtSchd,offset,level)
+			if(offset>lZ)nxtSchd=addTime(r9,nxtSchd,offset,level)
 			if(lge) myDetail r9,mySt1+"offset: $offset",iN2
 		}
 		time=nxtSchd
@@ -4705,9 +4719,9 @@ private void scheduleTimer(Map r9,Map timer,Long lastRun=lZ,Boolean myPep){
 private Long fixPresetSRSS(Map r9,Map oper,Long itime){
 	Long time; time=itime
 	if(sMt(oper)==sS && sMs(oper,sS) in [sSUNSET, sSUNRISE]){
-		TimeZone mtz=mTZ()
+		TimeZone mtz=rTZ(r9)
 		Long t=wnow()
-		Boolean timeOk= time>getMidnightTime() && time<getNextMidnightTime() && t<time
+		Boolean timeOk= time>getMidnightTime(mtz) && time<getNextMidnightTime(mtz) && t<time
 		time= timeOk ? time :
 				Math.round(
 					(time+ (
@@ -4723,9 +4737,9 @@ private Long fixPresetSRSS(Map r9,Map oper,Long itime){
  * Add time (mod DST)
  */
 @CompileStatic
-private static Long addTime(Long pastTime,Long add,Integer level){
+private static Long addTime(Map r9,Long pastTime,Long add,Integer level){
 	Long t0,t1
-	TimeZone mtz=mTZ()
+	TimeZone mtz=rTZ(r9)
 	t0=pastTime+add
 	t1= level>=i5 ? Math.round( (t0+(mtz.getOffset(pastTime)-mtz.getOffset(t0))) *d1) : t0
 	return t1
@@ -4735,10 +4749,10 @@ private static Long addTime(Long pastTime,Long add,Integer level){
  * Push pastTime head by 24 hours (mod DST) until >=curTime
  */
 @CompileStatic
-private static Long pushTimeAhead(Long pastTime,Long curTime){
+private static Long pushTimeAhead(Map r9,Long pastTime,Long curTime){
 	Long retTime,t0,t1
 	retTime=pastTime
-	TimeZone mtz=mTZ()
+	TimeZone mtz=rTZ(r9)
 	while(retTime<curTime){
 		t0=Math.round(retTime+dMSDAY)
 		t1=Math.round( (t0+(mtz.getOffset(retTime)-mtz.getOffset(t0))) *d1)
@@ -4787,14 +4801,14 @@ private void scheduleTimeCondition(Map r9,Map cndtn){
 
 	ro2=mMs(cndtn,sRO2)
 	tv2=ro2!=null && sMt(ro2)!=sC && pCnt>i1 ? mevaluateOperand(r9,mMs(cndtn,sTO2)):null
-	v2=trigger ? v1:(pCnt>i1 ? (longEvalExpr(r9,mevaluateOperand(r9,ro2,null,false,true),sDTIME) + (tv2!=null ? longEvalExpr(r9,rtnMap1(tv2)) :lZ)) : sMv(cLO)==sTIME ? getMidnightTime():v1 )
+	v2=trigger ? v1:(pCnt>i1 ? (longEvalExpr(r9,mevaluateOperand(r9,ro2,null,false,true),sDTIME) + (tv2!=null ? longEvalExpr(r9,rtnMap1(tv2)) :lZ)) : sMv(cLO)==sTIME ? getMidnightTime(rTZ(r9)):v1 )
 
 	v2=!trigger && pCnt>i1 ? fixPresetSRSS(r9,ro2,v2) : v2
 
 	n=Math.round(d1*wnow()+2000L)
 	if(sMv(cLO)==sTIME){
-		v1=pushTimeAhead(v1,n)
-		v2=pushTimeAhead(v2,n)
+		v1=pushTimeAhead(r9,v1,n)
+		v2=pushTimeAhead(r9,v2,n)
 	}
 
 	//figure out the next time
@@ -4811,7 +4825,7 @@ private void scheduleTimeCondition(Map r9,Map cndtn){
 			//repeat until we find a day that's matching the restrictions
 			if(checkTimeRestrictions(r9,cLO,n1,i5,i1)==lZ) break
 			v-=i1
-			n1=pushTimeAhead(n1,n1+l1)
+			n1=pushTimeAhead(r9,n1,n1+l1)
 		}
 		if(lg && v!=iyr)debug "Adding ${iyr-v} days, $n >>> $n1" ,r9
 		if(v==iZ)n1=n
@@ -5055,13 +5069,13 @@ private void requestWakeUp(Map r9,Map statement,Map task,Long timeOrDelay,String
 	}
 	fnd=spshSch(r9,mmschedule)
 	if(msg||tmsg){
-		String s= wakeS(sBLK,mmschedule)
+		String s= wakeS(r9,sBLK,mmschedule)
 		if(msg)debug msg+s,r9 else trace tmsg+s,r9
 	}
 }
 
 @CompileStatic
-private String wakeS(String m,Map sch){ Long t=lMt(sch); return m+" wake up at ${formatLocalTime(t)} (in ${t-wnow()}ms) for "+cnlS(sch) }
+private String wakeS(Map r9,String m,Map sch){ Long t=lMt(sch); return m+" wake up at ${formatLocalTime(r9,t)} (in ${t-wnow()}ms) for "+cnlS(sch) }
 
 /** Returns true if switch does not match mat  */
 @CompileStatic
@@ -5359,7 +5373,7 @@ private static Long vcmd_waitRandom(Map r9,device,List prms){
 private Long vcmd_waitForTime(Map r9,device,List prms){
 	Long time; time=(Long)cast(r9,(Long)cast(r9,prms[iZ],sTIME),sDTIME,sTIME)
 	Long rightNow=wnow()
-	time=pushTimeAhead(time,rightNow)
+	time=pushTimeAhead(r9,time,rightNow)
 	return time-rightNow
 }
 
@@ -5727,7 +5741,7 @@ void qrunRepeat(Map r9,Long dur,Map jq){
 		(sPS):svPS(statement),
 		('jq'):jq1,
 	]
-	if(isEric(r9))trace wakeS('Requesting a repeat task',schedule),r9
+	if(isEric(r9))trace wakeS(r9,'Requesting a repeat task',schedule),r9
 	Boolean a=spshSch(r9,schedule)
 }
 
@@ -7173,11 +7187,12 @@ private evaluateOperand(Map r9,Map node,Map oper,Integer index=null,Boolean trig
 				case sTIME:
 				case sDTIME:
 					Long v; v=lZ
+					TimeZone mtz=rTZ(r9)
 					switch(sMs(operand,sS)){
 						case sSUNSET: v=getSunsetTime(r9); break
 						case sSUNRISE: v=getSunriseTime(r9); break
-						case 'midnight': v=nextMidnight ? getNextMidnightTime():getMidnightTime(); break
-						case 'noon': v=getNoonTime(); break
+						case 'midnight': v=nextMidnight ? getNextMidnightTime(mtz):getMidnightTime(mtz); break
+						case 'noon': v=getNoonTime(mtz); break
 					}
 					if(ovt==sTIME && v)v=(Long)cast(r9,v,ovt,sDTIME)
 					mv=rtnMap(ovt,v)
@@ -9026,10 +9041,10 @@ private getDevice(Map r9,String idOrName, Boolean rptMissing=true){
 	if(!idOrName)return null
 	String d=sDEVS
 	r9[d]=r9[d] ?:[:]
-	Map dM=mMs(r9,d)
+	Map<String,Object> dM=mMs(r9,d)
 	def t0=dM[idOrName]
 	def device
-	device=t0!=null ? t0:dM.find{ gtLbl(it.value)==idOrName }?.value
+	device=t0!=null ? t0:dM.find{Map.Entry<String,Object> it -> gtLbl(it.value)==idOrName }?.value
 	if(device==null){
 		String aD=sALLDEVS
 		if(r9[aD]==null){
@@ -9038,7 +9053,7 @@ private getDevice(Map r9,String idOrName, Boolean rptMissing=true){
 			if(isDbg(r9))debug msg,r9
 		}
 		if(r9[aD]!=null){
-			Map.Entry<String,Object> deviceEnt=mMs(r9,aD).find{ idOrName==(String)it.key || idOrName==gtLbl(it.value) }
+			Map.Entry<String,Object> deviceEnt=mMs(r9,aD).find{ Map.Entry<String,Object> it -> idOrName==(String)it.key || idOrName==gtLbl(it.value) }
 			if(deviceEnt!=null){
 				device=deviceEnt.value
 				r9[sUPDDEVS]=true
@@ -9169,7 +9184,7 @@ private getDeviceAttributeValue(Map r9,device,String attr,Boolean skipCurEvt=fal
 						result= (String)device.getStatus() // ACTIVE/INACTIVE
 						break
 					case sROOMID:
-						result= (Long)device.getRoomid()
+						result= (Long)device.getRoomId()
 						break
 					case sROOMNM:
 						result= (String)device.getRoomName()
@@ -9564,7 +9579,7 @@ private Map<String,Object> getVariable(Map r9,String name, Boolean rtnL=false){
 				waddInUseGlobalVar(r9,vn)
 				String typ; typ=sNL
 				def vl; vl=null
-				Map ta=fixHeGType(false,sMs(hg,sTYPE),hg[sVAL])
+				Map ta=fixHeGType(r9,false,sMs(hg,sTYPE),hg[sVAL])
 				for(t in ta){
 					typ=(String)t.key
 					vl=t.value
@@ -9709,12 +9724,12 @@ private Map setVariable(Map r9,String name,value){
 				typ=sNL
 				wctyp=sNL
 				def vl; vl=null
-				Map tb=fixHeGType(false,sMs(hg,sTYPE),hg[sVAL])
+				Map tb=fixHeGType(r9,false,sMs(hg,sTYPE),hg[sVAL])
 				for(t in tb){
 					wctyp=(String)t.key
 				}
 				if(wctyp){ // if we know current type
-					Map ta=fixHeGType(true,wctyp,value)
+					Map ta=fixHeGType(r9,true,wctyp,value)
 					for(t in ta){
 						typ=(String)t.key
 						vl=t.value
@@ -10718,6 +10733,32 @@ private String buildDeviceAttributeList(Map r9,List<String> devices,String attr,
 		a=list.push(v)
 	}
 	return buildList(list,suffix)
+}
+
+/** roundTimeToMinutes
+ * Usage: roundTimeToMinutes(time, mins, roundup) */
+private Map func_roundtimetominutes(Map r9,List<Map> prms){
+	String err='roundTimeToMinutes(time,mins,roundup)'
+	if(badParams(r9,prms,i3))return rtnErr(err)
+	Long value= longEvalExpr(r9,prms[iZ],sDTIME)
+	Integer mins; mins= intEvalExpr(r9,prms[i1])
+	Boolean rndUp= boolEvalExpr(r9,prms[i2])
+
+	if(mins<i1 || mins>60) return rtnErr(err) // 1-60
+	if(mins!=i1 && mins%i5!=iZ) return rtnErr(err) // multiple of 5
+
+	Calendar cal = Calendar.getInstance()
+	Date timestamp= new Date(value)
+	cal.setTime(timestamp)
+	cal.set(Calendar.MILLISECOND,iZ)
+	cal.set(Calendar.SECOND,iZ)
+	if(mins!=i1){
+		Integer currMinute = cal.get(Calendar.MINUTE)
+		Integer rMin; rMin = currMinute - (currMinute % mins)
+		if(rndUp) rMin += mins
+		cal.set(Calendar.MINUTE,rMin)
+	}
+	rtnMap(sDTIME, cal.getTime().getTime())
 }
 
 /** setVariable assigns a variable
@@ -11744,7 +11785,7 @@ private Map addtimeHelper(Map r9,List<Map> prms,Long mulp,String msg){
 	Long value=sz==i2 ? longEvalExpr(r9,prms[iZ],sDTIME) :wnow()
 	Long delta=longEvalExpr(r9,(sz==i2 ? prms[i1]:prms[iZ]),sLONG) *mulp
 	Long res; res=value+delta
-	TimeZone mtz=mTZ()
+	TimeZone mtz=rTZ(r9)
 	res+=Math.round((mtz.getOffset(value)-mtz.getOffset(res))*d1)
 	return rtnMap(sDTIME,res)
 }
@@ -11774,7 +11815,7 @@ private Map func_addweeks(Map r9,List<Map> prms){ return addtimeHelper(r9,prms,6
 private Map func_weekdayname(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnErr('weekDayName(dateTimeOrWeekDayIndex)')
 	Long value=longEvalExpr(r9,prms[iZ],sLONG)
-	Integer index=((value>=lMSDAY)? utcToLocalDate(value).day:value.toInteger()) % i7
+	Integer index=((value>=lMSDAY)? utcToLocalDate(r9,value).day:value.toInteger()) % i7
 	rtnMapS(weekDaysFLD[index])
 }
 
@@ -11783,7 +11824,7 @@ private Map func_weekdayname(Map r9,List<Map> prms){
 private Map func_monthname(Map r9,List<Map> prms){
 	if(badParams(r9,prms,i1))return rtnErr('monthName(dateTimeOrMonthNumber)')
 	Long value=longEvalExpr(r9,prms[iZ],sLONG)
-	Integer index=((value>=lMSDAY)? utcToLocalDate(value).month: (value-l1).toInteger())%i12+i1
+	Integer index=((value>=lMSDAY)? utcToLocalDate(r9,value).month: (value-l1).toInteger())%i12+i1
 	rtnMapS(yearMonthsFLD[index])
 }
 
@@ -11900,21 +11941,61 @@ private Map func_parsedatetime(Map r9,List<Map> prms){
 		if(format){
 			SimpleDateFormat formatter= new SimpleDateFormat(format)
 			res= formatter.parse(value).getTime()
-		}else res= stringToTime(value)
+		}else res= stringToTime(r9,value)
 	}catch(all){
 		return rtnErr("$all $format $value".toString())
 	}
 	return rtnMap(sDTIME,res)
 }
 
+/** settzid returns previous tzid as string	and sets timezone to new timezone based on tzid			**/
+/** Usage: setTzid(tzid)						**/
+private Map func_settzid(Map r9,List<Map> prms){
+	Integer sz=prms.size()
+	if(badParams(r9,prms,i1) || sz>i1)return rtnErr('setTzid(tzid)')
+	String tzid= strEvalExpr(r9,prms[iZ])
+
+	String rtn= TZID(rTZ(r9))
+	TimeZone tz; tz=null
+	if(tzid){
+		try{
+			tz= TimeZone.getTimeZone(tzid)
+		}catch(all){
+			return rtnErr("$all $tzid".toString())
+		}
+	}
+	if(tzid && tz){
+		r9[sTZ]= tz
+		if(TZID(tz) != TZID(mTZ())) state[sTZ]=tzid
+		else wstateRemove(sTZ)
+	} else return rtnErr("bad tzid $tzid".toString())
+	rtnMapS(rtn)
+}
+
 /** formatDateTime returns a datetime in a readable format				**/
-/** Usage: formatDateTime(value[, format])						**/
+/** Usage: formatDateTime(value[, format, tzid])						**/
 private Map func_formatdatetime(Map r9,List<Map> prms){
 	Integer sz=prms.size()
-	if(badParams(r9,prms,i1) || sz>i2)return rtnErr('formatDateTime(value[, format])')
+	if(badParams(r9,prms,i1) || sz>i3)return rtnErr('formatDateTime(value[, format, tzid])')
 	Long value=longEvalExpr(r9,prms[iZ],sDTIME)
 	String format=sz>i1 ? strEvalExpr(r9,prms[i1]):sNL
-	rtnMapS((format ? formatLocalTime(value,format):formatLocalTime(value)))
+	String tzid=sz>i2 ? strEvalExpr(r9,prms[i2]):sNL
+	String rtn
+
+	TimeZone tz; tz=null
+	if(tzid){
+		try{
+			tz= TimeZone.getTimeZone(tzid)
+		}catch(all){
+			return rtnErr("$all $format $value".toString())
+		}
+	}
+	tz=tz ?: mTZ()
+	TimeZone sv= rTZ(r9)
+	if(TZID(sv) != TZID(tz)){ r9[sTZ]= tz }
+	rtn= format ? formatLocalTime(r9,value,format):formatLocalTime(r9,value)
+	if(TZID(sv) != TZID(tz)){ r9[sTZ]= sv }
+	rtnMapS(rtn)
 }
 
 /** random returns a random value						**/
@@ -12088,12 +12169,12 @@ private static String encodeURIComponent(value){
 }
 
 @CompileStatic
-private Long gtWCTimeToday(Long time){
-	Long t0=getMidnightTime()
+private Long gtWCTimeToday(Map r9,Long time){
+	TimeZone tz= rTZ(r9)
+	Long t0=getMidnightTime(tz)
 	Long result=time+t0
 	//we need to adjust for time overlapping during DST changes
-	TimeZone mtz=mTZ()
-	return Math.round( (result+(mtz.getOffset(t0)-mtz.getOffset(result)) ) *d1)
+	return Math.round( (result+(tz.getOffset(t0)-tz.getOffset(result)) ) *d1)
 }
 
 @Field static final List<String> trueStrings= [ '1','true', "on", "open",  "locked",  "active",  "wet",           "detected",    "present",    "occupied",    "muted",  "sleeping"]
@@ -12288,9 +12369,9 @@ private Object cast(Map r9,ival,String dataTT,String isrcDT=sNL){
 					return value.toString().replaceFirst(/(?:\.|(\.\d*?))0+$/,'$1')
 				case sINT:
 				case sLONG: break
-				case sTIME: return formatLocalTime(value,'h:mm:ss a z')
-				case sDATE: return formatLocalTime(value,'EEE, MMM d yyyy')
-				case sDTIME: return formatLocalTime(value)
+				case sTIME: return formatLocalTime(r9,value,'h:mm:ss a z')
+				case sDATE: return formatLocalTime(r9,value,'EEE, MMM d yyyy')
+				case sDTIME: return formatLocalTime(r9,value)
 				case sDEV: return buildDeviceList(r9,value)
 			}
 			return "$value".toString()
@@ -12304,7 +12385,7 @@ private Object cast(Map r9,ival,String dataTT,String isrcDT=sNL){
 			return (Double)com_cast(r9,value,dataType,srcDt)
 		case sTIME:
 			Long d
-			d=srcDt==sSTR ? stringToTime(value):((Number)value).toLong()
+			d=srcDt==sSTR ? stringToTime(r9,value):((Number)value).toLong()
 			if(d<lMSDAY)return d
 			Date t1=new Date(d)
 			d=Math.round((t1.hours*dSECHR+t1.minutes*d60+t1.seconds)*d1000)
@@ -12314,16 +12395,16 @@ private Object cast(Map r9,ival,String dataTT,String isrcDT=sNL){
 			Long d
 			if(srcDt in [sTIME,sLONG,sINT,sDEC]){
 				d=((Number)value).toLong()
-				if(d<lMSDAY) value=gtWCTimeToday(d)
+				if(d<lMSDAY) value=gtWCTimeToday(r9,d)
 				else value=d
 			}
-			d=srcDt==sSTR ? stringToTime(value):(Long)value
+			d=srcDt==sSTR ? stringToTime(r9,value):(Long)value
 			if(dataType==sDATE){
 				Date t1= new Date(d)
-				TimeZone mtz=mTZ()
 				// take ms off and first guess at midnight
 				Long td= Math.round( (Math.floor(d/d1000)*d1000)-((t1.hours*dSECHR+t1.minutes*d60+t1.seconds)*d1000))
 				// could be earlier/later depending if DST change day
+				TimeZone mtz=rTZ(r9)
 				d=Math.round( (td-(mtz.getOffset(td)-mtz.getOffset(d)) ) *d1)
 			}
 			return d
@@ -12376,12 +12457,12 @@ private Object cast(Map r9,ival,String dataTT,String isrcDT=sNL){
 @CompileStatic
 private Long elapseT(Long t,Long n=wnow()){ return Math.round(d1*n-t) }
 
-private Date utcToLocalDate(dateOrTimeOrString=null){ // cast to Date
+private Date utcToLocalDate(Map r9,dateOrTimeOrString=null){ // cast to Date
 	def mdate=dateOrTimeOrString
 	Long ldate
 	if(!(mdate instanceof Long)){
 		if(mdate instanceof String){
-			ldate=stringToTime((String)mdate)
+			ldate=stringToTime(r9,(String)mdate)
 		}else if(mdate instanceof Date){
 			//get unix time
 			ldate=((Date)mdate).getTime()
@@ -12397,7 +12478,7 @@ private Date utcToLocalDate(dateOrTimeOrString=null){ // cast to Date
 private static Date localDate(){ return new Date() }
 
 @CompileStatic
-private Long stringToTime(dateOrTimeOrString){ // convert to dtime
+private Long stringToTime(Map r9,dateOrTimeOrString){ // convert to dtime
 	Long lnull=(Long)null
 	Long result
 	result=lnull
@@ -12408,7 +12489,7 @@ private Long stringToTime(dateOrTimeOrString){ // convert to dtime
 			Double aa= a as Double
 			Long tt= aa.toLong()
 			if(tt<lMSDAY){
-				result=gtWCTimeToday(tt)
+				result=gtWCTimeToday(r9,tt)
 				n=i1
 			}else{
 // deal with a time in sec (vs. ms)
@@ -12481,7 +12562,7 @@ private Long stringToTime(dateOrTimeOrString){ // convert to dtime
 				//get unix time
 				//if(!(sdate =~ /(\s[A-Z]{3}([+\-][0-9]{2}:[0-9]{2}|\s[0-9]{4})?$)/)){
 				if(!(sdate =~ /(\s[A-Z]{3}([+\-]\d{2}:\d{2}|\s\d{4})?$)/)){
-					Long newDate=(new Date()).parse(sdate+sSPC+formatLocalTime(wnow(),'Z'))
+					Long newDate=(new Date()).parse(sdate+sSPC+formatLocalTime(r9,wnow(),'Z'))
 					result=newDate
 				}
 			}catch(ignored){ result=lnull }
@@ -12491,7 +12572,7 @@ private Long stringToTime(dateOrTimeOrString){ // convert to dtime
 			n=i8
 			try{
 				TimeZone tz
-				tz=mTZ()
+				tz=rTZ(r9)
 				String nsdate,t0
 				nsdate=sdate
 				if(nsdate =~ /\s[A-Z]{3}$/){ // is not the timezone, strings like CET are not unique.
@@ -12530,7 +12611,7 @@ private Long stringToTime(dateOrTimeOrString){ // convert to dtime
 						n=i9
 						String tt=t0
 						time=(new Date()).parse('HH:mm:ssXX',tt+'-0000').getTime()
-						time=gtWCTimeToday(time)
+						time=gtWCTimeToday(r9,time)
 					}else{
 						n=i10
 						time=wtimeToday(t0,tz).getTime()
@@ -12577,7 +12658,7 @@ private Long stringToTime(dateOrTimeOrString){ // convert to dtime
 }
 
 @CompileStatic
-private String formatLocalTime(time,String format='EEE, MMM d yyyy @ h:mm:ss a z'){
+private String formatLocalTime(Map r9,time,String format='EEE, MMM d yyyy @ h:mm:ss a z'){
 	def nTime
 	nTime=time
 	Double aa
@@ -12590,19 +12671,19 @@ private String formatLocalTime(time,String format='EEE, MMM d yyyy @ h:mm:ss a z
 	if(fnd || time instanceof Long || "${time}".isNumber()){
 		Long lt
 		lt=fnd ? aa.toLong():"${time}".toLong()
-		if(lt<lMSDAY)lt=gtWCTimeToday(lt)
+		if(lt<lMSDAY)lt=gtWCTimeToday(r9,lt)
 // deal with a time in sec (vs. ms)
 		if(lt<Math.round((wnow()/d1000+86400.0D*365.0D).toDouble()) )lt=Math.round((lt*d1000).toDouble())
 		nTime=new Date(lt)
 	}else if(time instanceof String){
-		nTime=new Date(stringToTime((String)time))
+		nTime=new Date(stringToTime(r9,(String)time))
 	}
 	if(!(nTime instanceof Date)){
 		return sNL
 	}
 	Date d=(Date)nTime
 	SimpleDateFormat formatter=new SimpleDateFormat(format)
-	formatter.setTimeZone(mTZ())
+	formatter.setTimeZone(rTZ(r9))
 	return formatter.format(d)
 }
 
@@ -12919,20 +13000,20 @@ private Map initSunrSunst(Map r9){
 	}
 	if(t0==null){
 		Map sunTimes=app.getSunriseAndSunset()
+		TimeZone mtz=rTZ(r9)
 		if(sunTimes[sSUNRISE]==null){
 			warn 'Actual sunrise and sunset times are unavailable; please reset the location for your hub',r9
-			Long t1=getMidnightTime()
+			Long t1=getMidnightTime(mtz)
 			sunTimes[sSUNRISE]=new Date(Math.round(t1+7.0D*dMSECHR))
 			sunTimes[sSUNSET]=new Date(Math.round(t1+19.0D*dMSECHR))
 			t=lZ
 		}
 		Long a=((Date)sunTimes[sSUNRISE]).getTime()
 		Long b=((Date)sunTimes[sSUNSET]).getTime()
-		Long nmnght=getNextMidnightTime()
+		Long nmnght=getNextMidnightTime(mtz)
 		Long c,d,a1,b1
 		d=lZ
 
-		TimeZone mtz=mTZ()
 		Boolean good
 		good=true
 		try{
@@ -12941,7 +13022,7 @@ private Map initSunrSunst(Map r9){
 			c=((Date)tomorrowsSunrise).getTime()
 			d=((Date)tomorrowsSunset).getTime()
 			if(!a1){
-				a1= getMidnightTime()
+				a1= getMidnightTime(mtz)
 			}
 			if(!b1){
 				Long n,mar21,sep21,mid01
@@ -13006,10 +13087,15 @@ private Long getSunriseTime(Map r9){ Map st=initSunrSunst(r9); return lMs(st,sTR
 private Long getSunsetTime(Map r9){ Map st=initSunrSunst(r9); return lMs(st,sTSET) }
 private Long getNextSunriseTime(Map r9){ Map st=initSunrSunst(r9); return lMs(st,'tomorrowssunrise') }
 private Long getNextSunsetTime(Map r9){ Map st=initSunrSunst(r9); return lMs(st,'tomorrowssunset') }
-private Long getMidnightTime(){ return wtimeToday('00:00',mTZ()).getTime() }
-private Long getNextMidnightTime(){ return wtimeTodayAfter('23:59','00:00',mTZ()).getTime() }
-private Long getNoonTime(){ return wtimeToday('12:00',mTZ()).getTime() }
-private Long getNextNoonTime(){ return wtimeTodayAfter('23:59','12:00',mTZ()).getTime() }
+
+private static TimeZone mTZ(){ return TimeZone.getDefault() }
+private static TimeZone rTZ(Map r9){ return (TimeZone)r9[sTZ] ?: mTZ() }
+private static String TZID(TimeZone tz){ return (String)tz.getID() }
+
+private Long getMidnightTime(TimeZone tz){ return wtimeToday('00:00',tz).getTime() }
+private Long getNextMidnightTime(TimeZone tz){ return wtimeTodayAfter('23:59','00:00',tz).getTime() }
+private Long getNoonTime(TimeZone tz){ return wtimeToday('12:00',tz).getTime() }
+private Long getNextNoonTime(TimeZone tz){ return wtimeTodayAfter('23:59','12:00',tz).getTime() }
 
 
 // This is trying to ensure to not fire sunsets or sunrises twice in same day by ensuring we fire a bit later than actual sunrise or sunset
@@ -13282,10 +13368,10 @@ private gtSysVarVal(Map r9,String name, Boolean frcStr=false){
 		case sPEVUNIT: return pe[sUNIT]
 		case '$name': return gtAppN()
 		case '$state': return (String)((Map)r9[sST])?.new
-		case '$tzName': return mTZ().displayName
-		case '$tzId': return mTZ().getID()
-		case '$tzOffset': return mTZ().getOffset(wnow())
-		case '$tzInDst': return mTZ().inDaylightTime(new Date())
+		case '$tzName': return rTZ(r9).displayName
+		case '$tzId': return TZID(rTZ(r9))
+		case '$tzOffset': return rTZ(r9).getOffset(wnow())
+		case '$tzInDst': return rTZ(r9).inDaylightTime(new Date(wnow()))
 		case '$version': return sVER
 		case '$versionH': return sHVER
 		case '$hour': Integer h=localDate().hours; return (h==iZ ? i12:(h>i12 ? h-i12:h))
@@ -13303,14 +13389,14 @@ private gtSysVarVal(Map r9,String name, Boolean frcStr=false){
 		case '$month': return localDate().month+i1
 		case '$monthName': return yearMonthsFLD[localDate().month+i1]
 		case '$year': return localDate().year+1900
-		case '$midnight': return getMidnightTime()
-		case '$noon': return getNoonTime()
+		case '$midnight': return getMidnightTime(rTZ(r9))
+		case '$noon': return getNoonTime(rTZ(r9))
 		case '$sunrise': return getSunriseTime(r9)
 		case '$sunset': return getSunsetTime(r9)
 		case '$calcsunrise': return getCalcSunriseTime(r9)
 		case '$calcsunset': return getCalcSunsetTime(r9)
-		case '$nextMidnight': return getNextMidnightTime()
-		case '$nextNoon': return getNextNoonTime()
+		case '$nextMidnight': return getNextMidnightTime(rTZ(r9))
+		case '$nextNoon': return getNextNoonTime(rTZ(r9))
 		case '$nextSunrise': return getNextSunriseTime(r9)
 		case '$nextSunset': return getNextSunsetTime(r9)
 		case '$time': Date t=localDate(); Integer h=t.hours; Integer m=t.minutes; return ((h==iZ ? i12:(h>i12 ? h-i12:h))+sCLN+(m<i10 ? "0$m":"$m")+sSPC+(h<i12 ? 'A.M.':'P.M.')).toString()
@@ -13438,12 +13524,13 @@ private static Boolean isWcDev(String dev){ return (dev && dev.size()==i34 && de
 
 /** Converts v to either webCoRE or hubitat hub variable types and values */
 @CompileStatic
-Map fixHeGType(Boolean toHubV,String typ,v){
+Map fixHeGType(Map r9,Boolean toHubV,String typ,v){
 	Map ret; ret=[:]
 	def myv; myv=v
 	String T='T'
 	String s9s='9999'
 	String format="yyyy-MM-dd'T'HH:mm:ss.sssXX"
+	TimeZone tz=rTZ(r9)
 	if(toHubV){ // from webcore(9 types) -> hub (5 types + 3 overloads + sDYN becomes sSTR)
 		switch(typ){
 			case sINT:
@@ -13483,9 +13570,8 @@ Map fixHeGType(Boolean toHubV,String typ,v){
 				Long aaa= fnd ? aa.toLong():("$v".isNumber() ? v as Long: null)
 				if(aaa!=null){
 					if(aaa<lMSDAY && aaa>=lZ){
-						Long t0=getMidnightTime()
+						Long t0=getMidnightTime(tz)
 						Long a1=t0+aaa
-						TimeZone tz=mTZ()
 						myv=a1+(tz.getOffset(t0)-tz.getOffset(a1))
 					}else{
 						Date t1=new Date(aaa)
@@ -13497,7 +13583,7 @@ Map fixHeGType(Boolean toHubV,String typ,v){
 			case sDTIME: //@@
 				Date nTime=new Date((Long)myv)
 				SimpleDateFormat formatter=new SimpleDateFormat(format)
-				formatter.setTimeZone(mTZ())
+				formatter.setTimeZone(tz)
 				String tt=formatter.format(nTime)
 				String[] t1=tt.split(T)
 
@@ -13553,7 +13639,7 @@ Map fixHeGType(Boolean toHubV,String typ,v){
 				if(iD.endsWith(s9s) || iD.startsWith(s9s)){
 					Date nTime=new Date()
 					SimpleDateFormat formatter=new SimpleDateFormat(format)
-					formatter.setTimeZone(mTZ())
+					formatter.setTimeZone(tz)
 					String tt=formatter.format(nTime)
 					String[] mystart=tt.split(T)
 
@@ -13860,7 +13946,6 @@ private Map<String,Object> gtState(){ return (Map<String,Object>)state }
 
 private gtLocation(){ return location }
 private Map<String,Object> cvtLoc(){ cvtDev(location) }
-private static TimeZone mTZ(){ return TimeZone.getDefault() }
 private String gtLMode(){ return (String)location.getMode() }
 private Map fndMode(Map r9,String m){
 	def mode= ((List)location.getModes())?.find{ it-> hashId(r9,(Long)it.getId())==m || (String)it.getName()==m }
