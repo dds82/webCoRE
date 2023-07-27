@@ -10755,7 +10755,7 @@ private Map func_roundtimetominutes(Map r9,List<Map> prms){
 	if(mins!=i1){
 		Integer currMinute = cal.get(Calendar.MINUTE)
 		Integer rMin; rMin = currMinute - (currMinute % mins)
-		if(rndUp) rMin += mins
+		if(rndUp && currMinute != iZ) rMin += mins
 		cal.set(Calendar.MINUTE,rMin)
 	}
 	rtnMap(sDTIME, cal.getTime().getTime())
